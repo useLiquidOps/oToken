@@ -1,0 +1,5 @@
+{
+  "scripts": {
+    "build": "cd src && ao build"
+  }
+}
