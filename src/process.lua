@@ -4,6 +4,10 @@ ao = require ".utils.ao"
 
 local process = { _version = "0.0.1" }
 
+local balance = require ".token.balance"
+local token = require ".token.token"
+local transfer = require ".token.transfer"
+
 function process.handle(msg, env)
   -- setup env
   local setup_res = ao.init(msg, env)
@@ -15,6 +19,16 @@ function process.handle(msg, env)
     })
 
     return ao.result()
+  end
+
+  -- setup submodules
+  token.init(msg, env)
+
+  if msg.Action == "Info" then token.info(msg)
+  elseif msg.Action == "Total-Supply" then token.total_supply(msg)
+  elseif msg.Action == "Balance" then balance.balance(msg)
+  elseif msg.Action == "Balances" then balance.balances(msg)
+  elseif msg.Action == "Transfer" then transfer(msg)
   end
 
   return ao.result()

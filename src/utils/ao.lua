@@ -115,16 +115,6 @@ function ao.init(msg, env)
 
   ao.clearOutbox()
 
-  if msg.From ~= msg.Owner and not ao.isTrusted(msg) then
-    return false
-  end
-
-  if ao.isAssignment(msg) and not ao.isAssignable(msg) then
-    Send({Target = msg.From, Data = "Assignment is not trusted by this process!"})
-    print('Assignment is not trusted! From: ' .. msg.From .. ' - Owner: ' .. msg.Owner)
-    return ao.result({})
-  end
-
   return (msg.From == msg.Owner or ao.isTrusted(msg)) and
     (not ao.isAssignment(msg) or ao.isAssignable(msg))
 end
