@@ -1,5 +1,12 @@
 {
-  "scripts": {
-    "build": "cd src && ao build"
+  "type": "module",
+  "devDependencies": {
+    "@types/bun": "latest"
+  },
+  "peerDependencies": {
+    "typescript": "^5.0.0"
+  },
+  "dependencies": {
+    "@permaweb/ao-loader": "^0.0.35"
   }
 }
