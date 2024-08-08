@@ -1,7 +1,7 @@
 {
   "type": "module",
   "scripts": {
-    "build": "cd src && ao build --experimental-wasm-memory64",
+    "build": "cd src && ao build",
     "test": "node --experimental-wasm-memory64 node_modules/.bin/jest"
   },
   "devDependencies": {

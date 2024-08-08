@@ -1,6 +1,8 @@
-Handlers = require ".utils.handlers"
+--Handlers = require ".utils.handlers"
 Utils = require ".utils.utils"
 ao = require ".utils.ao"
+
+require(".utils.assignment").init(ao)
 
 local process = { _version = "0.0.1" }
 
