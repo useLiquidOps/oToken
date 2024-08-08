@@ -13,7 +13,7 @@ describe("Token standard functionalities", () => {
     const message = createMessage({ Action: "Info" });
     const res = handle(memory, message, env);
 
-    expect(true).toBe(true);
+    throw new Error(JSON.stringify(res))
     /*
     expect(res.Messages).toEqual(
       expect.arrayContaining([

@@ -302,10 +302,10 @@ function ao.result(result)
     return {Error = result.Error or ao.outbox.Error}
   end
   return {
-    Output = result.Output or ao.outbox.Output,
-    Messages = ao.outbox.Messages,
-    Spawns = ao.outbox.Spawns,
-    Assignments = ao.outbox.Assignments
+    Output = result.Output or ao.outbox.Output or {},
+    Messages = ao.outbox.Messages or {},
+    Spawns = ao.outbox.Spawns or {},
+    Assignments = ao.outbox.Assignments or {}
   }
 end
 
@@ -319,6 +319,34 @@ function ao.normalize_tags(msg)
   end
 
   return inputs
+end
+
+function ao.add_message_actions(msg)
+  function msg.reply(replyMsg)
+    replyMsg.Target = msg["Reply-To"] or (replyMsg.Target or msg.From)
+    replyMsg["X-Reference"] = msg["X-Reference"] or msg.Reference
+    replyMsg["X-Origin"] = msg["X-Origin"] or nil
+
+    return ao.send(replyMsg)
+  end
+
+  function msg.forward(target, forwardMsg)
+    -- Clone the message and add forwardMsg tags
+    local newMsg =  ao.sanitize(msg)
+    forwardMsg = forwardMsg or {}
+
+    for k,v in pairs(forwardMsg) do
+      newMsg[k] = v
+    end
+
+    -- Set forward-specific tags
+    newMsg.Target = target
+    newMsg["Reply-To"] = msg["Reply-To"] or msg.From
+    newMsg["X-Reference"] = msg["X-Reference"] or msg.Reference
+    newMsg["X-Origin"] = msg["X-Origin"] or msg.From
+
+    ao.send(newMsg)
+  end
 end
 
 return ao
