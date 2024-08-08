@@ -1,11 +1,10 @@
 local bint = require ".utils.bint"(1024)
 local mod = {}
 
----@param env Message
 function mod.init(_, env)
-  Name = Name or env.Tags.Name
-  Ticker = Ticker or env.Tags.Ticker
-  Logo = Logo or env.Tags.Logo
+  Name = Name or env.Process.Tags.Name
+  Ticker = Ticker or env.Process.Tags.Ticker
+  Logo = Logo or env.Process.Tags.Logo
   Denomination = Denomination or 12
   Balances = Balances or {}
 end
