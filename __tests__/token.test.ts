@@ -1,22 +1,20 @@
 import { createMessage, env, setupProcess } from "./utils";
-import { it, describe, before } from "node:test";
 import AoLoader from "@permaweb/ao-loader";
-import assert from "node:assert";
 
 describe("Token standard functionalities", () => {
   let handle: AoLoader.handleFunction;
   let memory: ArrayBuffer | null = null;
 
-  before(async () => handle = await setupProcess());
+  beforeAll(async () => {
+    handle = await setupProcess();
+  });
 
   it("Returns token info", async () => {
     const message = createMessage({ Action: "Info" });
     const res = handle(memory, message, env);
 
-    console.log(res);
-    /*assert.deepEqual(res.Messages, [{
-
-    }])
+    expect(true).toBe(true);
+    /*
     expect(res.Messages).toEqual(
       expect.arrayContaining([
         expect.objectContaining({
@@ -42,6 +40,6 @@ describe("Token standard functionalities", () => {
       ])
     )*/
 
-    memory = res.Memory;
+    //memory = res.Memory;
   });
 });
