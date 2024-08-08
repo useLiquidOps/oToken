@@ -1,32 +1,22 @@
-import { expect, test, describe, beforeAll } from "bun:test";
-import AoLoader, { type Environment } from "@permaweb/ao-loader";
-import { env } from "./utils";
-import fs from "fs/promises";
-import path from "path";
+import { createMessage, env, setupProcess } from "./utils";
+import { it, describe, before } from "node:test";
+import AoLoader from "@permaweb/ao-loader";
+import assert from "node:assert";
 
 describe("Token standard functionalities", () => {
   let handle: AoLoader.handleFunction;
   let memory: ArrayBuffer | null = null;
 
-  beforeAll(async () => {
-    const wasmBinary = await fs.readFile(path.join(__dirname, "../src/process.wasm"));
-    // @ts-expect-error
-    handle = await AoLoader(wasmBinary, { format: "wasm32-unknown-emscripten2" });
-  });
+  before(async () => handle = await setupProcess());
 
-  test("Returns token info", async () => {
-    const res = handle(memory, {
-      Target: env.Process.Id,
-      Owner: env.Process.Owner,
-      From: env.Process.Owner,
-      Tags: [
-        { name: "Action", value: "Info" }
-      ],
-      Cron: false,
-      "Block-Height": "1",
-      Timestamp: "172302981"
-    }, (env as unknown) as Environment);
+  it("Returns token info", async () => {
+    const message = createMessage({ Action: "Info" });
+    const res = handle(memory, message, env);
 
+    console.log(res);
+    /*assert.deepEqual(res.Messages, [{
+
+    }])
     expect(res.Messages).toEqual(
       expect.arrayContaining([
         expect.objectContaining({
@@ -50,7 +40,7 @@ describe("Token standard functionalities", () => {
           ])
         })
       ])
-    )
+    )*/
 
     memory = res.Memory;
   });

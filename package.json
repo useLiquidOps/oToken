@@ -1,10 +1,11 @@
 {
   "type": "module",
-  "devDependencies": {
-    "@types/bun": "latest"
+  "scripts": {
+    "build": "cd src && ao build --experimental-wasm-memory64"
   },
-  "peerDependencies": {
-    "typescript": "^5.0.0"
+  "devDependencies": {
+    "typescript": "^5.0.0",
+    "@types/node": "^22.1.0"
   },
   "dependencies": {
     "@permaweb/ao-loader": "^0.0.35"
