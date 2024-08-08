@@ -12,6 +12,32 @@ local balance = require ".token.balance"
 local token = require ".token.token"
 local transfer = require ".token.transfer"
 
+Handlers.add(
+  "token-info",
+  Handlers.utils.hasMatchingTag("Action", "Info"),
+  token.info
+)
+Handlers.add(
+  "token-total-supply",
+  Handlers.utils.hasMatchingTag("Action", "Total-Supply"),
+  token.total_supply
+)
+Handlers.add(
+  "token-balance",
+  Handlers.utils.hasMatchingTag("Action", "Balance"),
+  balance.balance
+)
+Handlers.add(
+  "token-all-balances",
+  Handlers.utils.hasMatchingTag("Action", "Balances"),
+  balance.balances
+)
+Handlers.add(
+  "token-transfer",
+  Handlers.utils.hasMatchingTag("Action", "Transfer"),
+  transfer
+)
+
 function process.handle(msg, env)
   -- setup env
   local setup_res = ao.init(msg, env)
@@ -52,13 +78,6 @@ function process.handle(msg, env)
 
   -- setup submodules
   token.init(msg, env)
-
-  if msg.Action == "Info" then token.info(msg)
-  elseif msg.Action == "Total-Supply" then token.total_supply(msg)
-  elseif msg.Action == "Balance" then balance.balance(msg)
-  elseif msg.Action == "Balances" then balance.balances(msg)
-  elseif msg.Action == "Transfer" then transfer(msg)
-  end
 
   return ao.result()
 end

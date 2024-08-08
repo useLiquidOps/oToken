@@ -32,12 +32,15 @@ export function createMessage(message: Partial<Omit<Message, "Tags">> & { [tagNa
   const nonTags = ["Signature", "Owner", "Target", "Anchor", "Data", "From", "Forwarded-By", "Epoch", "Nonce", "Block-Height", "Timestamp", "Hash-Chain", "Cron"];
   const tags: Tag[] = [];
   const constructedMsg: Record<string, unknown> = {
+    Id: "0000000000000000000000000000000000000000003",
     Target: environment.Process.Id,
     Owner: environment.Process.Owner,
     From: environment.Process.Owner,
     ["Block-Height"]: "1",
     Timestamp: "172302981",
-    Cron: false
+    Module: "examplemodule",
+    Cron: false,
+    Data: ""
   };
 
   for (const field in message) {
