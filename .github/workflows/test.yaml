@@ -38,6 +38,7 @@ jobs:
         uses: actions/download-artifact@v4
         with:
           name: ao-module-artifact
+          path: src
 
       - name: Setup Node
         uses: actions/setup-node@v2
