@@ -1,0 +1,48 @@
+name: Run Tests
+
+on: [push, pull_request]
+
+jobs:
+  build:
+    name: Build project
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v2
+
+      - name: Install ao
+        run: curl -L https://install_ao.g8way.io | bash
+
+      - name: Build module
+        run: |
+          cd src
+          $HOME/.ao/bin/ao build
+          cd ..
+
+      - name: Temporarily save ao module
+        uses: actions/upload-artifact@v4
+        with:
+          name: ao-module-artifact
+          path: src/process.wasm
+          retention-days: 1
+
+  test:
+    name: Run integration tests
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v2
+
+      - name: Retrive ao module
+        uses: actions/download-artifact@v4
+        with:
+          name: ao-module-artifact
+          path: src/process.wasm
+
+      - name: Setup Node
+        uses: actions/setup-node@v2
+        with:
+          node-version: "18"
+
+      - name: Run tests
+        run: npm test
