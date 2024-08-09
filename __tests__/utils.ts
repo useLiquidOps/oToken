@@ -1,4 +1,5 @@
-import AoLoader, { type Environment, type Message, type Tag } from "@permaweb/ao-loader";
+import AoLoader, { Options, type Environment, type Message, type Tag } from "@permaweb/ao-loader";
+import { expect } from "@jest/globals";
 import fs from "fs/promises";
 import path from "path";
 
@@ -22,10 +23,9 @@ export async function setupProcess() {
 
   return await AoLoader(wasmBinary, {
     format: "wasm64-unknown-emscripten-draft_2024_02_15",
-    // @ts-expect-error
     memoryLimit: "1-gb",
     computeLimit: 9_000_000_000
-  });
+  } as unknown as Options);
 }
 
 export function createMessage(message: Partial<Omit<Message, "Tags">> & { [tagName: string]: string }): Message {
@@ -58,14 +58,32 @@ export function createMessage(message: Partial<Omit<Message, "Tags">> & { [tagNa
   };
 }
 
-/*
-export function expectMessage(expected: Partial<Message>) {
-  return expect.objectContaining({
-    Owner: expected.Owner || expect.any(String),
-    Target: expected.Target || expect.any(String),
-    Tags: expected.Tags ? expect.arrayContaining(expected.Tags) : undefined,
-    Data: expected.Data || undefined,
-    From: expected.From || expect.any(String)
-  });
+expect.extend({
+  toBeIntegerStringEncoded(actual: unknown) {
+    const pass = typeof actual === "string" && actual.match(/^-?\d+$/) !== null;
+
+    return {
+      pass,
+      message: () => `expected ${this.utils.printReceived(actual)} to be a ${this.utils.printExpected("string encoded integer")}`
+    }
+  },
+  toBeArweaveAddress(actual: unknown) {
+    const pass = typeof actual === "string" && /^[a-z0-9_-]{43}$/i.test(actual);
+
+    return {
+      pass,
+      message: () => `expected ${this.utils.printReceived(actual)} to be an ${this.utils.printExpected("Arweave address")}`
+    }
+  }
+});
+
+declare module "expect" {
+  interface AsymmetricMatchers {
+    toBeIntegerStringEncoded(): void;
+    toBeArweaveAddress(): void;
+  }
+  interface Matchers<R> {
+    toBeIntegerStringEncoded(): R;
+    toBeArweaveAddress(): R;
+  }
 }
-*/
