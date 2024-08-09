@@ -12,7 +12,7 @@ describe("Token standard functionalities", () => {
 
   it("Returns token info", async () => {
     const message = createMessage({ Action: "Info" });
-    const res = handle(memory, message, env);
+    const res = await handle(memory, message, env);
 
     expect(res.Messages).toEqual(
       expect.arrayContaining([
@@ -43,5 +43,41 @@ describe("Token standard functionalities", () => {
     memory = res.Memory;
   });
 
-  //it("")
+  it("Returns token total supply", async () => {
+    const message = createMessage({ Action: "Total-Supply" });
+    const res = await handle(memory, message, env);
+
+    expect(res.Messages).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          Target: message.From,
+          Tags: expect.arrayContaining([
+            expect.objectContaining({
+              name: "Total-Supply",
+              value: expect.toBeIntegerStringEncoded()
+            }),
+            expect.objectContaining({
+              name: "Ticker",
+              value: expect.any(String)
+            })
+          ]),
+          Data: expect.toBeIntegerStringEncoded()
+        })
+      ])
+    )
+
+    memory = res.Memory;
+  });
+
+  it("Returns wallet balance", async () => {
+
+  });
+
+  it("Returns all wallet balances", async () => {
+
+  });
+
+  it("Transfers assets", async () => {
+    
+  });
 });

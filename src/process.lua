@@ -55,6 +55,9 @@ function process.handle(msg, env)
   -- add reply and forward actions
   ao.add_message_actions(msg)
 
+  -- setup submodules
+  token.init()
+
   -- eval handlers
   local co = coroutine.create(function() return pcall(Handlers.evaluate, msg, ao.env) end)
   local _, status, result = coroutine.resume(co)
@@ -75,9 +78,6 @@ function process.handle(msg, env)
 
     return ao.result()
   end
-
-  -- setup submodules
-  token.init(msg, env)
 
   return ao.result()
 end

@@ -1,10 +1,10 @@
 local bint = require ".utils.bint"(1024)
 local mod = {}
 
-function mod.init(_, env)
-  Name = Name or env.Process.Tags.Name
-  Ticker = Ticker or env.Process.Tags.Ticker
-  Logo = Logo or env.Process.Tags.Logo
+function mod.init()
+  Name = Name or ao.env.Process.Tags.Name
+  Ticker = Ticker or ao.env.Process.Tags.Ticker
+  Logo = Logo or ao.env.Process.Tags.Logo
   Denomination = Denomination or 12
   Balances = Balances or {}
 end
