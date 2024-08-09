@@ -1,9 +1,10 @@
-import AoLoader, { Options, type Environment, type Message, type Tag } from "@permaweb/ao-loader";
+import type { Environment, Message, Tag } from "@permaweb/ao-loader";
+import AoLoader from "@permaweb/ao-loader";
 import { expect } from "@jest/globals";
 import fs from "fs/promises";
 import path from "path";
 
-const environment = {
+export const env: Environment = {
   Process: {
     Id: "0000000000000000000000000000000000000000000",
     Owner: "0000000000000000000000000000000000000000001",
@@ -15,9 +16,6 @@ const environment = {
   }
 };
 
-// for types
-export const env = environment as unknown as Environment;
-
 export async function setupProcess() {
   const wasmBinary = await fs.readFile(path.join(__dirname, "../src/process.wasm"));
 
@@ -25,7 +23,7 @@ export async function setupProcess() {
     format: "wasm64-unknown-emscripten-draft_2024_02_15",
     memoryLimit: "1-gb",
     computeLimit: 9_000_000_000
-  } as unknown as Options);
+  });
 }
 
 export function createMessage(message: Partial<Omit<Message, "Tags">> & { [tagName: string]: string }): Message {
@@ -33,9 +31,9 @@ export function createMessage(message: Partial<Omit<Message, "Tags">> & { [tagNa
   const tags: Tag[] = [];
   const constructedMsg: Record<string, unknown> = {
     Id: "0000000000000000000000000000000000000000003",
-    Target: environment.Process.Id,
-    Owner: environment.Process.Owner,
-    From: environment.Process.Owner,
+    Target: env.Process.Id,
+    Owner: env.Process.Owner,
+    From: env.Process.Owner,
     ["Block-Height"]: "1",
     Timestamp: "172302981",
     Module: "examplemodule",
