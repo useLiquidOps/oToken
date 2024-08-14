@@ -1,6 +1,8 @@
 import { createMessage, env, setupProcess } from "./utils";
 import AoLoader from "@permaweb/ao-loader";
 import { expect } from "@jest/globals";
+import { writeFileSync } from "fs"
+import { join } from "path"
 
 describe("Token standard functionalities", () => {
   let handle: AoLoader.handleFunction;

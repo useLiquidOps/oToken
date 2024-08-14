@@ -12,6 +12,8 @@ local balance = require ".token.balance"
 local token = require ".token.token"
 local transfer = require ".token.transfer"
 
+local pool = require ".borrow.pool"
+
 Handlers.add(
   "token-info",
   Handlers.utils.hasMatchingTag("Action", "Info"),
@@ -57,6 +59,7 @@ function process.handle(msg, env)
 
   -- setup submodules
   token.init()
+  pool.init()
 
   -- eval handlers
   local co = coroutine.create(function() return pcall(Handlers.evaluate, msg, ao.env) end)
