@@ -80,24 +80,20 @@ function handlers.once(...)
 end
 
 function handlers.add(...)
-  local name, pattern, handle, maxRuns
   local args = select("#", ...)
-  if args == 2 then
-    name = select(1, ...)
-    pattern = select(1, ...)
-    handle = select(2, ...)
-    maxRuns = nil
-  elseif args == 3 then
-    name = select(1, ...)
+  local name = select(1, ...)
+  local pattern = select(1, ...)
+  local handle = select(2, ...)
+
+  local maxRuns, errorHandler
+
+  if args >= 3 then
     pattern = select(2, ...)
     handle = select(3, ...)
-    maxRuns = nil
-  else 
-    name = select(1, ...)
-    pattern = select(2, ...)
-    handle = select(3, ...)
-    maxRuns = select(4, ...)
   end
+  if args >= 4 then maxRuns = select(4, ...) end
+  if args == 5 then errorHandler = select(5, ...) end
+
   assertAddArgs(name, pattern, handle, maxRuns)
   
   handle = handlers.generateResolver(handle)
@@ -109,33 +105,30 @@ function handlers.add(...)
     handlers.list[idx].pattern = pattern
     handlers.list[idx].handle = handle
     handlers.list[idx].maxRuns = maxRuns
+    handlers.list[idx].errorHandler = errorHandler
   else
     -- not found then add    
-    table.insert(handlers.list, { pattern = pattern, handle = handle, name = name, maxRuns = maxRuns })
+    table.insert(handlers.list, { pattern = pattern, handle = handle, name = name, maxRuns = maxRuns, errorHandler = errorHandler })
 
   end
   return #handlers.list
 end
 
 function handlers.append(...)
-  local name, pattern, handle, maxRuns
   local args = select("#", ...)
-  if args == 2 then
-    name = select(1, ...)
-    pattern = select(1, ...)
-    handle = select(2, ...)
-    maxRuns = nil
-  elseif args == 3 then
-    name = select(1, ...)
+  local name = select(1, ...)
+  local pattern = select(1, ...)
+  local handle = select(2, ...)
+
+  local maxRuns, errorHandler
+
+  if args >= 3 then
     pattern = select(2, ...)
     handle = select(3, ...)
-    maxRuns = nil
-  else 
-    name = select(1, ...)
-    pattern = select(2, ...)
-    handle = select(3, ...)
-    maxRuns = select(4, ...)
   end
+  if args >= 4 then maxRuns = select(4, ...) end
+  if args == 5 then errorHandler = select(5, ...) end
+
   assertAddArgs(name, pattern, handle, maxRuns)
   
   handle = handlers.generateResolver(handle)
@@ -146,33 +139,29 @@ function handlers.append(...)
     handlers.list[idx].pattern = pattern
     handlers.list[idx].handle = handle
     handlers.list[idx].maxRuns = maxRuns
+    handlers.list[idx].errorHandler = errorHandler
   else
-    
-    table.insert(handlers.list, { pattern = pattern, handle = handle, name = name, maxRuns = maxRuns })
+    table.insert(handlers.list, { pattern = pattern, handle = handle, name = name, maxRuns = maxRuns, errorHandler = errorHandler })
   end
 
   
 end
 
 function handlers.prepend(...)
-  local name, pattern, handle, maxRuns
   local args = select("#", ...)
-  if args == 2 then
-    name = select(1, ...)
-    pattern = select(1, ...)
-    handle = select(2, ...)
-    maxRuns = nil
-  elseif args == 3 then
-    name = select(1, ...)
+  local name = select(1, ...)
+  local pattern = select(1, ...)
+  local handle = select(2, ...)
+
+  local maxRuns, errorHandler
+
+  if args >= 3 then
     pattern = select(2, ...)
     handle = select(3, ...)
-    maxRuns = nil
-  else 
-    name = select(1, ...)
-    pattern = select(2, ...)
-    handle = select(3, ...)
-    maxRuns = select(4, ...)
   end
+  if args >= 4 then maxRuns = select(4, ...) end
+  if args == 5 then errorHandler = select(5, ...) end
+
   assertAddArgs(name, pattern, handle, maxRuns)
 
   handle = handlers.generateResolver(handle)
@@ -184,8 +173,9 @@ function handlers.prepend(...)
     handlers.list[idx].pattern = pattern
     handlers.list[idx].handle = handle
     handlers.list[idx].maxRuns = maxRuns
+    handlers.list[idx].errorHandler = errorHandler
   else  
-    table.insert(handlers.list, 1, { pattern = pattern, handle = handle, name = name, maxRuns = maxRuns })
+    table.insert(handlers.list, 1, { pattern = pattern, handle = handle, name = name, maxRuns = maxRuns, errorHandler = errorHandler })
   end
 
   
@@ -196,13 +186,13 @@ function handlers.before(handleName)
 
   local idx = findIndexByProp(handlers.list, "name", handleName)
   return {
-    add = function (name, pattern, handle, maxRuns) 
+    add = function (name, pattern, handle, maxRuns, errorHandler) 
       assertAddArgs(name, pattern, handle, maxRuns)
       
       handle = handlers.generateResolver(handle)
       
       if idx then
-        table.insert(handlers.list, idx, { pattern = pattern, handle = handle, name = name, maxRuns = maxRuns })
+        table.insert(handlers.list, idx, { pattern = pattern, handle = handle, name = name, maxRuns = maxRuns, errorHandler = errorHandler })
       end
       
     end
@@ -213,13 +203,13 @@ function handlers.after(handleName)
   assert(type(handleName) == 'string', 'Handler name MUST be a string')
   local idx = findIndexByProp(handlers.list, "name", handleName)
   return {
-    add = function (name, pattern, handle, maxRuns)
+    add = function (name, pattern, handle, maxRuns, errorHandler)
       assertAddArgs(name, pattern, handle, maxRuns)
       
       handle = handlers.generateResolver(handle)
       
       if idx then
-        table.insert(handlers.list, idx + 1, { pattern = pattern, handle = handle, name = name, maxRuns = maxRuns })
+        table.insert(handlers.list, idx + 1, { pattern = pattern, handle = handle, name = name, maxRuns = maxRuns, errorHandler = errorHandler })
       end
       
     end
@@ -277,7 +267,8 @@ function handlers.evaluate(msg, env)
         -- each handle function can accept, the msg, env
         local status, err = pcall(o.handle, msg, env)
         if not status then
-          error(err)
+          if not o.errorHandler then error(err)
+          else pcall(o.errorHandler, msg, env, err) end
         end
         -- remove handler if maxRuns is reached. maxRuns can be either a number or "inf"
         if o.maxRuns ~= nil and o.maxRuns ~= "inf" then
