@@ -32,7 +32,7 @@ function mint.handler(msg)
 
   -- update stored quantities (balance, available, total supply)
   Balances[sender] = (Balances[sender] or bint.zero()) + mintQty
-  Available = (Available or bint.zero()) + mintQty
+  Available = (Available or bint.zero()) + quantity
   TotalSupply = (TotalSupply or bint.zero()) + mintQty
 
   ao.send({

@@ -19,7 +19,7 @@ local function price(msg)
   local totalPooled = Available + Lent
 
   -- calculate price based on the underlying value of the total supply
-  local price = bint.udiv(
+  local returnPrice = bint.udiv(
     totalPooled * quantity,
     TotalSupply
   )
@@ -27,7 +27,7 @@ local function price(msg)
   ao.send({
     Target = msg.From,
     Action = "Price",
-    Price = tostring(price)
+    Price = tostring(returnPrice)
   })
 end
 
