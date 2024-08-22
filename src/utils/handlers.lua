@@ -1,3 +1,6 @@
+-- Copyright (c) 2024 Forward Research
+-- Code from the aos codebase: https://github.com/permaweb/aos
+
 local handlers = { _version = "0.0.5" }
 local coroutine = require('coroutine')
 local utils = require('.utils.utils')

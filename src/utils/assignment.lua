@@ -1,4 +1,3 @@
-
 -- Copyright (c) 2024 Forward Research
 -- Code from the aos codebase: https://github.com/permaweb/aos
 

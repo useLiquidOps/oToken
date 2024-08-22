@@ -1,3 +1,6 @@
+-- Copyright (c) 2024 Forward Research
+-- Code from the aos codebase: https://github.com/permaweb/aos
+
 local utils = { _version = "0.0.5" }
 
 function utils.matchesPattern(pattern, value, msg)

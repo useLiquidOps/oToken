@@ -1,3 +1,6 @@
+-- Copyright (c) 2024 Forward Research
+-- Code from the aos codebase: https://github.com/permaweb/aos
+
 local _utils = { _version = "0.0.1" }
 
 local _ = require('.utils.utils')
