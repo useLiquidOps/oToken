@@ -15,6 +15,7 @@ local transfer = require ".token.transfer"
 local pool = require ".borrow.pool"
 
 local mint = require ".supply.mint"
+local price = require ".supply.price"
 
 Handlers.add(
   "supply-mint",
@@ -27,6 +28,11 @@ Handlers.add(
   mint.handler,
   nil,
   mint.error
+)
+Handlers.add(
+  "supply-price",
+  Handlers.utils.hasMatchingTag("Action", "Get-Price"),
+  price
 )
 
 Handlers.add(

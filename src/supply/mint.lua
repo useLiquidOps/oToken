@@ -7,7 +7,7 @@ local mint = {}
 function mint.handler(msg)
   assert(
     assertions.isTokenQuantity(msg.Tags.Quantity),
-    "Invalid transfer quantity"
+    "Invalid incoming transfer quantity"
   )
 
   -- quantity of tokens supplied

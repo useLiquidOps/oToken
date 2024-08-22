@@ -1,3 +1,34 @@
-local mod = {}
+local assertions = require ".utils.assertions"
+local bint = require ".utils.bint"(1024)
 
-return mod
+---@type HandlerFunction
+local function price(msg)
+  -- default qty
+  local quantity = bint.one()
+
+  -- optional provided qty
+  if msg.Tags.Quantity then
+    assert(
+      assertions.isTokenQuantity(msg.Tags.Quantity),
+      "Invalid token quantity"
+    )
+    quantity = bint(msg.Tags.Quantity)
+  end
+
+  -- total tokens pooled
+  local totalPooled = Available + Lent
+
+  -- calculate price based on the underlying value of the total supply
+  local price = bint.udiv(
+    totalPooled * quantity,
+    TotalSupply
+  )
+
+  ao.send({
+    Target = msg.From,
+    Action = "Price",
+    Price = tostring(price)
+  })
+end
+
+return price
