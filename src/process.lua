@@ -24,7 +24,9 @@ Handlers.add(
       msg.Tags["X-Action"] == "Mint" and
       msg.From == Token
   end,
-  mint
+  mint.handler,
+  nil,
+  mint.error
 )
 
 Handlers.add(

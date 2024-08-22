@@ -1,8 +1,10 @@
 local assertions = require ".utils.assertions"
 local bint = require ".utils.bint"(1024)
 
+local mint = {}
+
 ---@type HandlerFunction
-local function mint(msg)
+function mint.handler(msg)
   assert(
     assertions.isTokenQuantity(msg.Tags.Quantity),
     "Invalid transfer quantity"
@@ -38,6 +40,24 @@ local function mint(msg)
     Action = "Mint-Confirmation",
     ["Mint-Quantity"] = tostring(mintQty),
     ["Supplied-Quantity"] = msg.Tags.Quantity
+  })
+end
+
+---@param msg Message
+---@param _ Message
+---@param err unknown
+function mint.error(msg, _, err)
+  ao.send({
+    Target = msg.From,
+    Action = "Transfer",
+    Quantity = msg.Tags.Quantity,
+    Recipient = msg.Tags.Sender
+  })
+  ao.send({
+    Target = msg.Tags.Sender,
+    Action = "Mint-Error",
+    Error = tostring(err),
+    ["Refund-Quantity"] = msg.Tags.Quantity
   })
 end
 
