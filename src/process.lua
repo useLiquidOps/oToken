@@ -16,6 +16,7 @@ local pool = require ".borrow.pool"
 
 local mint = require ".supply.mint"
 local price = require ".supply.price"
+local reserves = require ".supply.reserves"
 
 Handlers.add(
   "supply-mint",
@@ -33,6 +34,11 @@ Handlers.add(
   "supply-price",
   Handlers.utils.hasMatchingTag("Action", "Get-Price"),
   price
+)
+Handlers.add(
+  "supply-reserves",
+  Handlers.utils.hasMatchingTag("Action", "Get-Reserves"),
+  reserves
 )
 
 Handlers.add(
