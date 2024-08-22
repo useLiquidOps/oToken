@@ -7,6 +7,7 @@ function mod.init()
   Logo = Logo or ao.env.Process.Tags.Logo
   Denomination = Denomination or 12
   Balances = Balances or {}
+  TotalSupply = TotalSupply or bint.zero()
 end
 
 ---@param msg Message
@@ -22,17 +23,11 @@ end
 
 ---@param msg Message
 function mod.total_supply(msg)
-  local total_supply = bint.zero()
-
-  for _, balance in pairs(Balances) do
-    total_supply = total_supply + balance
-  end
-
   ao.send({
     Target = msg.From,
-    ["Total-Supply"] = tostring(total_supply),
+    ["Total-Supply"] = tostring(TotalSupply),
     Ticker = Ticker,
-    Data = tostring(total_supply)
+    Data = tostring(TotalSupply)
   })
 end
 

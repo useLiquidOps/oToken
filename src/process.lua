@@ -14,6 +14,19 @@ local transfer = require ".token.transfer"
 
 local pool = require ".borrow.pool"
 
+local mint = require ".supply.mint"
+
+Handlers.add(
+  "supply-mint",
+  ---@param msg Message
+  function (msg)
+    return msg.Tags.Action == "Credit-Notice" and
+      msg.Tags["X-Action"] == "Mint" and
+      msg.From == Token
+  end,
+  mint
+)
+
 Handlers.add(
   "token-info",
   Handlers.utils.hasMatchingTag("Action", "Info"),
