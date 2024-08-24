@@ -13,6 +13,7 @@ end
 ---@param qty Bint Quantity to determinate the value of
 ---@param from string From token ticker
 ---@param to string? Price unit token ticker
+---@return Bint
 function mod.getPrice(qty, from, to)
   ---@type OracleData
   local data = ao.send({
@@ -23,8 +24,10 @@ function mod.getPrice(qty, from, to)
 
   -- return USD value if no target asset was provided
   if not to then
-
+    -- TODO bint transformation
   end
+
+  -- TODO: calculate price based on the usd price relations
 end
 
 return mod
