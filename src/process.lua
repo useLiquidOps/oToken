@@ -108,8 +108,7 @@ function process.handle(msg, env)
   end
 
   if not status then
-    ao.send({
-      Target = msg.From,
+    msg.reply({
       Action = msg.Action and msg.Action .. "-Error" or nil,
       Error = tostring(result)
     })

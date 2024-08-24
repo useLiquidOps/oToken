@@ -24,8 +24,7 @@ local function price(msg)
     TotalSupply
   )
 
-  ao.send({
-    Target = msg.From,
+  msg.reply({
     Action = "Price",
     Price = tostring(returnPrice)
   })

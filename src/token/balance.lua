@@ -8,8 +8,7 @@ function mod.balance(msg)
   local account = msg.Tags.Target or msg.From
   local balance = tostring(Balances[account] or bint.zero())
 
-  ao.send({
-    Target = msg.From,
+  msg.reply({
     Balance = balance,
     Ticker = Ticker,
     Data = balance
@@ -25,8 +24,7 @@ function mod.balances(msg)
     raw_balances[addr] = tostring(bal)
   end
 
-  ao.send({
-    Target = msg.From,
+  msg.reply({
     Ticker = Ticker,
     Data = json.encode(raw_balances)
   })

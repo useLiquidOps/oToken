@@ -1,7 +1,6 @@
 ---@type HandlerFunction
 local function reserves(msg)
-  ao.send({
-    Target = msg.From,
+  msg.reply({
     Action = "Reserves",
     Available = tostring(Available),
     Lent = tostring(Lent)

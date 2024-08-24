@@ -12,8 +12,7 @@ end
 
 ---@param msg Message
 function mod.info(msg)
-  ao.send({
-    Target = msg.From,
+  msg.reply({
     Name = Name,
     Ticker = Ticker,
     Logo = Logo,
@@ -23,8 +22,7 @@ end
 
 ---@param msg Message
 function mod.total_supply(msg)
-  ao.send({
-    Target = msg.From,
+  msg.reply({
     ["Total-Supply"] = tostring(TotalSupply),
     Ticker = Ticker,
     Data = tostring(TotalSupply)

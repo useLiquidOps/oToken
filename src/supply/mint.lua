@@ -35,6 +35,14 @@ function mint.handler(msg)
   Available = (Available or bint.zero()) + quantity
   TotalSupply = (TotalSupply or bint.zero()) + mintQty
 
+  -- TODO: maybe we could msg.reply, but the target of that would be
+  -- the token process that sent the "Credit-Notice"
+  -- we need to discuss with the ao team if the reply is actually forwarded
+  -- to the original user/process who sent the transfer or if we need
+  -- to add some custom tags that directly reply to that user
+  -- (same applies to all "Credit-Notice" handlers)
+  -- UPDATE: looking at the standard token code, this probably needs to be
+  -- implemented in a separate PR
   ao.send({
     Target = sender,
     Action = "Mint-Confirmation",

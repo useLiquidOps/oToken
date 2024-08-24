@@ -35,8 +35,7 @@ function mod.handler(msg)
   Available = (Available or bint.zero()) - rewardQty
   TotalSupply = (TotalSupply or bint.zero()) - quantity
 
-  ao.send({
-    Target = msg.From,
+  msg.reply({
     Action = "Redeem-Confirmation",
     ["Earned-Quantity"] = tostring(rewardQty),
     ["Burned-Quantity"] = tostring(quantity)
@@ -47,8 +46,7 @@ end
 ---@param _ Message
 ---@param err unknown
 function mod.error(msg, _, err)
-  ao.send({
-    Target = msg.From,
+  msg.reply({
     Action = "Redeem-Error",
     ["Refund-Quantity"] = msg.Tags.Quantity,
     Error = tostring(err),
