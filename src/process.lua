@@ -93,8 +93,8 @@ function process.handle(msg, env)
   ao.add_message_actions(msg)
 
   -- setup submodules
-  token.init()
   pool.init()
+  token.init()
 
   -- eval handlers
   local co = coroutine.create(function() return pcall(Handlers.evaluate, msg, ao.env) end)
