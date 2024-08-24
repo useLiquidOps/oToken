@@ -1,8 +1,10 @@
 local assertions = require ".utils.assertions"
 local bint = require ".utils.bint"(1024)
 
+local mod = {}
+
 ---@type HandlerFunction
-local function redeem(msg)
+function mod.handler(msg)
   assert(
     assertions.isTokenQuantity(msg.Tags.Quantity),
     "Invalid incoming transfer quantity"
@@ -41,4 +43,16 @@ local function redeem(msg)
   })
 end
 
-return redeem
+---@param msg Message
+---@param _ Message
+---@param err unknown
+function mod.error(msg, _, err)
+  ao.send({
+    Target = msg.From,
+    Action = "Redeem-Error",
+    ["Refund-Quantity"] = msg.Tags.Quantity,
+    Error = tostring(err),
+  })
+end
+
+return mod
