@@ -1,3 +1,4 @@
+local bint = require ".utils.bint"(1024)
 local json = require "json"
 
 local mod = {}
@@ -32,16 +33,29 @@ function mod.getPrice(qty, from, to)
   -- denominator to use integers instead of floating point numbers
   local denominator = oracleUtils.getFractionsCount(data[from].v)
 
+  -- usd value
+  local usdValDenominated = qty * oracleUtils.getDenominated(data[from].v, denominator)
+
   -- return USD value if no target asset was provided
   if not to then
-    -- TODO bint transformation
+    return bint.udiv(
+      usdValDenominated,
+      bint(10 ^ denominator)
+    )
   end
 
-  --denominator = 10 ^ orac
   -- select larger denominator for more precision
   denominator = oracleUtils.getMultiplier(data[from].v, data[to].v)
 
-  -- TODO: calculate price based on the usd price relations
+  --
+  -- TODO: figure out how to account for token denominations (maybe warp will store denominated values?)
+  --
+
+  -- calculate price based on the usd price relations
+  return bint.udiv(
+    usdValDenominated,
+    oracleUtils.getDenominated(data[to].v, denominator)
+  )
 end
 
 -- Get multiplier that can be used to create an integer from a float
@@ -59,6 +73,20 @@ end
 ---@param val number Full number
 function oracleUtils.getFractionsCount(val)
   return string.len(string.match(tostring(val), "%.(.*)"))
+end
+
+-- Get a float's biginteger denominated form
+---@param val number Floating point value
+---@param denominator number Integer denominator
+function oracleUtils.getDenominated(val, denominator)
+  local denominated = string.gsub(tostring(val), "%.", "")
+  local fractions = oracleUtils.getFractionsCount(val)
+
+  if fractions < denominator then
+    denominated = denominated .. string.rep("0", denominator - fractions)
+  end
+
+  return bint(denominated)
 end
 
 return mod
