@@ -21,12 +21,7 @@ local redeem = require ".supply.redeem"
 
 Handlers.add(
   "supply-mint",
-  ---@param msg Message
-  function (msg)
-    return msg.Tags.Action == "Credit-Notice" and
-      msg.Tags["X-Action"] == "Mint" and
-      msg.From == Token
-  end,
+  { From = Token, Action = "Credit-Notice", ["X-Action"] = "Mint" },
   mint.handler,
   nil,
   mint.error
