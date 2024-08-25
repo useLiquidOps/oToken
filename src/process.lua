@@ -14,6 +14,8 @@ local transfer = require ".token.transfer"
 
 local pool = require ".borrow.pool"
 
+local oracle = require ".liquidations.oracle"
+
 local mint = require ".supply.mint"
 local price = require ".supply.price"
 local reserves = require ".supply.reserves"
@@ -22,6 +24,7 @@ local redeem = require ".supply.redeem"
 -- setup must be in this order (as the first handlers)
 Handlers.once({}, pool.setup)
 Handlers.once({}, token.setup)
+Handlers.once({}, oracle.setup)
 
 Handlers.add(
   "supply-mint",
