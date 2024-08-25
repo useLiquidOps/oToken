@@ -2,7 +2,8 @@ local bint = require ".utils.bint"(1024)
 
 local mod = {}
 
-function mod.init()
+---@type HandlerFunction
+function mod.setup()
   -- token that can be lent/borrowed
   Token = Token or ao.env.Process.Tags.Token
 

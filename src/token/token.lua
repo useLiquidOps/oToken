@@ -3,38 +3,32 @@ local bint = require ".utils.bint"(1024)
 local utils = {}
 local mod = {}
 
-function mod.init()
-  if not Name or not Ticker or not Logo then
-    -- empty values so we don't ask again for the token info
-    Name = ""
-    Ticker = ""
-    Logo = ""
+---@type HandlerFunction
+function mod.setup()
+  ---@type Message
+  local tokenInfo = ao.send({
+    Target = Token,
+    Action = "Info"
+  }).receive()
 
-    ---@type Message
-    local tokenInfo = ao.send({
-      Target = Token,
-      Action = "Info"
-    }).receive()
+  Name = "LiquidOps " .. tokenInfo.Tags.Name
+  Ticker = "lo" .. tokenInfo.Tags.Ticker
 
-    Name = "LiquidOps " .. tokenInfo.Tags.Name
-    Ticker = "lo" .. tokenInfo.Tags.Ticker
+  -- the wrapped token's denomination
+  WrappedDenomination = tonumber(tokenInfo.Tags.Denomination)
 
-    -- the wrapped token's denomination
-    WrappedDenomination = tonumber(tokenInfo.Tags.Denomination)
+  -- submit logo to arweave
+  ao.send({
+    Target = ao.id,
+    Action = "Set-Logo",
+    Data = utils.getLogo(tokenInfo.Tags.Logo)
+  })
 
-    -- submit logo to arweave
-    ao.send({
-      Target = ao.id,
-      Action = "Set-Logo",
-      Data = utils.getLogo(tokenInfo.Tags.Logo)
-    })
-
-    -- set logo
-    Handlers.once(
-      { From = ao.id, Action = "Set-Logo" },
-      function (msg) Logo = msg.Id end
-    )
-  end
+  -- set logo
+  Handlers.once(
+    { From = ao.id, Action = "Set-Logo" },
+    function (msg) Logo = msg.Id end
+  )
 
   Denomination = Denomination or 12
   Balances = Balances or {}

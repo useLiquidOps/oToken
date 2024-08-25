@@ -19,6 +19,10 @@ local price = require ".supply.price"
 local reserves = require ".supply.reserves"
 local redeem = require ".supply.redeem"
 
+-- setup must be in this order (as the first handlers)
+Handlers.once({}, pool.setup)
+Handlers.once({}, token.setup)
+
 Handlers.add(
   "supply-mint",
   { From = Token, Action = "Credit-Notice", ["X-Action"] = "Mint" },
@@ -86,10 +90,6 @@ function process.handle(msg, env)
 
   -- add reply and forward actions
   ao.add_message_actions(msg)
-
-  -- setup submodules
-  pool.init()
-  token.init()
 
   -- eval handlers
   local co = coroutine.create(function() return pcall(Handlers.evaluate, msg, ao.env) end)
