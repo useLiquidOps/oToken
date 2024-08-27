@@ -18,22 +18,23 @@ function mod.handler(msg)
 
   -- total tokens pooled
   local totalPooled = Available + Lent
+  local totalSupply = bint(TotalSupply)
 
   -- if the total pooled and the total supply is not
   -- the same, then the reward qty will be higher
   -- than the burn qty, because there was already
   -- some interest coming in
-  if not bint.eq(totalPooled, TotalSupply) then
+  if not bint.eq(totalPooled, totalSupply) then
     rewardQty = bint.udiv(
       totalPooled * quantity,
-      TotalSupply
+      totalSupply
     )
   end
 
   -- update stored quantities (balance, available, total supply)
   Balances[msg.From] = (Balances[msg.From] or bint.zero()) - quantity
   Available = (Available or bint.zero()) - rewardQty
-  TotalSupply = (TotalSupply or bint.zero()) - quantity
+  TotalSupply = tostring(totalSupply - quantity)
 
   msg.reply({
     Action = "Redeem-Confirmation",

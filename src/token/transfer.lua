@@ -15,14 +15,14 @@ local function transfer(msg)
   )
 
   local quantity = bint(msg.Tags.Quantity)
+  local walletBalance = bint(Balances[msg.From] or "0")
 
   -- validate user balance
-  assert(Balances[msg.From] ~= nil, "No balance for this user")
-  assert(bint.ule(quantity, Balances[msg.From]), "Not enought tokens for this transfer")
+  assert(bint.ule(quantity, walletBalance), "Not enought tokens for this transfer")
 
   -- update balances
-  Balances[target] = (Balances[target] or bint.zero()) + quantity
-  Balances[msg.From] = Balances[msg.From] - quantity
+  Balances[target] = tostring(bint(Balances[target]) + quantity)
+  Balances[msg.From] = tostring(walletBalance - quantity)
 
   -- send notices about the transfer
   if not msg.Tags.Cast then

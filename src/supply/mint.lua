@@ -21,11 +21,12 @@ function mint.handler(msg)
 
   -- total tokens pooled
   local totalPooled = Available + Lent
+  local totalSupply = bint(TotalSupply or "0")
 
   if not bint.eq(totalPooled, bint.zero()) then
     -- mint in proportion to the already supplied tokens
     mintQty = bint.udiv(
-      TotalSupply * quantity,
+      totalSupply * quantity,
       totalPooled
     )
   end
@@ -33,7 +34,7 @@ function mint.handler(msg)
   -- update stored quantities (balance, available, total supply)
   Balances[sender] = (Balances[sender] or bint.zero()) + mintQty
   Available = (Available or bint.zero()) + quantity
-  TotalSupply = (TotalSupply or bint.zero()) + mintQty
+  TotalSupply = tostring(totalSupply + mintQty)
 
   -- TODO: maybe we could msg.reply, but the target of that would be
   -- the token process that sent the "Credit-Notice"

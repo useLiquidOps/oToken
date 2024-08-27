@@ -1,5 +1,3 @@
-local bint = require ".utils.bint"(1024)
-
 local utils = {}
 local mod = {}
 
@@ -32,7 +30,7 @@ function mod.setup()
 
   Denomination = Denomination or 12
   Balances = Balances or {}
-  TotalSupply = TotalSupply or bint.zero()
+  TotalSupply = TotalSupply or "0"
 end
 
 ---@param msg Message
