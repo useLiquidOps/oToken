@@ -21,10 +21,15 @@ local price = require ".supply.price"
 local reserves = require ".supply.reserves"
 local redeem = require ".supply.redeem"
 
--- setup must be in this order (as the first handlers)
-Handlers.once({}, pool.setup)
-Handlers.once({}, token.setup)
-Handlers.once({}, oracle.setup)
+-- setup must be in this order (as the first handler)
+Handlers.once(
+  function () return "continue" end,
+  function (msg, env)
+    pool.setup(msg, env)
+    token.setup(msg, env)
+    oracle.setup(msg, env)
+  end
+)
 
 Handlers.add(
   "supply-mint",

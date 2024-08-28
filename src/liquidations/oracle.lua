@@ -6,6 +6,7 @@ local oracleUtils = {}
 
 ---@alias OracleData table<string, { t: number, a: string, v: number }>
 
+---@type HandlerFunction
 function mod.setup()
   -- oracle process id
   Oracle = Oracle or ao.env.Process.Tags.Oracle
