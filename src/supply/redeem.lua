@@ -13,6 +13,15 @@ function mod.handler(msg)
   -- amount of tokens to burn
   local quantity = bint(msg.Tags.Quantity)
 
+  -- loToken wallet balance for sender
+  local walletBalance = bint(Balances[msg.From] or "0")
+
+  -- check if the user has enough tokens to burn
+  assert(
+    bint.ule(quantity, walletBalance),
+    "Not enough tokens to burn for this wallet"
+  )
+
   -- amount of tokens to be sent out
   local rewardQty = quantity
 
@@ -39,7 +48,7 @@ function mod.handler(msg)
   )
 
   -- update stored quantities (balance, available, total supply)
-  Balances[msg.From] = tostring(bint(Balances[msg.From] or "0") - quantity)
+  Balances[msg.From] = tostring(walletBalance - quantity)
   Available = tostring(availableTokens - rewardQty)
   TotalSupply = tostring(totalSupply - quantity)
 
