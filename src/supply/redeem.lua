@@ -32,6 +32,12 @@ function mod.handler(msg)
     )
   end
 
+  -- make sure there is enough tokens available to redeem for
+  assert(
+    bint.ult(rewardQty, availableTokens),
+    "Not enough available tokens to redeem for"
+  )
+
   -- update stored quantities (balance, available, total supply)
   Balances[msg.From] = tostring(bint(Balances[msg.From] or "0") - quantity)
   Available = tostring(availableTokens - rewardQty)
