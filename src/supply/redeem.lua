@@ -17,7 +17,8 @@ function mod.handler(msg)
   local rewardQty = quantity
 
   -- total tokens pooled
-  local totalPooled = Available + Lent
+  local availableTokens = bint(Available)
+  local totalPooled = availableTokens + bint(Lent)
   local totalSupply = bint(TotalSupply)
 
   -- if the total pooled and the total supply is not
@@ -32,8 +33,8 @@ function mod.handler(msg)
   end
 
   -- update stored quantities (balance, available, total supply)
-  Balances[msg.From] = (Balances[msg.From] or bint.zero()) - quantity
-  Available = (Available or bint.zero()) - rewardQty
+  Balances[msg.From] = tostring(bint(Balances[msg.From] or "0") - quantity)
+  Available = tostring(availableTokens - rewardQty)
   TotalSupply = tostring(totalSupply - quantity)
 
   msg.reply({

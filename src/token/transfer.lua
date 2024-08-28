@@ -21,7 +21,7 @@ local function transfer(msg)
   assert(bint.ule(quantity, walletBalance), "Not enought tokens for this transfer")
 
   -- update balances
-  Balances[target] = tostring(bint(Balances[target]) + quantity)
+  Balances[target] = tostring(bint(Balances[target] or "0") + quantity)
   Balances[msg.From] = tostring(walletBalance - quantity)
 
   -- send notices about the transfer

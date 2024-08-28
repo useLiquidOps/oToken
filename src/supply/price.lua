@@ -16,12 +16,12 @@ local function price(msg)
   end
 
   -- total tokens pooled
-  local totalPooled = Available + Lent
+  local totalPooled = bint(Available) + bint(Lent)
 
   -- calculate price based on the underlying value of the total supply
   local returnPrice = bint.udiv(
     totalPooled * quantity,
-    TotalSupply
+    bint(TotalSupply)
   )
 
   msg.reply({

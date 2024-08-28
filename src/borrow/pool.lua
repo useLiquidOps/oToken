@@ -1,5 +1,3 @@
-local bint = require ".utils.bint"(1024)
-
 local mod = {}
 
 ---@type HandlerFunction
@@ -8,17 +6,17 @@ function mod.setup()
   Token = Token or ao.env.Process.Tags.Token
 
   -- available tokens to be lent
-  Available = Available or bint.zero()
+  Available = Available or "0"
 
   -- tokens borrowed by borrowers
-  Lent = Lent or bint.zero()
+  Lent = Lent or "0"
 
-  -- all loans
-  ---@type table<string, Bint>
+  -- all loans (values are Bint in string format)
+  ---@type table<string, string>
   Loans = Loans or {}
 
-  -- all interests accrued
-  ---@type table<string, Bint>
+  -- all interests accrued (values are Bint in string format)
+  ---@type table<string, string>
   Interests = Interests or {}
 end
 

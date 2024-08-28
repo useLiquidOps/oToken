@@ -46,9 +46,9 @@ end
 ---@param msg Message
 function mod.total_supply(msg)
   msg.reply({
-    ["Total-Supply"] = tostring(TotalSupply),
+    ["Total-Supply"] = TotalSupply,
     Ticker = Ticker,
-    Data = tostring(TotalSupply)
+    Data = TotalSupply
   })
 end
 

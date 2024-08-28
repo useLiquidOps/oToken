@@ -2,8 +2,8 @@
 local function reserves(msg)
   msg.reply({
     Action = "Reserves",
-    Available = tostring(Available),
-    Lent = tostring(Lent)
+    Available = Available,
+    Lent = Lent
   })
 end
 

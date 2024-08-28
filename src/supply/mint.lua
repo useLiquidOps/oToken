@@ -19,9 +19,10 @@ function mint.handler(msg)
   -- amount of loTokens to be minted
   local mintQty = quantity
 
-  -- total tokens pooled
-  local totalPooled = Available + Lent
-  local totalSupply = bint(TotalSupply or "0")
+  -- total tokens pooled and supply
+  local availableTokens = bint(Available)
+  local totalPooled = availableTokens + bint(Lent)
+  local totalSupply = bint(TotalSupply)
 
   if not bint.eq(totalPooled, bint.zero()) then
     -- mint in proportion to the already supplied tokens
@@ -32,8 +33,8 @@ function mint.handler(msg)
   end
 
   -- update stored quantities (balance, available, total supply)
-  Balances[sender] = (Balances[sender] or bint.zero()) + mintQty
-  Available = (Available or bint.zero()) + quantity
+  Balances[sender] = tostring(bint(Balances[sender] or "0") + mintQty)
+  Available = tostring(availableTokens + quantity)
   TotalSupply = tostring(totalSupply + mintQty)
 
   -- TODO: maybe we could msg.reply, but the target of that would be

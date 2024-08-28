@@ -11,8 +11,8 @@ function mod.balance(msg)
 
   msg.reply({
     Action = "Borrow-Balance-Response",
-    ["Borrowed-Quantity"] = tostring(Loans[account]),
-    ["Interest-Quantity"] = tostring(Interests[account])
+    ["Borrowed-Quantity"] = Loans[account],
+    ["Interest-Quantity"] = Interests[account]
   })
 end
 
