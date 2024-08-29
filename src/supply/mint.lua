@@ -33,7 +33,7 @@ function mint.handler(msg)
   end
 
   -- update stored quantities (balance, available, total supply)
-  Balances[sender] = tostring(bint(Balances[sender] or "0") + mintQty)
+  Balances[sender] = tostring(bint(Balances[sender] or 0) + mintQty)
   Available = tostring(availableTokens + quantity)
   TotalSupply = tostring(totalSupply + mintQty)
 

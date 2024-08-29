@@ -5,6 +5,9 @@ function mod.setup()
   -- token that can be lent/borrowed
   Token = Token or ao.env.Process.Tags.Token
 
+  -- collateralization ratio
+  CollateralRatio = CollateralRatio or tonumber(ao.env.Process.Tags.CollateralRatio)
+
   -- available tokens to be lent
   Available = Available or "0"
 
