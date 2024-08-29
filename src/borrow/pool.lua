@@ -23,4 +23,15 @@ function mod.setup()
   Interests = Interests or {}
 end
 
+---@type HandlerFunction
+function mod.config(msg)
+  msg.reply({
+    Action = "Config",
+    Token = Token,
+    ["Collateral-Ratio"] = tostring(CollateralRatio),
+    Oracle = Oracle,
+    ["Wrapped-Denomination"] = tostring(WrappedDenomination)
+  })
+end
+
 return mod

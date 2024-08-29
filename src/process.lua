@@ -42,6 +42,11 @@ Handlers.add(
   Handlers.utils.hasMatchingTag("Action", "Borrow-Capacity"),
   position.capacity
 )
+Handlers.add(
+  "borrow-pool-config",
+  Handlers.utils.hasMatchingTag("Action", "Get-Config"),
+  pool.config
+)
 
 Handlers.add(
   "supply-mint",
