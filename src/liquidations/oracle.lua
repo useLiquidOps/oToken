@@ -12,79 +12,71 @@ function mod.setup()
   Oracle = Oracle or ao.env.Process.Tags.Oracle
 end
 
--- Get the price of an asset in terms of another asset
----@param qty Bint Quantity to determinate the value of
----@param from string From token ticker
----@param to string? Price unit token ticker
+-- Get the price/value of a quantity of the underlying asset
+---@param quantity Bint? Quantity to determinate the value of
 ---@return Bint
-function mod.getPrice(qty, from, to)
+function mod.getUnderlyingPrice(quantity)
+  -- quantity should be 1 by default
+  if not quantity then quantity = bint.one() end
+
   ---@type OracleData
   local data = ao.send({
     Target =  Oracle,
     Action = "v2.Request-Latest-Data",
-    Tickers = json.encode({ from, to })
+    Tickers = json.encode({ Token })
   }).receive().Data
 
-  assert(data[from] ~= nil and data[from].v, "No data returned from the oracle for " .. from)
   assert(
-    not to or (data[to] ~= nil and data[to].v ~= nil),
-    "No data returned from the oracle for " .. to
+    data[Token] ~= nil and data[Token].v,
+    "No data returned from the oracle for the underlying token (" .. Token .. ")"
   )
 
-  -- denominator to use integers instead of floating point numbers
-  local denominator = oracleUtils.getFractionsCount(data[from].v)
-
-  -- usd value
-  local usdValDenominated = qty * oracleUtils.getDenominated(data[from].v, denominator)
-
-  -- return USD value if no target asset was provided
-  if not to then
-    return bint.udiv(
-      usdValDenominated,
-      bint(10 ^ denominator)
-    )
-  end
-
-  -- select larger denominator for more precision
-  denominator = oracleUtils.getMultiplier(data[from].v, data[to].v)
-
-  --
-  -- TODO: figure out how to account for token denominations (maybe warp will store denominated values?)
-  --
-
-  -- calculate price based on the usd price relations
-  return bint.udiv(
-    usdValDenominated,
-    oracleUtils.getDenominated(data[to].v, denominator)
+  -- the value of the quantity
+  -- (USD price value is denominated for precision,
+  -- but the result needs to be divided according
+  -- to the underlying asset's denomination,
+  -- because the price data is for the non-denominated
+  -- unit)
+  local value = bint.udiv(
+    quantity * oracleUtils.getUSDDenominated(data[Token].v),
+    -- optimize performance by repeating "0" instead of a power operation
+    bint("1" .. string.rep("0", WrappedDenomination))
   )
-end
 
--- Get multiplier that can be used to create an integer from a float
--- without loosing precision
----@param qtyA number First quantity
----@param qtyB number Second quantity
-function oracleUtils.getMultiplier(qtyA, qtyB)
-  local qtyAFractions = oracleUtils.getFractionsCount(qtyA)
-  local qtyBFractions = oracleUtils.getFractionsCount(qtyB)
-
-  return qtyAFractions > qtyBFractions and qtyAFractions or qtyBFractions
+  return value
 end
 
 -- Get the fractional part's length
 ---@param val number Full number
 function oracleUtils.getFractionsCount(val)
-  return string.len(string.match(tostring(val), "%.(.*)"))
+  -- check if there is a fractional part 
+  -- by trying to find it with a pattern
+  local fractionalPart = string.match(tostring(val), "%.(.*)")
+
+  if not fractionalPart then return 0 end
+
+  -- get the length of the fractional part
+  return string.len(fractionalPart)
 end
 
--- Get a float's biginteger denominated form
----@param val number Floating point value
----@param denominator number Integer denominator
-function oracleUtils.getDenominated(val, denominator)
+-- Get a USD value in a 12 denominated form
+---@param val number USD value as a floating point number
+function oracleUtils.getUSDDenominated(val)
+  local denominator = 12
+
+  -- remove decimal point
   local denominated = string.gsub(tostring(val), "%.", "")
+
+  -- get the count of decimal places after the decimal point
   local fractions = oracleUtils.getFractionsCount(val)
 
   if fractions < denominator then
     denominated = denominated .. string.rep("0", denominator - fractions)
+  elseif fractions > denominator then
+    -- get the count of the integer part's digits
+    local wholeDigits = string.len(denominated) - fractions
+
+    denominated = string.sub(denominated, 1, wholeDigits + denominator)
   end
 
   return bint(denominated)

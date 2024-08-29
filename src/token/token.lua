@@ -13,7 +13,7 @@ function mod.setup()
   Ticker = "lo" .. tokenInfo.Tags.Ticker
 
   -- the wrapped token's denomination
-  WrappedDenomination = tonumber(tokenInfo.Tags.Denomination)
+  WrappedDenomination = tonumber(tokenInfo.Tags.Denomination or 0) or 0
 
   -- submit logo to arweave
   ao.send({
