@@ -13,6 +13,7 @@ local token = require ".token.token"
 local transfer = require ".token.transfer"
 
 local pool = require ".borrow.pool"
+local position = require ".borrow.position"
 
 local oracle = require ".liquidations.oracle"
 
@@ -29,6 +30,17 @@ Handlers.once(
     token.setup(msg, env)
     oracle.setup(msg, env)
   end
+)
+
+Handlers.add(
+  "borrow-position-balance",
+  Handlers.utils.hasMatchingTag("Action", "Borrow-Balance"),
+  position.balance
+)
+Handlers.add(
+  "borrow-position-capacity",
+  Handlers.utils.hasMatchingTag("Action", "Borrow-Capacity"),
+  position.capacity
 )
 
 Handlers.add(
