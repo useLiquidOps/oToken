@@ -6,7 +6,10 @@ function mod.setup()
   Token = Token or ao.env.Process.Tags.Token
 
   -- collateralization ratio
-  CollateralRatio = CollateralRatio or tonumber(ao.env.Process.Tags.CollateralRatio)
+  CollateralRatio = CollateralRatio or tonumber(ao.env.Process.Tags["Collateral-Ratio"])
+
+  -- liquidation treshold (should be lower than the collateral ratio)
+  LiquidationThreshold = LiquidationThreshold or tonumber(ao.env.Process.Tags["Liquidation-Threshold"])
 
   -- available tokens to be lent
   Available = Available or "0"
@@ -29,6 +32,7 @@ function mod.config(msg)
     Action = "Config",
     Token = Token,
     ["Collateral-Ratio"] = tostring(CollateralRatio),
+    ["Liquidation-Threshold"] = tostring(LiquidationThreshold),
     Oracle = Oracle,
     ["Wrapped-Denomination"] = tostring(WrappedDenomination)
   })

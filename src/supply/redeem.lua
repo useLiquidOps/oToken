@@ -7,7 +7,7 @@ local mod = {}
 function mod.handler(msg)
   assert(
     assertions.isTokenQuantity(msg.Tags.Quantity),
-    "Invalid incoming transfer quantity"
+    "Invalid redeem quantity"
   )
 
   -- amount of tokens to burn
