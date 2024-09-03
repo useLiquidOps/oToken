@@ -44,7 +44,7 @@ function mint.handler(msg)
   -- to add some custom tags that directly reply to that user
   -- (same applies to all "Credit-Notice" handlers)
   -- UPDATE: looking at the standard token code, this probably needs to be
-  -- implemented in a separate PR
+  -- implemented in a separate PR (in the token blueprint)
   ao.send({
     Target = sender,
     Action = "Mint-Confirmation",

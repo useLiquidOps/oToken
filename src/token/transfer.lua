@@ -20,6 +20,9 @@ local function transfer(msg)
   -- validate user balance
   assert(bint.ule(quantity, walletBalance), "Not enought tokens for this transfer")
 
+  -- TODO: can the user transfer an loToken if they have a borrow ?????
+  -- they shouldn't be able to, since the collateral is lost, and the system cannot liquidate
+
   -- update balances
   Balances[target] = tostring(bint(Balances[target] or 0) + quantity)
   Balances[msg.From] = tostring(walletBalance - quantity)

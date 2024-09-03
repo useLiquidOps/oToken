@@ -14,6 +14,7 @@ local transfer = require ".token.transfer"
 
 local pool = require ".borrow.pool"
 local position = require ".borrow.position"
+local repay = require ".borrow.repay"
 
 local oracle = require ".liquidations.oracle"
 
@@ -32,6 +33,13 @@ Handlers.once(
   end
 )
 
+Handlers.add(
+  "borrow-repay",
+  { From = Token, Action = "Credit-Notice", ["X-Action"] = "Repay" },
+  repay.handler,
+  nil,
+  repay.error
+)
 Handlers.add(
   "borrow-position-balance",
   Handlers.utils.hasMatchingTag("Action", "Borrow-Balance"),
