@@ -36,7 +36,7 @@ end
 
 ---@type HandlerFunction
 function mod.capacity(msg)
-  local account = msg.Tags.Target or msg.From
+  local account = msg.Tags.Recipient or msg.From
 
   -- get the capacity in the wrapped token
   local capacity = mod.getLocalBorrowCapacity(account)
@@ -54,7 +54,7 @@ end
 
 ---@type HandlerFunction
 function mod.balance(msg)
-  local account = msg.Tags.Target or msg.From
+  local account = msg.Tags.Recipient or msg.From
 
   msg.reply({
     Action = "Borrow-Balance-Response",
@@ -65,7 +65,7 @@ end
 
 ---@type HandlerFunction
 function mod.collateralization(msg)
-  local account = msg.Tags.Target or msg.From
+  local account = msg.Tags.Recipient or msg.From
 
   -- get the capacity in USD
   local capacity = oracle.getUnderlyingPrice(
