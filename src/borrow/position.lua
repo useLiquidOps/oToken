@@ -79,7 +79,7 @@ function mod.collateralization(msg)
   )
 
   msg.reply({
-    Action = "User-Collateralization",
+    Action = "Collateralization-Response",
     Capacity = tostring(capacity),
     ["Used-Capacity"] = tostring(usedCapacity)
   })
