@@ -183,9 +183,9 @@ end, 2)
 utils.find = utils.curry(function (fn, t)
   assert(type(fn) == "function", "first argument should be a unary function")
   assert(type(t) == "table", "second argument should be a table that is an array")
-  for _, v in pairs(t) do
+  for i, v in pairs(t) do
     if fn(v) then
-      return v
+      return v, i
     end
   end
 end, 2)

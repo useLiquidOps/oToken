@@ -8,6 +8,8 @@ local process = { _version = "0.0.1" }
 
 local coroutine = require "coroutine"
 
+local friend = require ".temp_admin.friend"
+
 local balance = require ".token.balance"
 local token = require ".token.token"
 local transfer = require ".token.transfer"
@@ -31,6 +33,25 @@ Handlers.once(
     token.setup(msg, env)
     oracle.setup(msg, env)
   end
+)
+
+-- temporary handlers for testnet
+-- these are "admin" functions that will be removed
+-- once the protocol is ready
+Handlers.add(
+  "temp-admin-friend-add",
+  { From = ao.env.Process.Owner, Action = "Add-Friend" },
+  friend.add
+)
+Handlers.add(
+  "temp-admin-friend-remove",
+  { From = ao.env.Process.Owner, Action = "Remove-Friend" },
+  friend.remove
+)
+Handlers.add(
+  "temp-admin-friend-list",
+  { From = ao.env.Process.Owner, Action = "List-Friends" },
+  friend.list
 )
 
 Handlers.add(

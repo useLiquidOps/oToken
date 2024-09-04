@@ -1,3 +1,5 @@
+local json = require "json"
+
 local mod = {}
 
 ---@type HandlerFunction
@@ -24,6 +26,10 @@ function mod.setup()
   -- all interests accrued (values are Bint in string format)
   ---@type table<string, string>
   Interests = Interests or {}
+
+  -- other loToken processes
+  ---@type string[]
+  Friends = Friends or json.decode(ao.env.Process.Tags.Friends or "[]")
 end
 
 ---@type HandlerFunction
