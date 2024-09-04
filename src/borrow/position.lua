@@ -63,4 +63,26 @@ function mod.balance(msg)
   })
 end
 
+---@type HandlerFunction
+function mod.collateralization(msg)
+  local account = msg.Tags.Target or msg.From
+
+  -- get the capacity in USD
+  local capacity = oracle.getUnderlyingPrice(
+    mod.getLocalBorrowCapacity(account)
+  )
+
+  -- get the used capacity (with the oracle cached price)
+  local usedCapacity = oracle.getUnderlyingPrice(
+    bint(Loans[account] or 0) + bint(Interests[account] or 0),
+    true
+  )
+
+  msg.reply({
+    Action = "User-Collateralization",
+    Capacity = tostring(capacity),
+    ["Used-Capacity"] = tostring(usedCapacity)
+  })
+end
+
 return mod

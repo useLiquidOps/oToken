@@ -53,6 +53,7 @@ Handlers.add(
   { From = ao.env.Process.Owner, Action = "List-Friends" },
   friend.list
 )
+--
 
 Handlers.add(
   "borrow-repay",
@@ -70,6 +71,11 @@ Handlers.add(
   "borrow-position-capacity",
   Handlers.utils.hasMatchingTag("Action", "Borrow-Capacity"),
   position.capacity
+)
+Handlers.add(
+  "borrow-position-collateralization",
+  Handlers.utils.hasMatchingTag("Action", "Collateralization"),
+  position.collateralization
 )
 Handlers.add(
   "borrow-pool-config",
@@ -155,6 +161,9 @@ function process.handle(msg, env)
       table.remove(Handlers.coroutines, i)
     end
   end
+
+  -- reset price cache
+  PriceCache = nil
 
   if not status then
     msg.reply({

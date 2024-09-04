@@ -10,26 +10,41 @@ local oracleUtils = {}
 function mod.setup()
   -- oracle process id
   Oracle = Oracle or ao.env.Process.Tags.Oracle
+
+  -- cached price
+  -- this should only be used within the same request
+  ---@type number?
+  PriceCache = nil
 end
 
 -- Get the price/value of a quantity of the underlying asset
 ---@param quantity Bint? Quantity to determinate the value of
+---@param cache boolean? Use cache (disabled by default, only use after one request has been made to the oracle)
 ---@return Bint
-function mod.getUnderlyingPrice(quantity)
+function mod.getUnderlyingPrice(quantity, cache)
   -- quantity should be 1 by default
   if not quantity then quantity = bint.one() end
 
-  ---@type OracleData
-  local data = ao.send({
-    Target =  Oracle,
-    Action = "v2.Request-Latest-Data",
-    Tickers = json.encode({ Token })
-  }).receive().Data
+  -- load cached price
+  local price = PriceCache
 
-  assert(
-    data[Token] ~= nil and data[Token].v,
-    "No data returned from the oracle for the underlying token (" .. Token .. ")"
-  )
+  -- if the cache is disabled or there is no price
+  -- data cached, fetch the price
+  if not cache or not price then
+    ---@type OracleData
+    local data = ao.send({
+      Target =  Oracle,
+      Action = "v2.Request-Latest-Data",
+      Tickers = json.encode({ Token })
+    }).receive().Data
+
+    assert(
+      data[Token] ~= nil and data[Token].v,
+      "No data returned from the oracle for the underlying token (" .. Token .. ")"
+    )
+
+    price = data[Token].v
+  end
 
   -- the value of the quantity
   -- (USD price value is denominated for precision,
@@ -38,7 +53,7 @@ function mod.getUnderlyingPrice(quantity)
   -- because the price data is for the non-denominated
   -- unit)
   local value = bint.udiv(
-    quantity * oracleUtils.getUSDDenominated(data[Token].v),
+    quantity * oracleUtils.getUSDDenominated(price),
     -- optimize performance by repeating "0" instead of a power operation
     bint("1" .. string.rep("0", WrappedDenomination))
   )
