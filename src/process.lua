@@ -9,6 +9,7 @@ local process = { _version = "0.0.1" }
 local coroutine = require "coroutine"
 
 local friend = require ".temp_admin.friend"
+local config = require ".temp_admin.config"
 
 local balance = require ".token.balance"
 local token = require ".token.token"
@@ -52,6 +53,21 @@ Handlers.add(
   "temp-admin-friend-list",
   { From = ao.env.Process.Owner, Action = "List-Friends" },
   friend.list
+)
+Handlers.add(
+  "temp-admin-config-oracle",
+  { From = ao.env.Process.Owner, Action = "Set-Oracle" },
+  config.setOracle
+)
+Handlers.add(
+  "temp-admin-config-collateral-ratio",
+  { From = ao.env.Process.Owner, Action = "Set-Collateral-Ratio" },
+  config.setCollateralRatio
+)
+Handlers.add(
+  "temp-admin-config-liquidation-threshold",
+  { From = ao.env.Process.Owner, Action = "Set-Liquidation-Threshold" },
+  config.setLiquidationThreshold
 )
 --
 

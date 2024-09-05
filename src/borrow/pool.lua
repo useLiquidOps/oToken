@@ -10,7 +10,7 @@ function mod.setup()
   -- collateralization ratio
   CollateralRatio = CollateralRatio or tonumber(ao.env.Process.Tags["Collateral-Ratio"])
 
-  -- liquidation treshold (should be lower than the collateral ratio)
+  -- liquidation threshold (should be lower than the collateral ratio)
   LiquidationThreshold = LiquidationThreshold or tonumber(ao.env.Process.Tags["Liquidation-Threshold"])
 
   -- available tokens to be lent
