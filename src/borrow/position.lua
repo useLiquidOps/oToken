@@ -1,4 +1,3 @@
-local oracle = require ".liquidations.oracle"
 local bint = require ".utils.bint"(1024)
 
 local mod = {}
@@ -41,14 +40,10 @@ function mod.capacity(msg)
   -- get the capacity in the wrapped token
   local capacity = mod.getLocalBorrowCapacity(account)
 
-  -- calculate USD value of the capacity
-  local capacityUSD = oracle.getUnderlyingPrice(capacity)
-
   -- reply with the results
   msg.reply({
     Action = "Borrow-Capacity-Response",
-    Value = tostring(capacity),
-    ["USD-Value"] = tostring(capacityUSD)
+    ["Borrow-Capacity"] = tostring(capacity)
   })
 end
 
@@ -67,16 +62,11 @@ end
 function mod.collateralization(msg)
   local account = msg.Tags.Recipient or msg.From
 
-  -- get the capacity in USD
-  local capacity = oracle.getUnderlyingPrice(
-    mod.getLocalBorrowCapacity(account)
-  )
+  -- get the capacity
+  local capacity = mod.getLocalBorrowCapacity(account)
 
-  -- get the used capacity (with the oracle cached price)
-  local usedCapacity = oracle.getUnderlyingPrice(
-    bint(Loans[account] or 0) + bint(Interests[account] or 0),
-    true
-  )
+  -- get the used capacity
+  local usedCapacity = bint(Loans[account] or 0) + bint(Interests[account] or 0)
 
   msg.reply({
     Action = "Collateralization-Response",
