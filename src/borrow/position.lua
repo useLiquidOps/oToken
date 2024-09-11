@@ -1,4 +1,6 @@
+local scheduler = require ".utils.scheduler"
 local bint = require ".utils.bint"(1024)
+local utils = require ".utils.utils"
 
 local mod = {}
 
@@ -31,6 +33,18 @@ function mod.getLocalBorrowCapacity(address)
     balanceValue * bint(ratioMul),
     collateralWhole
   )
+end
+
+-- Get the global collateralization state (across all friend loTokens)
+---@param address string Address to get the collateralization for
+function mod.getGlobalCollateralization(address)
+  -- get friend values
+  local friendCollateralizations = scheduler.schedule(table.unpack(utils.map(
+    function (id) return { Target = id, Action = "Collateralization" } end,
+    Friends
+  )))
+
+  
 end
 
 ---@type HandlerFunction

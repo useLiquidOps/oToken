@@ -148,8 +148,7 @@ utils.reduce = utils.curry(function (fn, initial, t)
   return result
 end, 3)
 
--- @param {function} fn
--- @param {table<Array>} data
+--- @type function(fn: function, data: table)
 utils.map = utils.curry(function (fn, data)
   assert(type(fn) == "function", "first argument should be a unary function")
   assert(type(data) == "table" and isArray(data), "second argument should be an Array")
