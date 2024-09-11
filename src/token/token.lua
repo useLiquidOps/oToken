@@ -11,6 +11,7 @@ function mod.setup()
 
   Name = "LiquidOps " .. tokenInfo.Tags.Name
   Ticker = "lo" .. tokenInfo.Tags.Ticker
+  CollateralTicker = tokenInfo.Tags.Ticker
 
   -- the wrapped token's denomination
   WrappedDenomination = tonumber(tokenInfo.Tags.Denomination or 0) or 0
