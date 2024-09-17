@@ -34,20 +34,14 @@ function mod.timeoutSync(msg)
   end
 end
 
--- Get the price/value of a quantity of the underlying asset
+-- Get the price/value of a quantity of the provided assets. The function
+-- will only provide up to date values, outdated and nil values will be
+-- filtered out
+---@param timestamp number Current message timestamp
 ---@param ... PriceParam
----@return Bint[]
-function mod.getPrice(...)
+---@return ResultItem[]
+function mod.getPrice(timestamp, ...)
   local args = {...}
-  local one = bint.one()
-  local zero = bint.zero()
-
-  -- quantity should be 1 by default
-  for k, v in ipairs(args) do
-    if not v.quantity then
-      args[k].quantity = one
-    end
-  end
 
   -- prices that require to be synced
   ---@type string[]
@@ -72,34 +66,48 @@ function mod.getPrice(...)
     }).receive().Data
 
     for ticker, p in pairs(data) do
-      PriceCache[ticker] = {
-        price = p.v,
-        timestamp = p.t
-      }
+      -- only add data if the timestamp is up to date
+      if p.t + MaxOracleDelay >= timestamp then
+        PriceCache[ticker] = {
+          price = p.v,
+          timestamp = p.t
+        }
+      end
     end
   end
 
   ---@type ResultItem[]
   local results = {}
 
-  -- TODO: validate timestamps
-  -- this is probably only needed for tokens that have non-0 quantity,
-  -- and are required for collateralization
-  -- we also need to figure out the period that is acceptable for the timestamp
+  local one = bint.one()
+  for _, v in ipairs(args) do
+    local cached = PriceCache[v.ticker]
 
-  -- the value of the quantity
-  -- (USD price value is denominated for precision,
-  -- but the result needs to be divided according
-  -- to the underlying asset's denomination,
-  -- because the price data is for the non-denominated
-  -- unit)
-  local value = bint.udiv(
-    quantity * oracleUtils.getUSDDenominated(price),
-    -- optimize performance by repeating "0" instead of a power operation
-    bint("1" .. string.rep("0", WrappedDenomination))
-  )
+    if cached then
+      if not v.quantity then v.quantity = one end
 
-  return value
+      -- the value of the quantity
+      -- (USD price value is denominated for precision,
+      -- but the result needs to be divided according
+      -- to the underlying asset's denomination,
+      -- because the price data is for the non-denominated
+      -- unit)
+      local price = bint.udiv(
+        v.quantity * oracleUtils.getUSDDenominated(cached.price),
+        -- optimize performance by repeating "0" instead of a power operation
+        bint("1" .. string.rep("0", WrappedDenomination))
+      )
+
+      -- add data
+      table.insert(results, {
+        ticker = v.ticker,
+        price = price,
+        timestamp = cached.timestamp
+      })
+    end
+  end
+
+  return results
 end
 
 -- Get the fractional part's length
