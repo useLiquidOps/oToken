@@ -36,6 +36,13 @@ Handlers.once(
   end
 )
 
+-- oracle timeout sync (must be the second handler)
+Handlers.add(
+  "oracle-timeout-sync",
+  function () return "continue" end,
+  oracle.timeoutSync
+)
+
 -- temporary handlers for testnet
 -- these are "admin" functions that will be removed
 -- once the protocol is ready
@@ -177,9 +184,6 @@ function process.handle(msg, env)
       table.remove(Handlers.coroutines, i)
     end
   end
-
-  -- reset price cache
-  PriceCache = nil
 
   if not status then
     msg.reply({

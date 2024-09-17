@@ -1,50 +1,89 @@
 local bint = require ".utils.bint"(1024)
+local utils = require ".utils.utils"
 local json = require "json"
 
 local mod = {}
 local oracleUtils = {}
 
 ---@alias OracleData table<string, { t: number, a: string, v: number }>
+---@alias PriceParam { ticker: string, quantity: Bint?, denomination: number }
+---@alias ResultItem { ticker: string, price: Bint?, timestamp: number }
+---@alias CachedPrice { price: number, timestamp: number }
 
 ---@type HandlerFunction
 function mod.setup()
   -- oracle process id
   Oracle = Oracle or ao.env.Process.Tags.Oracle
 
+  -- oracle delay tolerance in miliseconds
+  MaxOracleDelay = MaxOracleDelay or ao.env.Process.Tags["Oracle-Delay-Tolerance"]
+
   -- cached price
   -- this should only be used within the same request
-  ---@type number?
-  PriceCache = nil
+  ---@type table<string, { price: number, timestamp: number }>
+  PriceCache = PriceCache or {}
+end
+
+---@type HandlerFunction
+function mod.timeoutSync(msg)
+  -- filter out prices that are no longer up to date
+  for ticker, data in pairs(PriceCache) do
+    if data.timestamp + MaxOracleDelay < msg.Timestamp then
+      PriceCache[ticker] = nil
+    end
+  end
 end
 
 -- Get the price/value of a quantity of the underlying asset
----@param quantity Bint? Quantity to determinate the value of
----@param cache boolean? Use cache (disabled by default, only use after one request has been made to the oracle)
----@return Bint
-function mod.getUnderlyingPrice(quantity, cache)
-  -- quantity should be 1 by default
-  if not quantity then quantity = bint.one() end
+---@param ... PriceParam
+---@return Bint[]
+function mod.getPrice(...)
+  local args = {...}
+  local one = bint.one()
+  local zero = bint.zero()
 
-  -- load cached price
-  local price = PriceCache
+  -- quantity should be 1 by default
+  for k, v in ipairs(args) do
+    if not v.quantity then
+      args[k].quantity = one
+    end
+  end
+
+  -- prices that require to be synced
 
   -- if the cache is disabled or there is no price
   -- data cached, fetch the price
-  if not cache or not price then
+  if not price then
     ---@type OracleData
     local data = ao.send({
       Target =  Oracle,
       Action = "v2.Request-Latest-Data",
-      Tickers = json.encode({ Token })
+      Tickers = json.encode(utils.map(
+        ---@param v PriceParam
+        function (v) return v.ticker end,
+        utils.filter(
+          ---@param v PriceParam
+          function (v) return not bint.eq(v.quantity, zero) end,
+          args
+        )
+      ))
     }).receive().Data
 
-    assert(
-      data[Token] ~= nil and data[Token].v,
-      "No data returned from the oracle for the underlying token (" .. Token .. ")"
-    )
-
-    price = data[Token].v
+    for ticker, p in pairs(data) do
+      prices[ticker] = {
+        price = p.v,
+        timestamp = p.t
+      }
+    end
   end
+
+  ---@type ResultItem[]
+  local results = {}
+
+  -- TODO: validate timestamps
+  -- this is probably only needed for tokens that have non-0 quantity,
+  -- and are required for collateralization
+  -- we also need to figure out the period that is acceptable for the timestamp
 
   -- the value of the quantity
   -- (USD price value is denominated for precision,
