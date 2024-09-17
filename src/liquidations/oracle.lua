@@ -50,27 +50,29 @@ function mod.getPrice(...)
   end
 
   -- prices that require to be synced
+  ---@type string[]
+  local pricesToSync = utils.map(
+    ---@param v PriceParam
+    function (v) return v.ticker end,
+    utils.filter(
+      ---@param v PriceParam
+      function (v) return not PriceCache[v.ticker] end,
+      args
+    )
+  )
 
   -- if the cache is disabled or there is no price
   -- data cached, fetch the price
-  if not price then
+  if #pricesToSync > 0 then
     ---@type OracleData
     local data = ao.send({
       Target =  Oracle,
       Action = "v2.Request-Latest-Data",
-      Tickers = json.encode(utils.map(
-        ---@param v PriceParam
-        function (v) return v.ticker end,
-        utils.filter(
-          ---@param v PriceParam
-          function (v) return not bint.eq(v.quantity, zero) end,
-          args
-        )
-      ))
+      Tickers = json.encode(pricesToSync)
     }).receive().Data
 
     for ticker, p in pairs(data) do
-      prices[ticker] = {
+      PriceCache[ticker] = {
         price = p.v,
         timestamp = p.t
       }
