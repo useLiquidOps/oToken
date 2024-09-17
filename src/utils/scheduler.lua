@@ -20,7 +20,7 @@ function mod.schedule(...)
 
     -- continue execution when all responses are back
     if #responses == #messages then
-      coroutine.resume(thread, messages)
+      coroutine.resume(thread, responses)
     end
   end
 
@@ -36,7 +36,7 @@ function mod.schedule(...)
   end
 
   -- yield execution, till all responses are back
-  return coroutine.yield()
+  return coroutine.yield({ From = messages[#messages], ["X-Reference"] = tostring(ao.reference) })
 end
 
 return mod
