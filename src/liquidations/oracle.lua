@@ -7,7 +7,7 @@ local oracleUtils = {}
 
 ---@alias OracleData table<string, { t: number, a: string, v: number }>
 ---@alias PriceParam { ticker: string, quantity: Bint?, denomination: number }
----@alias ResultItem { ticker: string, price: Bint?, timestamp: number }
+---@alias ResultItem { ticker: string, price: Bint }
 ---@alias CachedPrice { price: number, timestamp: number }
 
 ---@type HandlerFunction
@@ -38,9 +38,10 @@ end
 -- will only provide up to date values, outdated and nil values will be
 -- filtered out
 ---@param timestamp number Current message timestamp
+---@param cache boolean Use only cache
 ---@param ... PriceParam
 ---@return ResultItem[]
-function mod.getPrice(timestamp, ...)
+function mod.getPrice(timestamp, cache, ...)
   local args = {...}
 
   -- prices that require to be synced
@@ -57,7 +58,7 @@ function mod.getPrice(timestamp, ...)
 
   -- if the cache is disabled or there is no price
   -- data cached, fetch the price
-  if #pricesToSync > 0 then
+  if #pricesToSync > 0 and not cache then
     ---@type OracleData
     local data = ao.send({
       Target =  Oracle,
@@ -101,8 +102,7 @@ function mod.getPrice(timestamp, ...)
       -- add data
       table.insert(results, {
         ticker = v.ticker,
-        price = price,
-        timestamp = cached.timestamp
+        price = price
       })
     end
   end

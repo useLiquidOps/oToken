@@ -326,7 +326,7 @@ function ao.add_message_actions(msg)
     replyMsg.Target = msg["Reply-To"] or (replyMsg.Target or msg.From)
     replyMsg["X-Reference"] = msg["X-Reference"] or msg.Reference
     replyMsg["X-Origin"] = msg["X-Origin"] or nil
-    replyMsg["Reply-For"] = msg.Action
+    replyMsg["Response-For"] = msg.Action
 
     return ao.send(replyMsg)
   end

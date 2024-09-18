@@ -1,3 +1,4 @@
+local oracle = require ".liquidations.oracle"
 local scheduler = require ".utils.scheduler"
 local bint = require ".utils.bint"(1024)
 local utils = require ".utils.utils"
@@ -35,16 +36,69 @@ function mod.getLocalBorrowCapacity(address)
   )
 end
 
--- Get the global collateralization state (across all friend loTokens)
+-- Get the global collateralization state (across all friend loTokens) in denominated USD
 ---@param address string Address to get the collateralization for
-function mod.getGlobalCollateralization(address)
+---@param timestamp number Current message timestamp
+function mod.getGlobalCollateralization(address, timestamp)
   -- get friend values
-  local friendCollateralizations = scheduler.schedule(table.unpack(utils.map(
-    function (id) return { Target = id, Action = "Collateralization" } end,
+  local friendsCollateralRes = scheduler.schedule(table.unpack(utils.map(
+    function (id) return { Target = id, Action = "Collateralization", Recipient = address } end,
     Friends
   )))
 
-  
+  -- list capacity values separately
+  ---@type PriceParam[]
+  local capacities = {
+    -- add local value
+    { ticker = CollateralTicker, quantity = mod.getLocalBorrowCapacity(address), denomination = WrappedDenomination }
+  }
+
+  ---@type PriceParam[]
+  local usedCapacities = {
+    -- add local value
+    {
+      ticker = CollateralTicker,
+      quantity = bint(Loans[address] or 0) + bint(Interests[address] or 0),
+      denomination = WrappedDenomination
+    }
+  }
+
+  for _, msg in ipairs(friendsCollateralRes) do
+    table.insert(capacities, {
+      ticker = msg.Tags["Collateral-Ticker"],
+      quantity = bint(msg.Tags.Capacity),
+      denomination = tonumber(msg.Tags["Collateral-Denomination"])
+    })
+    table.insert(usedCapacities, {
+      ticker = msg.Tags["Collateral-Ticker"],
+      quantity = msg.Tags["Used-Capacity"],
+      denomination = tonumber(msg.Tags["Collateral-Denomination"])
+    })
+  end
+
+  -- get collateralization values
+  local zero = bint.zero()
+
+  ---@type Bint
+  local capacity = utils.reduce(
+    ---@param result Bint
+    ---@param v ResultItem
+    function (result, v) return result + v.price end,
+    zero,
+    oracle.getPrice(timestamp, false, table.unpack(capacities))
+  )
+  ---@type Bint
+  local usedCapacity = utils.reduce(
+    ---@param result Bint
+    ---@param v ResultItem
+    function (result, v) return result + v.price end,
+    zero,
+    -- use ONLY the cache, so in case a price that has not been
+    -- fetched correctly previously is not added here
+    oracle.getPrice(timestamp, true, table.unpack(usedCapacities))
+  )
+
+  return capacity, usedCapacity
 end
 
 ---@type HandlerFunction
@@ -86,7 +140,8 @@ function mod.collateralization(msg)
     Action = "Collateralization-Response",
     Capacity = tostring(capacity),
     ["Used-Capacity"] = tostring(usedCapacity),
-    ["Collateral-Ticker"] = CollateralTicker
+    ["Collateral-Ticker"] = CollateralTicker,
+    ["Collateral-Denomination"] = tostring(WrappedDenomination)
   })
 end
 
