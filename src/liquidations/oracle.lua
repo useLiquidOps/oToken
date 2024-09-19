@@ -38,7 +38,7 @@ end
 -- will only provide up to date values, outdated and nil values will be
 -- filtered out
 ---@param timestamp number Current message timestamp
----@param cache boolean Use only cache
+---@param cache boolean Force use cache
 ---@param ... PriceParam
 ---@return ResultItem[]
 function mod.getPrice(timestamp, cache, ...)
