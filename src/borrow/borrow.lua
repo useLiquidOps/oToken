@@ -41,9 +41,15 @@ function mod.borrow(msg)
     denomination = WrappedDenomination
   })
 
+  -- make sure the oracle returned a price
+  assert(borrowValue[1] ~= nil, "No price returned from the oracle for the borrow quantity")
+
   -- make sure the user is allowed to borrow
   assert(bint.ult(usedCapacity, capacity), "Borrow balance is too high")
-  assert(bint.ule(borrowValue, capacity - usedCapacity), "Not enough collateral for this borrow")
+  assert(
+    bint.ule(borrowValue[1].price, capacity - usedCapacity),
+    "Not enough collateral for this borrow"
+  )
 
   -- add loan
   Loans[account] = tostring(bint(Loans[account] or 0) + quantity)
