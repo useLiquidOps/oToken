@@ -1,34 +1,58 @@
 local assertions = require ".utils.assertions"
+local oracle = require ".liquidations.oracle"
+local position = require ".borrow.position"
 local bint = require ".utils.bint"(1024)
+local price = require ".supply.price"
 
 ---@param msg Message
 local function transfer(msg)
-  -- transfer target
+  -- transfer target and sender
   local target = msg.Tags.Recipient or msg.Target
+  local sender = msg.From
 
   -- validate target and quantity
   assert(assertions.isAddress(target), "Invalid address")
-  assert(target ~= msg.From, "Target cannot be the sender")
+  assert(target ~= sender, "Target cannot be the sender")
   assert(
     assertions.isTokenQuantity(msg.Tags.Quantity),
     "Invalid transfer quantity"
   )
 
   local quantity = bint(msg.Tags.Quantity)
-  local walletBalance = bint(Balances[msg.From] or 0)
+  local walletBalance = bint(Balances[sender] or 0)
 
   if bint.ule(quantity, walletBalance) then
-    -- TODO: can the user transfer an loToken if they have a borrow ?????
-    -- they shouldn't be able to, since the collateral is lost, and the system cannot liquidate
+    -- get position data
+    local capacity, usedCapacity = position.getGlobalCollateralization(
+      sender,
+      msg.Timestamp
+    )
+
+    -- get the value of the tokens to be transferred in
+    -- terms of the underlying asset and then get the price
+    -- of that quantity
+    local transferValue = oracle.getPrice(msg.Timestamp, false, {
+      ticker = CollateralTicker,
+      quantity = quantity,
+      denomination = WrappedDenomination
+    })
+
+    -- check if a price was returned
+    assert(transferValue[1] ~= nil, "No price data returned from the oracle for the transfer value")
+
+    -- do not allow reserved collateral to be transferred
+    assert(
+      bint.ule(transferValue[1].price, capacity - usedCapacity),
+      "Transfer value is too high and requires higher collateralization"
+    )
 
     -- update balances
     Balances[target] = tostring(bint(Balances[target] or 0) + quantity)
-    Balances[msg.From] = tostring(walletBalance - quantity)
+    Balances[sender] = tostring(walletBalance - quantity)
 
     -- send notices about the transfer
     if not msg.Tags.Cast then
       local debitNotice = {
-        Target = msg.From,
         Action = "Debit-Notice",
         Recipient = target,
         Quantity = tostring(quantity)
@@ -36,7 +60,7 @@ local function transfer(msg)
       local creditNotice = {
         Target = target,
         Action = "Credit-Notice",
-        Sender = msg.From,
+        Sender = sender,
         Quantity = tostring(quantity)
       }
 

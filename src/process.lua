@@ -43,6 +43,12 @@ Handlers.add(
   function () return "continue" end,
   oracle.timeoutSync
 )
+-- interest payment sync (must be the third handler)
+Handlers.add(
+  "borrow-loan-interest-sync",
+  function () return "continue" end,
+  loan.interest
+)
 
 -- temporary handlers for testnet
 -- these are "admin" functions that will be removed
@@ -127,7 +133,7 @@ Handlers.add(
 Handlers.add(
   "supply-price",
   Handlers.utils.hasMatchingTag("Action", "Get-Price"),
-  price
+  price.handler
 )
 Handlers.add(
   "supply-reserves",
