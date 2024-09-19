@@ -43,6 +43,7 @@ end
 ---@return ResultItem[]
 function mod.getPrice(timestamp, cache, ...)
   local args = {...}
+  local zero = bint.zero()
 
   -- prices that require to be synced
   ---@type string[]
@@ -51,7 +52,7 @@ function mod.getPrice(timestamp, cache, ...)
     function (v) return v.ticker end,
     utils.filter(
       ---@param v PriceParam
-      function (v) return not PriceCache[v.ticker] end,
+      function (v) return not PriceCache[v.ticker] and not bint.eq(v.quantity, zero) end,
       args
     )
   )
@@ -84,9 +85,8 @@ function mod.getPrice(timestamp, cache, ...)
   for _, v in ipairs(args) do
     local cached = PriceCache[v.ticker]
 
-    if cached then
-      if not v.quantity then v.quantity = one end
-
+    if not v.quantity then v.quantity = one end
+    if cached and not bint.eq(v.quantity, zero) then
       -- the value of the quantity
       -- (USD price value is denominated for precision,
       -- but the result needs to be divided according
@@ -96,7 +96,7 @@ function mod.getPrice(timestamp, cache, ...)
       local price = bint.udiv(
         v.quantity * oracleUtils.getUSDDenominated(cached.price),
         -- optimize performance by repeating "0" instead of a power operation
-        bint("1" .. string.rep("0", WrappedDenomination))
+        bint("1" .. string.rep("0", v.denomination))
       )
 
       -- add data
@@ -105,6 +105,12 @@ function mod.getPrice(timestamp, cache, ...)
         price = price
       })
     end
+
+    -- if the quantity is 0, we don't need to calculate anything
+    table.insert(results, {
+      ticker = v.ticker,
+      price = zero
+    })
   end
 
   return results
