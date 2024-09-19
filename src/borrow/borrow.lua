@@ -15,6 +15,14 @@ function mod.borrow(msg)
   -- amount of tokens to borrow
   local quantity = bint(msg.Tags.Quantity)
 
+  -- check if there are enough tokens available
+  local available = bint(Available)
+
+  -- we check if the quantity is less (and not less than equal) than
+  -- the amount of tokens available to be lent so the interest ratio
+  -- is never broken
+  assert(bint.ult(quantity, available), "Not enough tokens available to be lent")
+
   -- the wallet that will borrow the tokens
   local account = msg.From
 
@@ -47,22 +55,24 @@ function mod.borrow(msg)
     assert(bint.ule(borrowValue, capacity - usedCapacity), "Not enough collateral for this borrow")
   end
 
-  -- if the borrow capacity is not enough, 
-  -- we need to check the local collateralization
-  -- of the other loTokens
-  --if bint.ult(capacity, quantity) then
-    -- get the USD value of the local capacity
-    -- (other tokens will return the same)
-    --local localCapacityUSD = oracle.getUnderlyingPrice(capacity)
+  -- add loan
+  Loans[account] = tostring(bint(Loans[account] or 0) + quantity)
+  Available = tostring(available - quantity)
+  Lent = tostring(bint(Lent) + quantity)
 
-    -- TODO: get capacity from other loTokens
+  -- send out the tokens
+  ao.send({
+    Target = Token,
+    Action = "Transfer",
+    Quantity = tostring(quantity),
+    Recipient = account
+  })
 
-    -- TODO: assert for enough capacity
-  --end
-
-  -- TODO: add loan
-
-  -- TODO: send out the tokens
+  -- send confirmation
+  msg.reply({
+    Action = "Borrow-Confirmation",
+    ["Borrowed-Quantity"] = tostring(quantity)
+  })
 end
 
 return mod
