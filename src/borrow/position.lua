@@ -152,4 +152,18 @@ function mod.collateralization(msg)
   })
 end
 
+---@type HandlerFunction
+function mod.globalCollateralization(msg)
+  local account = msg.Tags.Recipient or msg.From
+
+  -- reach out to friend processes
+  local capacity, usedCapacity = mod.getGlobalCollateralization(account, msg.Timestamp)
+
+  msg.reply({
+    Capacity = tostring(capacity),
+    ["Used-Capacity"] = tostring(usedCapacity),
+    ["USD-Denomination"] = tostring(oracle.getUSDDenomination())
+  })
+end
+
 return mod

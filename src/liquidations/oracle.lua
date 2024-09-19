@@ -116,6 +116,9 @@ function mod.getPrice(timestamp, cache, ...)
   return results
 end
 
+-- Get the precision used for USD biginteger values
+function mod.getUSDDenomination() return 12 end
+
 -- Get the fractional part's length
 ---@param val number Full number
 function oracleUtils.getFractionsCount(val)
@@ -132,7 +135,7 @@ end
 -- Get a USD value in a 12 denominated form
 ---@param val number USD value as a floating point number
 function oracleUtils.getUSDDenominated(val)
-  local denominator = 12
+  local denominator = mod.getUSDDenomination()
 
   -- remove decimal point
   local denominated = string.gsub(tostring(val), "%.", "")

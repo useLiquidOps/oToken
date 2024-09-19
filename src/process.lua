@@ -18,6 +18,7 @@ local transfer = require ".token.transfer"
 local pool = require ".borrow.pool"
 local position = require ".borrow.position"
 local repay = require ".borrow.repay"
+local loan = require ".borrow.borrow"
 
 local oracle = require ".liquidations.oracle"
 
@@ -79,6 +80,11 @@ Handlers.add(
 --
 
 Handlers.add(
+  "borrow-loan-borrow",
+  Handlers.utils.hasMatchingTag("Action", "Borrow"),
+  loan.borrow
+)
+Handlers.add(
   "borrow-repay",
   { From = Token, Action = "Credit-Notice", ["X-Action"] = "Repay" },
   repay.handler,
@@ -99,6 +105,11 @@ Handlers.add(
   "borrow-position-collateralization",
   Handlers.utils.hasMatchingTag("Action", "Collateralization"),
   position.collateralization
+)
+Handlers.add(
+  "borrow-position-global-collateralization",
+  Handlers.utils.hasMatchingTag("Action", "Global-Collateralization"),
+  position.globalCollateralization
 )
 Handlers.add(
   "borrow-pool-config",
