@@ -18,20 +18,34 @@ function mod.borrow(msg)
   -- the wallet that will borrow the tokens
   local account = msg.From
 
-  -- get position data
-  local capacity, usedCapacity = position.getGlobalCollateralization(
-    account,
-    msg.Timestamp
-  )
+  -- get local collateralization first, so in case it is high enough,
+  -- we don't even need to reach out to the friend processes to ensure
+  -- collateralization
+  local localCapacity = position.getLocalBorrowCapacity(account)
+  local localUsedCapacity = position.getLocalUsedCapacity(account)
 
-  -- get borrow value in USD
-  -- we request this after the collateralization, because
-  -- in this case the oracle might not have to sync the price
-  local borrowValue = oracle.getPrice(msg.Timestamp, false, {
-    ticker = CollateralTicker,
-    quantity = quantity,
-    denomination = WrappedDenomination
-  })
+  -- if the loan wouldn't have enough collateral locally
+  -- we check the global collateralization
+  if not bint.ult(localUsedCapacity, localCapacity) or not bint.ule(quantity, localCapacity - localUsedCapacity) then
+    -- get position data
+    local capacity, usedCapacity = position.getGlobalCollateralization(
+      account,
+      msg.Timestamp
+    )
+
+    -- get borrow value in USD
+    -- we request this after the collateralization, because
+    -- in this case the oracle might not have to sync the price
+    local borrowValue = oracle.getPrice(msg.Timestamp, false, {
+      ticker = CollateralTicker,
+      quantity = quantity,
+      denomination = WrappedDenomination
+    })
+
+    -- make sure the user is allowed to borrow
+    assert(bint.ult(usedCapacity, capacity), "Borrow balance is too high")
+    assert(bint.ule(borrowValue, capacity - usedCapacity), "Not enough collateral for this borrow")
+  end
 
   -- if the borrow capacity is not enough, 
   -- we need to check the local collateralization

@@ -36,6 +36,13 @@ function mod.getLocalBorrowCapacity(address)
   )
 end
 
+-- Get the amount of tokens borrowed + owned as interest
+---@param address string Address to get the borrow capacity for
+---@return Bint
+function mod.getLocalUsedCapacity(address)
+  return bint(Loans[address] or 0) + bint(Interests[address] or 0)
+end
+
 -- Get the global collateralization state (across all friend loTokens) in denominated USD
 ---@param address string Address to get the collateralization for
 ---@param timestamp number Current message timestamp
@@ -58,7 +65,7 @@ function mod.getGlobalCollateralization(address, timestamp)
     -- add local value
     {
       ticker = CollateralTicker,
-      quantity = bint(Loans[address] or 0) + bint(Interests[address] or 0),
+      quantity = mod.getLocalUsedCapacity(address),
       denomination = WrappedDenomination
     }
   }
@@ -134,7 +141,7 @@ function mod.collateralization(msg)
   local capacity = mod.getLocalBorrowCapacity(account)
 
   -- get the used capacity
-  local usedCapacity = bint(Loans[account] or 0) + bint(Interests[account] or 0)
+  local usedCapacity = mod.getLocalUsedCapacity(account)
 
   msg.reply({
     Action = "Collateralization-Response",
