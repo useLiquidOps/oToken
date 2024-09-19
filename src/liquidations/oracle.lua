@@ -85,8 +85,10 @@ function mod.getPrice(timestamp, cache, ...)
   for _, v in ipairs(args) do
     local cached = PriceCache[v.ticker]
 
+    assert(cached ~= nil, "No price returned from the oracle for " .. v.ticker)
+
     if not v.quantity then v.quantity = one end
-    if cached and not bint.eq(v.quantity, zero) then
+    if not bint.eq(v.quantity, zero) then
       -- the value of the quantity
       -- (USD price value is denominated for precision,
       -- but the result needs to be divided according
@@ -104,13 +106,12 @@ function mod.getPrice(timestamp, cache, ...)
         ticker = v.ticker,
         price = price
       })
+    else
+      table.insert(results, {
+        ticker = v.ticker,
+        price = zero
+      })
     end
-
-    -- if the quantity is 0, we don't need to calculate anything
-    table.insert(results, {
-      ticker = v.ticker,
-      price = zero
-    })
   end
 
   return results
