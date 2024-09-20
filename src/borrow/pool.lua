@@ -3,7 +3,7 @@ local json = require "json"
 local mod = {}
 
 ---@type HandlerFunction
-function mod.setup()
+function mod.setup(msg)
   -- token that can be lent/borrowed
   Token = Token or ao.env.Process.Tags.Token
 
@@ -26,6 +26,15 @@ function mod.setup()
   -- all interests accrued (values are Bint in string format)
   ---@type table<string, string>
   Interests = Interests or {}
+
+  -- last time interests have been synced
+  LastInterestTimestamp = LastInterestTimestamp or msg.Timestamp
+
+  -- base interest ratio
+  BaseRate = BaseRate or tonumber(BaseRate)
+
+  -- initial interest ratio
+  InitRate = InitRate or tonumber(InitRate)
 
   -- other loToken processes
   ---@type string[]

@@ -26,8 +26,7 @@ function mod.getLocalBorrowCapacity(address)
   -- ratios below, while using bigintegers
   -- later the final result needs to be multiplied by
   -- 1000 as well, to get the actual result
-  local ratioMul = 1000
-  local collateralWhole = bint(CollateralRatio * ratioMul // 1)
+  local collateralWhole, ratioMul = utils.floatBintRepresentation(CollateralRatio)
 
   -- capacity in units of the underlying asset
   return bint.udiv(

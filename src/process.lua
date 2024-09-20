@@ -18,7 +18,8 @@ local transfer = require ".token.transfer"
 local pool = require ".borrow.pool"
 local position = require ".borrow.position"
 local repay = require ".borrow.repay"
-local loan = require ".borrow.borrow"
+local borrow = require ".borrow.borrow"
+local interest = require ".borrow.interest"
 
 local oracle = require ".liquidations.oracle"
 
@@ -47,7 +48,7 @@ Handlers.add(
 Handlers.add(
   "borrow-loan-interest-sync",
   function () return "continue" end,
-  loan.interest
+  interest.syncInterests
 )
 
 -- temporary handlers for testnet
@@ -88,7 +89,7 @@ Handlers.add(
 Handlers.add(
   "borrow-loan-borrow",
   Handlers.utils.hasMatchingTag("Action", "Borrow"),
-  loan.borrow
+  borrow
 )
 Handlers.add(
   "borrow-repay",

@@ -3,10 +3,8 @@ local oracle = require ".liquidations.oracle"
 local position = require ".borrow.position"
 local bint = require ".utils.bint"(1024)
 
-local mod = {}
-
 ---@type HandlerFunction
-function mod.borrow(msg)
+local function borrow(msg)
   assert(
     assertions.isTokenQuantity(msg.Tags.Quantity),
     "Invalid borrow quantity"
@@ -71,9 +69,4 @@ function mod.borrow(msg)
   })
 end
 
----@type HandlerFunction
-function mod.interest(msg)
-  
-end
-
-return mod
+return borrow

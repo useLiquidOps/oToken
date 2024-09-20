@@ -1,6 +1,8 @@
 -- Copyright (c) 2024 Forward Research
 -- Code from the aos codebase: https://github.com/permaweb/aos
 
+local bint = require ".utils.bint"(1024)
+
 local utils = { _version = "0.0.5" }
 
 function utils.matchesPattern(pattern, value, msg)
@@ -258,6 +260,22 @@ utils.values = function (t)
     table.insert(values, value)
   end
   return values
+end
+
+-- Turn a floating point number
+---@param raw number Value to represent as a bigint
+---@param floatMul number? Optional multiplier
+function utils.floatBintRepresentation(raw, floatMul)
+  if not floatMul then floatMul = 100000 end
+
+  -- multiply the raw value by the floatMul
+  -- we do this, so that we can calculate with
+  -- more precise ratios, while using bigintegers
+  -- later the final result needs to be handled
+  -- according to the multiplier
+  local repr = bint(raw * floatMul // 1)
+
+  return repr, floatMul
 end
 
 return utils
