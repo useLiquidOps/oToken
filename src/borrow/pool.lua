@@ -49,7 +49,7 @@ function mod.config(msg)
     ["Collateral-Ratio"] = tostring(CollateralRatio),
     ["Liquidation-Threshold"] = tostring(LiquidationThreshold),
     Oracle = Oracle,
-    ["Wrapped-Denomination"] = tostring(WrappedDenomination)
+    ["Collateral-Denomination"] = tostring(CollateralDenomination)
   })
 end
 

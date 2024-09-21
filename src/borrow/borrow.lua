@@ -36,7 +36,7 @@ local function borrow(msg)
   local borrowValue = oracle.getPrice(msg.Timestamp, false, {
     ticker = CollateralTicker,
     quantity = quantity,
-    denomination = WrappedDenomination
+    denomination = CollateralDenomination
   })
 
   -- make sure the oracle returned a price

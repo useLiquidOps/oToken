@@ -34,7 +34,7 @@ local function transfer(msg)
     local transferValue = oracle.getPrice(msg.Timestamp, false, {
       ticker = CollateralTicker,
       quantity = quantity,
-      denomination = WrappedDenomination
+      denomination = CollateralDenomination
     })
 
     -- check if a price was returned

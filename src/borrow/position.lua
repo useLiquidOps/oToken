@@ -56,7 +56,7 @@ function mod.getGlobalCollateralization(address, timestamp)
   ---@type PriceParam[]
   local capacities = {
     -- add local value
-    { ticker = CollateralTicker, quantity = mod.getLocalBorrowCapacity(address), denomination = WrappedDenomination }
+    { ticker = CollateralTicker, quantity = mod.getLocalBorrowCapacity(address), denomination = CollateralDenomination }
   }
 
   ---@type PriceParam[]
@@ -65,7 +65,7 @@ function mod.getGlobalCollateralization(address, timestamp)
     {
       ticker = CollateralTicker,
       quantity = mod.getLocalUsedCapacity(address),
-      denomination = WrappedDenomination
+      denomination = CollateralDenomination
     }
   }
 
@@ -147,7 +147,7 @@ function mod.collateralization(msg)
     Capacity = tostring(capacity),
     ["Used-Capacity"] = tostring(usedCapacity),
     ["Collateral-Ticker"] = CollateralTicker,
-    ["Collateral-Denomination"] = tostring(WrappedDenomination)
+    ["Collateral-Denomination"] = tostring(CollateralDenomination)
   })
 end
 
