@@ -36,7 +36,7 @@ function mod.setup(msg)
   -- initial interest rate
   InitRate = InitRate or tonumber(ao.env.Process.Tags["Init-Rate"])
 
-  -- other loToken processes
+  -- other oToken processes
   ---@type string[]
   Friends = Friends or json.decode(ao.env.Process.Tags.Friends or "[]")
 end

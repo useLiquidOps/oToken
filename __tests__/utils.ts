@@ -9,7 +9,7 @@ export const env: Environment = {
     Id: "0000000000000000000000000000000000000000000",
     Owner: "0000000000000000000000000000000000000000001",
     Tags: [
-      { name: "Name", value: "loToken" },
+      { name: "Name", value: "oToken" },
       { name: "Ticker", value: "TST" },
       { name: "Logo", value: "0000000000000000000000000000000000000000002" }
     ]

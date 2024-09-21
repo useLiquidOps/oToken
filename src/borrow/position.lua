@@ -9,7 +9,7 @@ local mod = {}
 ---@param address string Address to get the borrow capacity for
 ---@return Bint
 function mod.getLocalBorrowCapacity(address)
-  -- user loToken balance
+  -- user oToken balance
   local balance = bint(Balances[address] or 0)
 
   -- total tokens pooled
@@ -42,7 +42,7 @@ function mod.getLocalUsedCapacity(address)
   return bint(Loans[address] or 0) + bint(Interests[address] or 0)
 end
 
--- Get the global collateralization state (across all friend loTokens) in denominated USD
+-- Get the global collateralization state (across all friend oTokens) in denominated USD
 ---@param address string Address to get the collateralization for
 ---@param timestamp number Current message timestamp
 function mod.getGlobalCollateralization(address, timestamp)

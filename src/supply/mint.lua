@@ -16,7 +16,7 @@ function mint.handler(msg)
   -- transfer sender
   local sender = msg.Tags.Sender
 
-  -- amount of loTokens to be minted
+  -- amount of oTokens to be minted
   local mintQty = quantity
 
   -- total tokens pooled and supply

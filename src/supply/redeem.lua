@@ -13,7 +13,7 @@ function mod.handler(msg)
   -- amount of tokens to burn
   local quantity = bint(msg.Tags.Quantity)
 
-  -- loToken wallet balance for sender
+  -- oToken wallet balance for sender
   local walletBalance = bint(Balances[msg.From] or "0")
 
   -- check if the user has enough tokens to burn
