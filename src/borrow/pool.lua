@@ -30,11 +30,11 @@ function mod.setup(msg)
   -- last time interests have been synced
   LastInterestTimestamp = LastInterestTimestamp or msg.Timestamp
 
-  -- base interest ratio
-  BaseRate = BaseRate or tonumber(BaseRate)
+  -- base interest rate
+  BaseRate = BaseRate or tonumber(ao.env.Process.Tags["Base-Rate"])
 
-  -- initial interest ratio
-  InitRate = InitRate or tonumber(InitRate)
+  -- initial interest rate
+  InitRate = InitRate or tonumber(ao.env.Process.Tags["Init-Rate"])
 
   -- other loToken processes
   ---@type string[]
