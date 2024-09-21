@@ -56,7 +56,7 @@ local function borrow(msg)
 
   -- send out the tokens
   ao.send({
-    Target = Token,
+    Target = CollateralID,
     Action = "Transfer",
     Quantity = tostring(quantity),
     Recipient = account

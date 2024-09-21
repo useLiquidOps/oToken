@@ -5,7 +5,7 @@ local mod = {}
 ---@type HandlerFunction
 function mod.setup(msg)
   -- token that can be lent/borrowed
-  Token = Token or ao.env.Process.Tags.Token
+  CollateralID = CollateralID or ao.env.Process.Tags["Collateral-Id"]
 
   -- collateralization ratio
   CollateralRatio = CollateralRatio or tonumber(ao.env.Process.Tags["Collateral-Ratio"])
@@ -45,7 +45,7 @@ end
 function mod.config(msg)
   msg.reply({
     Action = "Config",
-    Token = Token,
+    ["Collateral-Id"] = CollateralID,
     ["Collateral-Ratio"] = tostring(CollateralRatio),
     ["Liquidation-Threshold"] = tostring(LiquidationThreshold),
     Oracle = Oracle,

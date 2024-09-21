@@ -93,7 +93,7 @@ Handlers.add(
 )
 Handlers.add(
   "borrow-repay",
-  { From = Token, Action = "Credit-Notice", ["X-Action"] = "Repay" },
+  { From = CollateralID, Action = "Credit-Notice", ["X-Action"] = "Repay" },
   repay.handler,
   nil,
   repay.error
@@ -126,7 +126,7 @@ Handlers.add(
 
 Handlers.add(
   "supply-mint",
-  { From = Token, Action = "Credit-Notice", ["X-Action"] = "Mint" },
+  { From = CollateralID, Action = "Credit-Notice", ["X-Action"] = "Mint" },
   mint.handler,
   nil,
   mint.error
