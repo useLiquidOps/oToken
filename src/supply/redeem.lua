@@ -1,4 +1,6 @@
 local assertions = require ".utils.assertions"
+local oracle = require ".liquidations.oracle"
+local position = require ".borrow.position"
 local bint = require ".utils.bint"(1024)
 
 local mod = {}
@@ -13,8 +15,11 @@ function mod.handler(msg)
   -- amount of tokens to burn
   local quantity = bint(msg.Tags.Quantity)
 
+  -- the wallet that is burning the tokens
+  local sender = msg.From
+
   -- oToken wallet balance for sender
-  local walletBalance = bint(Balances[msg.From] or "0")
+  local walletBalance = bint(Balances[sender] or "0")
 
   -- check if the user has enough tokens to burn
   assert(
@@ -47,8 +52,32 @@ function mod.handler(msg)
     "Not enough available tokens to redeem for"
   )
 
+  -- get position data
+  local capacity, usedCapacity = position.getGlobalCollateralization(
+    sender,
+    msg.Timestamp
+  )
+
+  -- get the value of the tokens to be burned in
+  -- terms of the underlying asset and then get the price
+  -- of that quantity
+  local burnValue = oracle.getPrice(msg.Timestamp, false, {
+    ticker = CollateralTicker,
+    quantity = quantity,
+    denomination = CollateralDenomination
+  })
+
+  -- check if a price was returned
+  assert(burnValue[1] ~= nil, "No price data returned from the oracle for the redeem value")
+
+  -- do not allow reserved collateral to be burned
+  assert(
+    bint.ule(burnValue[1].price, capacity - usedCapacity),
+    "Redeem value is too high and requires higher collateralization"
+  )
+
   -- update stored quantities (balance, available, total supply)
-  Balances[msg.From] = tostring(walletBalance - quantity)
+  Balances[sender] = tostring(walletBalance - quantity)
   Available = tostring(availableTokens - rewardQty)
   TotalSupply = tostring(totalSupply - quantity)
 
