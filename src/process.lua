@@ -87,6 +87,11 @@ Handlers.add(
 --
 
 Handlers.add(
+  "borrow-loan-interest-get",
+  Handlers.utils.hasMatchingTag("Action", "Get-APR"),
+  interest.interestRate
+)
+Handlers.add(
   "borrow-loan-borrow",
   Handlers.utils.hasMatchingTag("Action", "Borrow"),
   borrow
