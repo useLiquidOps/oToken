@@ -4,8 +4,25 @@ local utils = require ".utils.utils"
 local mod = {}
 
 ---@type HandlerFunction
-function mod.interestRate()
-  local 
+function mod.interestRate(msg)
+  -- helper values
+  local totalLent = bint(Lent)
+  local baseRateB, rateMul = utils.floatBintRepresentation(BaseRate)
+  local initRateB = utils.floatBintRepresentation(InitRate, rateMul)
+
+  -- calculate weighted base rate
+  local weightedBase = bint.udiv(
+    baseRateB * totalLent,
+    (totalLent + bint(Available))
+  )
+
+  -- full interest rate
+  local interestRate = weightedBase + initRateB
+
+  msg.reply({
+    ["Annual-Percentage-Rate"] = tostring(interestRate),
+    ["Rate-Multiplier"] = tostring(rateMul)
+  })
 end
 
 ---@type HandlerFunction
