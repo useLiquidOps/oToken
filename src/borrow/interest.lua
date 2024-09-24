@@ -1,6 +1,12 @@
 local bint = require ".utils.bint"(1024)
+local utils = require ".utils.utils"
 
 local mod = {}
+
+---@type HandlerFunction
+function mod.interestRate()
+  local 
+end
 
 ---@type HandlerFunction
 function mod.syncInterests(msg)
@@ -15,6 +21,9 @@ function mod.syncInterests(msg)
   local totalPooled = totalLent + bint(Available)
   local interestDelayB = bint(interestDelay)
   local oneYearInMs = bint("31560000000")
+  local initRateB, rateMul = utils.floatBintRepresentation(InitRate)
+  local baseRateB = utils.floatBintRepresentation(BaseRate, rateMul)
+  local rateMulWithPercentage = bint(rateMul) * bint(100)
 
   -- go through all Loans and add the interest
   for address, rawQty in pairs(Loans) do
@@ -24,10 +33,16 @@ function mod.syncInterests(msg)
       local interestQty = Interests[address] and bint(Interests[address]) or zero
       local yieldingQty = loanQty + interestQty
 
-      -- calculate missing interest
+      -- calculate interest for a year
+      local ownedYearlyInterest = bint.udiv(
+        yieldingQty * totalLent * baseRateB,
+        totalPooled * rateMulWithPercentage
+      ) + bint.udiv(yieldingQty * initRateB, rateMulWithPercentage)
+
+      -- calculate interest for the delay period
       local ownedInterest = bint.udiv(
-        yieldingQty * totalLent * interestDelayB,
-        totalPooled * oneYearInMs
+        ownedYearlyInterest * interestDelayB,
+        oneYearInMs
       )
 
       -- add owned interest

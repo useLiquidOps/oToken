@@ -31,10 +31,10 @@ function mod.setup(msg)
   LastInterestTimestamp = LastInterestTimestamp or msg.Timestamp
 
   -- base interest rate
-  BaseRate = BaseRate or tonumber(ao.env.Process.Tags["Base-Rate"])
+  BaseRate = BaseRate or tonumber(ao.env.Process.Tags["Base-Rate"]) or 0
 
   -- initial interest rate
-  InitRate = InitRate or tonumber(ao.env.Process.Tags["Init-Rate"])
+  InitRate = InitRate or tonumber(ao.env.Process.Tags["Init-Rate"]) or 0
 
   -- other oToken processes
   ---@type string[]
