@@ -2,6 +2,7 @@ local oracle = require ".liquidations.oracle"
 local scheduler = require ".utils.scheduler"
 local bint = require ".utils.bint"(1024)
 local utils = require ".utils.utils"
+local json = require "json"
 
 local mod = {}
 
@@ -9,8 +10,18 @@ local mod = {}
 ---@param address string Address to get the borrow capacity for
 ---@return Bint
 function mod.getLocalBorrowCapacity(address)
+  -- optimize 0 results
+  if not Balances[address] or Balances[address] == "0" then
+    return bint.zero()
+  end
+
   -- user oToken balance
   local balance = bint(Balances[address] or 0)
+
+  -- TODO: calculating the total amount pooled can probably be improved
+  -- an option would be to re-calculate this every time a new message is
+  -- handled, before calling any handlers and removing the value after
+  -- all handlers have been evaluated
 
   -- total tokens pooled
   local totalPooled = bint(Available) + bint(Lent)
@@ -39,6 +50,11 @@ end
 ---@param address string Address to get the borrow capacity for
 ---@return Bint
 function mod.getLocalUsedCapacity(address)
+  -- optimize 0 results
+  if (not Loans[address] or Loans[address] == "0") and (not Interests[address] or Interests[address] == "0") then
+    return bint.zero()
+  end
+
   return bint(Loans[address] or 0) + bint(Interests[address] or 0)
 end
 
@@ -133,7 +149,7 @@ function mod.balance(msg)
 end
 
 ---@type HandlerFunction
-function mod.collateralization(msg)
+function mod.position(msg)
   local account = msg.Tags.Recipient or msg.From
 
   -- get the capacity
@@ -152,7 +168,7 @@ function mod.collateralization(msg)
 end
 
 ---@type HandlerFunction
-function mod.globalCollateralization(msg)
+function mod.globalPosition(msg)
   local account = msg.Tags.Recipient or msg.From
 
   -- reach out to friend processes
@@ -162,6 +178,47 @@ function mod.globalCollateralization(msg)
     Capacity = tostring(capacity),
     ["Used-Capacity"] = tostring(usedCapacity),
     ["USD-Denomination"] = tostring(oracle.getUSDDenomination())
+  })
+end
+
+---@type HandlerFunction
+function mod.allPositions(msg)
+  ---@type table<string, { Capacity: string, Used-Capacity: string }>
+  local positions = {}
+
+  -- go through all users who have collateral deposited
+  -- and add their position
+  for address, _ in pairs(Balances) do
+    positions[address] = {
+      Capacity = tostring(mod.getLocalBorrowCapacity(address)),
+      ["Used-Capacity"] = tostring(mod.getLocalUsedCapacity(address)),
+    }
+  end
+
+  -- go through all users who have "Loans"
+  -- because it is possible that their collateralization
+  -- is not in this instance of the process
+  --
+  -- we only need to go through the "Loand" and
+  -- not the "Interests", because the interest is repaid
+  -- first, the loan is only repaid after the owned
+  -- interest is zero
+  for address, _ in pairs(Loans) do
+    -- do not handle positions that have
+    -- already been added above
+    if not positions[address] then
+      positions[address] = {
+        Capacity = tostring(mod.getLocalBorrowCapacity(address)),
+        ["Used-Capacity"] = tostring(mod.getLocalUsedCapacity(address))
+      }
+    end
+  end
+
+  -- reply with the serialized result
+  msg.reply({
+    ["Collateral-Ticker"] = CollateralTicker,
+    ["Collateral-Denomination"] = tostring(CollateralDenomination),
+    Data = json.encode(positions)
   })
 end
 

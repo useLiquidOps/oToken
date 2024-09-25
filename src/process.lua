@@ -115,13 +115,17 @@ Handlers.add(
 )
 Handlers.add(
   "borrow-position-collateralization",
-  Handlers.utils.hasMatchingTag("Action", "Collateralization"),
-  position.collateralization
+  Handlers.utils.hasMatchingTag("Action", "Position"),
+  position.position
 )
 Handlers.add(
   "borrow-position-global-collateralization",
-  Handlers.utils.hasMatchingTag("Action", "Global-Collateralization"),
-  position.globalCollateralization
+  Handlers.utils.hasMatchingTag("Action", "Global-Position"),
+  position.globalPosition
+)
+Handlers.add(
+  "borrow-position-all-positions",
+  Handlers.utils.hasMatchingTag("Action", "Positions")
 )
 Handlers.add(
   "borrow-pool-config",
