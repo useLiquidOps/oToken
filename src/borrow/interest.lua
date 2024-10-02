@@ -66,6 +66,8 @@ function mod.syncInterests(msg)
       Interests[address] = tostring(interestQty + ownedInterest)
     end
   end
+
+  LastInterestTimestamp = msg.Timestamp
 end
 
 return mod

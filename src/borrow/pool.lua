@@ -24,11 +24,8 @@ function mod.setup(msg)
   Loans = Loans or {}
 
   -- all interests accrued (values are Bint in string format)
-  ---@type table<string, string>
+  ---@type table<string, { value: string, updated: number }>
   Interests = Interests or {}
-
-  -- last time interests have been synced
-  LastInterestTimestamp = LastInterestTimestamp or msg.Timestamp
 
   -- base interest rate
   BaseRate = BaseRate or tonumber(ao.env.Process.Tags["Base-Rate"]) or 0

@@ -41,13 +41,15 @@ Handlers.once(
 -- oracle timeout sync (must be the second handler)
 Handlers.add(
   "oracle-timeout-sync",
-  function () return "continue" end,
+  Handlers.utils.continue({}),
   oracle.timeoutSync
 )
 -- interest payment sync (must be the third handler)
 Handlers.add(
   "borrow-loan-interest-sync",
-  function () return "continue" end,
+  Handlers.utils.continue(Handlers.utils.hasMatchingTagOf("Action", {
+    "Borrow", "Repay", "Borrow-Balance", "Borrow-Capacity", "Position", "Global-Position", "Positions", "Redeem", "Transfer"
+  })),
   interest.syncInterests
 )
 
