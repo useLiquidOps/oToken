@@ -25,10 +25,13 @@ function mod.interestRate(msg)
   })
 end
 
+---@alias InterestPerformanceHelper { zero: Bint, totalLent: Bint, totalPooled: Bint, oneYearInMs: Bint, initRate: Bint, baseRate: Bint, rateMulWithPercentage: Bint }
+
 -- Updates the owned interest for a single user
 ---@param address string User to update interests for
 ---@param timestamp number Current timestamp
-function mod.updateInterest(address, timestamp)
+---@param helperData InterestPerformanceHelper Helper params for performance improvements in case the function is used in a loop
+function mod.updateInterest(address, timestamp, helperData)
   -- no action needed if the user does not have an active loan
   -- (we only check the interests for extra security. If there is
   -- no active loan, the interest should always be 0 or nil, because
@@ -46,7 +49,31 @@ function mod.updateInterest(address, timestamp)
   -- no need to update if there is no delay
   if delay <= 0 then return end
 
-  
+  -- loan quantity and interest quantity
+  local loanQty = bint(Loans[address])
+  local interestQty = bint(Interests[address].value) or helperData.zero
+  local yieldingQty = loanQty + interestQty
+
+  -- calculate interest for a year
+  local ownedYearlyInterest = bint.udiv(
+    yieldingQty * helperData.totalLent * helperData.baseRate,
+    helperData.totalPooled * helperData.rateMulWithPercentage
+  ) + bint.udiv(
+    yieldingQty * helperData.initRate,
+    helperData.rateMulWithPercentage
+  )
+
+  -- calculate interest for the delay period
+  local ownedExtraInterest = bint.udiv(
+    ownedYearlyInterest * bint(delay),
+    helperData.oneYearInMs
+  )
+
+  -- update interest balance for the user
+  Interests[address] = {
+    value = tostring(Interests[address].value + ownedExtraInterest),
+    updated = timestamp
+  }
 end
 
 ---@type HandlerFunction
@@ -57,6 +84,8 @@ function mod.syncInterests(msg)
   local interestDelay = msg.Timestamp - LastInterestTimestamp
 
   if interestDelay == 0 then return end
+
+
 
   -- helper values for calculation
   local zero = bint.zero()
