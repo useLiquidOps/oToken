@@ -25,8 +25,34 @@ function mod.interestRate(msg)
   })
 end
 
+-- Updates the owned interest for a single user
+---@param address string User to update interests for
+---@param timestamp number Current timestamp
+function mod.updateInterest(address, timestamp)
+  -- no action needed if the user does not have an active loan
+  -- (we only check the interests for extra security. If there is
+  -- no active loan, the interest should always be 0 or nil, because
+  -- when a user repays a loan, the interest gets paid first)
+  if (not Loans[address] or Loans[address] == "0") and (not Interests[address] or Interests[address].value == "0") then return end
+
+  -- fixup interest for user, in case it is missing
+  if not Interests[address] then
+    Interests[address] = { value = "0", updated = timestamp }
+  end
+
+  -- calculate delay
+  local delay = timestamp - Interests[address].updated
+
+  -- no need to update if there is no delay
+  if delay <= 0 then return end
+
+  
+end
+
 ---@type HandlerFunction
 function mod.syncInterests(msg)
+
+
   -- milliseconds since the last interest sync
   local interestDelay = msg.Timestamp - LastInterestTimestamp
 

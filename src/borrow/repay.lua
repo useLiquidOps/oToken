@@ -21,9 +21,14 @@ function repay.handler(msg)
     "Invalid repay target address"
   )
 
+  -- fixup interest
+  if not Interests[target] then
+    Interests[target] = { value = "0", updated = msg.Timestamp }
+  end
+
   -- borrow & interest balances for the target
   local borrowBalance = bint(Loans[target] or "0")
-  local interestBalance = bint(Interests[target] or "0")
+  local interestBalance = bint(Interests[target].value)
 
   local zero = bint.zero()
 
@@ -40,13 +45,13 @@ function repay.handler(msg)
   -- in case the quantity is less than or equal to the
   -- outstanding interest, we just deduct from the interest
   if bint.ule(quantity, interestBalance) then
-    Interests[target] = tostring(interestBalance - quantity)
+    Interests[target].value = tostring(interestBalance - quantity)
   else
     -- the quantity is more than the outstanding interest,
     -- so we reset the owned interest quantity and calculate
     -- the remainder of the repay interaction
     local remainingQty = quantity - interestBalance
-    Interests[target] = "0"
+    Interests[target].value = "0"
 
     -- then if there are any tokens left, we repay the borrow
     --

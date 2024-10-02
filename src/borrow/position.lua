@@ -51,11 +51,11 @@ end
 ---@return Bint
 function mod.getLocalUsedCapacity(address)
   -- optimize 0 results
-  if (not Loans[address] or Loans[address] == "0") and (not Interests[address] or Interests[address] == "0") then
+  if (not Loans[address] or Loans[address] == "0") and (not Interests[address] or Interests[address].value == "0") then
     return bint.zero()
   end
 
-  return bint(Loans[address] or 0) + bint(Interests[address] or 0)
+  return bint(Loans[address] or 0) + bint(Interests[address].value or 0)
 end
 
 -- Get the global collateralization state (across all friend oTokens) in denominated USD
@@ -144,7 +144,7 @@ function mod.balance(msg)
   msg.reply({
     Action = "Borrow-Balance-Response",
     ["Borrowed-Quantity"] = Loans[account],
-    ["Interest-Quantity"] = Interests[account]
+    ["Interest-Quantity"] = Interests[account].value
   })
 end
 
