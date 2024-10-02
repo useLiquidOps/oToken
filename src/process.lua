@@ -46,7 +46,7 @@ Handlers.add(
 )
 -- interest payment sync (must be the third handler)
 Handlers.add(
-  "borrow-loan-interest-sync",
+  "borrow-loan-interest-sync-dynamic",
   Handlers.utils.continue(Handlers.utils.hasMatchingTagOf("Action", {
     "Borrow", "Repay", "Borrow-Balance", "Borrow-Capacity", "Position", "Global-Position", "Positions", "Redeem", "Transfer"
   })),
@@ -92,6 +92,11 @@ Handlers.add(
   "borrow-loan-interest-get",
   Handlers.utils.hasMatchingTag("Action", "Get-APR"),
   interest.interestRate
+)
+Handlers.add(
+  "borrow-loan-interest-sync-static",
+  Handlers.utils.hasMatchingTag("Action", "Sync-Interest"),
+  interest.syncInterestForUser
 )
 Handlers.add(
   "borrow-loan-borrow",

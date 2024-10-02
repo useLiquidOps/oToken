@@ -76,14 +76,14 @@ function mod.updateInterest(address, timestamp, helperData)
   }
 end
 
----@type HandlerFunction
-function mod.syncInterests(msg)
+-- This function generates the interest performance helper data
+---@returns InterestPerformanceHelper
+function mod.genHelperData()
   -- setup the helper data
   local totalLent = bint(Lent)
   local initRate, rateMul = utils.floatBintRepresentation(InitRate)
 
-  ---@type InterestPerformanceHelper
-  local helperData = {
+  return {
     zero = bint.zero(),
     totalLent = totalLent,
     totalPooled = totalLent + bint(Available),
@@ -92,6 +92,15 @@ function mod.syncInterests(msg)
     baseRate = utils.floatBintRepresentation(BaseRate, rateMul),
     rateMulWithPercentage = bint(rateMul) * bint(100)
   }
+end
+
+-- This handler function will sync the interest owned dynamically
+-- based on the called Action. It is necessary for borrowing, etc.
+-- to ensure collateralization
+---@type HandlerFunction
+function mod.syncInterests(msg)
+  -- set up helper data
+  local helperData = mod.genHelperData()
 
   -- if the current action is "Repay", we need to update the interest
   -- not for the message sender (that is the collateral token process),
@@ -115,6 +124,27 @@ function mod.syncInterests(msg)
   else
     mod.updateInterest(msg.From, msg.Timestamp, helperData)
   end
+end
+
+-- This is an externally callable handler's function
+-- that lets the caller sync the interest owned for
+-- the provided user (will sync for the caller if
+-- no recipient is provided)
+---@type HandlerFunction
+function mod.syncInterestForUser(msg)
+  -- sync target
+  local target = msg.Tags.Recipient or msg.From
+
+  -- set up helper data
+  local helperData = mod.genHelperData()
+
+  mod.updateInterest(target, msg.Timestamp, helperData)
+
+  msg.reply({
+    ["Updated-For"] = target,
+    ["Owned-Interest-Quantity"] = Interests[target] and Interests[target].value or "0",
+    ["Base-Loan-Quantity"] = Loans[target] or "0"
+  })
 end
 
 return mod
