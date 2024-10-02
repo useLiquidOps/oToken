@@ -78,51 +78,43 @@ end
 
 ---@type HandlerFunction
 function mod.syncInterests(msg)
-
-
-  -- milliseconds since the last interest sync
-  local interestDelay = msg.Timestamp - LastInterestTimestamp
-
-  if interestDelay == 0 then return end
-
-
-
-  -- helper values for calculation
-  local zero = bint.zero()
+  -- setup the helper data
   local totalLent = bint(Lent)
-  local totalPooled = totalLent + bint(Available)
-  local interestDelayB = bint(interestDelay)
-  local oneYearInMs = bint("31560000000")
-  local initRateB, rateMul = utils.floatBintRepresentation(InitRate)
-  local baseRateB = utils.floatBintRepresentation(BaseRate, rateMul)
-  local rateMulWithPercentage = bint(rateMul) * bint(100)
+  local initRate, rateMul = utils.floatBintRepresentation(InitRate)
 
-  -- go through all Loans and add the interest
-  for address, rawQty in pairs(Loans) do
-    if rawQty ~= nil and rawQty ~= "0" then
-      -- loan quantity and interest quantity
-      local loanQty = bint(rawQty)
-      local interestQty = Interests[address] and bint(Interests[address]) or zero
-      local yieldingQty = loanQty + interestQty
+  ---@type InterestPerformanceHelper
+  local helperData = {
+    zero = bint.zero(),
+    totalLent = totalLent,
+    totalPooled = totalLent + bint(Available),
+    oneYearInMs = bint("31560000000"),
+    initRate = initRate,
+    baseRate = utils.floatBintRepresentation(BaseRate, rateMul),
+    rateMulWithPercentage = bint(rateMul) * bint(100)
+  }
 
-      -- calculate interest for a year
-      local ownedYearlyInterest = bint.udiv(
-        yieldingQty * totalLent * baseRateB,
-        totalPooled * rateMulWithPercentage
-      ) + bint.udiv(yieldingQty * initRateB, rateMulWithPercentage)
-
-      -- calculate interest for the delay period
-      local ownedInterest = bint.udiv(
-        ownedYearlyInterest * interestDelayB,
-        oneYearInMs
-      )
-
-      -- add owned interest
-      Interests[address] = tostring(interestQty + ownedInterest)
+  -- if the current action is "Repay", we need to update the interest
+  -- not for the message sender (that is the collateral token process),
+  -- but the user who initiated the transfer that resulted in the
+  -- "Repay" action or the user who they are repaying on behalf of
+  if msg.Tags.Action == "Repay" then
+    mod.updateInterest(
+      msg.Tags["X-On-Behalf"] or msg.Tags.Sender,
+      msg.Timestamp,
+      helperData
+    )
+  -- if the current action is "Positions", we need to update the interest
+  -- for all users. this will be a heavy process, the helperData is used
+  -- to optimize the loop
+  elseif msg.Tags.Action == "Positions" then
+    for address, _ in pairs(Loans) do
+      mod.updateInterest(address, msg.Timestamp, helperData)
     end
+  -- any other action that calls the interest results in syncing the
+  -- message sender's interest
+  else
+    mod.updateInterest(msg.From, msg.Timestamp, helperData)
   end
-
-  LastInterestTimestamp = msg.Timestamp
 end
 
 return mod
