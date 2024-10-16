@@ -9,9 +9,18 @@ export const env: Environment = {
     Id: "0000000000000000000000000000000000000000000",
     Owner: "0000000000000000000000000000000000000000001",
     Tags: [
-      { name: "Name", value: "oToken" },
-      { name: "Ticker", value: "TST" },
-      { name: "Logo", value: "0000000000000000000000000000000000000000002" }
+      { name: "Collateral-Name", value: "Arweave" },
+      { name: "Collateral-Ticker", value: "AR" },
+      { name: "Logo", value: "0000000000000000000000000000000000000000002" },
+      { name: "Collateral-Id", value: "0000000000000000000000000000000000000000002" },
+      { name: "Collateral-Denomination", value: "12" },
+      { name: "Collateral-Ratio", value: "2" },
+      { name: "Liquidation-Treshold", value: "1.2" },
+      { name: "Base-Rate", value: "0.5" },
+      { name: "Friends", value: "[]" },
+      { name: "Init-Rate", value: "1.5" },
+      { name: "Oracle", value: "0000000000000000000000000000000000000000002" },
+      { name: "Oracle-Delay-Tolerance", value: "3600000" }
     ]
   }
 };
