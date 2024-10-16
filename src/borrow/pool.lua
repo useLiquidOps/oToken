@@ -8,7 +8,7 @@ function mod.setup(msg)
   CollateralID = CollateralID or ao.env.Process.Tags["Collateral-Id"]
 
   -- collateralization ratio
-  CollateralRatio = CollateralRatio or tonumber(ao.env.Process.Tags["Collateral-Ratio"])
+  CollateralRatio = CollateralRatio or tonumber(ao.env.Process.Tags["Collateral-Ratio"]) or 2
 
   -- liquidation threshold (should be lower than the collateral ratio)
   LiquidationThreshold = LiquidationThreshold or tonumber(ao.env.Process.Tags["Liquidation-Threshold"])
