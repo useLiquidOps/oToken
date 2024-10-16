@@ -29,21 +29,21 @@ local reserves = require ".supply.reserves"
 local redeem = require ".supply.redeem"
 
 function process.handle(msg, env)
-  -- setup env
+  -- add reply and forward actions
+  ao.add_message_actions(msg)
+
+  -- try to setup env
   local setup_res = ao.init(msg, env)
 
   if not setup_res then
-    ao.send({
+    msg.reply({
       Target = msg.From,
-      Action = msg.Action and msg.Action .. "-Error" or nil,
-      Data = "Message or assignment not trusted"
+      Action = (msg.Action and msg.Action or "Unknown") .. "-Error",
+      Error = "Message or assignment not trusted"
     })
 
     return ao.result()
   end
-
-  -- add reply and forward actions
-  ao.add_message_actions(msg)
 
   -- add handlers
   -- setup must be in this order (as the first handler)
