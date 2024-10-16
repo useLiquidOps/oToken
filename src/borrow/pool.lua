@@ -3,7 +3,7 @@ local json = require "json"
 local mod = {}
 
 ---@type HandlerFunction
-function mod.setup(msg)
+function mod.setup()
   -- token that can be lent/borrowed
   CollateralID = CollateralID or ao.env.Process.Tags["Collateral-Id"]
 

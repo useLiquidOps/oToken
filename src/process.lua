@@ -28,169 +28,6 @@ local price = require ".supply.price"
 local reserves = require ".supply.reserves"
 local redeem = require ".supply.redeem"
 
--- setup must be in this order (as the first handler)
-Handlers.once(
-  function () return "continue" end,
-  function (msg, env)
-    pool.setup(msg, env)
-    token.setup(msg, env)
-    oracle.setup(msg, env)
-  end
-)
-
--- oracle timeout sync (must be the second handler)
-Handlers.add(
-  "oracle-timeout-sync",
-  Handlers.utils.continue({}),
-  oracle.timeoutSync
-)
--- interest payment sync (must be the third handler)
-Handlers.add(
-  "borrow-loan-interest-sync-dynamic",
-  Handlers.utils.continue(Handlers.utils.hasMatchingTagOf("Action", {
-    "Borrow", "Repay", "Borrow-Balance", "Borrow-Capacity", "Position", "Global-Position", "Positions", "Redeem", "Transfer"
-  })),
-  interest.syncInterests
-)
-
--- temporary handlers for testnet
--- these are "admin" functions that will be removed
--- once the protocol is ready
-Handlers.add(
-  "temp-admin-friend-add",
-  { From = ao.env.Process.Owner, Action = "Add-Friend" },
-  friend.add
-)
-Handlers.add(
-  "temp-admin-friend-remove",
-  { From = ao.env.Process.Owner, Action = "Remove-Friend" },
-  friend.remove
-)
-Handlers.add(
-  "temp-admin-friend-list",
-  { From = ao.env.Process.Owner, Action = "List-Friends" },
-  friend.list
-)
-Handlers.add(
-  "temp-admin-config-oracle",
-  { From = ao.env.Process.Owner, Action = "Set-Oracle" },
-  config.setOracle
-)
-Handlers.add(
-  "temp-admin-config-collateral-ratio",
-  { From = ao.env.Process.Owner, Action = "Set-Collateral-Ratio" },
-  config.setCollateralRatio
-)
-Handlers.add(
-  "temp-admin-config-liquidation-threshold",
-  { From = ao.env.Process.Owner, Action = "Set-Liquidation-Threshold" },
-  config.setLiquidationThreshold
-)
---
-
-Handlers.add(
-  "borrow-loan-interest-get",
-  Handlers.utils.hasMatchingTag("Action", "Get-APR"),
-  interest.interestRate
-)
-Handlers.add(
-  "borrow-loan-interest-sync-static",
-  Handlers.utils.hasMatchingTag("Action", "Sync-Interest"),
-  interest.syncInterestForUser
-)
-Handlers.add(
-  "borrow-loan-borrow",
-  Handlers.utils.hasMatchingTag("Action", "Borrow"),
-  borrow
-)
-Handlers.add(
-  "borrow-repay",
-  { From = CollateralID, Action = "Credit-Notice", ["X-Action"] = "Repay" },
-  repay.handler,
-  nil,
-  repay.error
-)
-Handlers.add(
-  "borrow-position-balance",
-  Handlers.utils.hasMatchingTag("Action", "Borrow-Balance"),
-  position.balance
-)
-Handlers.add(
-  "borrow-position-capacity",
-  Handlers.utils.hasMatchingTag("Action", "Borrow-Capacity"),
-  position.capacity
-)
-Handlers.add(
-  "borrow-position-collateralization",
-  Handlers.utils.hasMatchingTag("Action", "Position"),
-  position.position
-)
-Handlers.add(
-  "borrow-position-global-collateralization",
-  Handlers.utils.hasMatchingTag("Action", "Global-Position"),
-  position.globalPosition
-)
-Handlers.add(
-  "borrow-position-all-positions",
-  Handlers.utils.hasMatchingTag("Action", "Positions")
-)
-Handlers.add(
-  "borrow-pool-config",
-  Handlers.utils.hasMatchingTag("Action", "Get-Config"),
-  pool.config
-)
-
-Handlers.add(
-  "supply-mint",
-  { From = CollateralID, Action = "Credit-Notice", ["X-Action"] = "Mint" },
-  mint.handler,
-  nil,
-  mint.error
-)
-Handlers.add(
-  "supply-price",
-  Handlers.utils.hasMatchingTag("Action", "Get-Price"),
-  price.handler
-)
-Handlers.add(
-  "supply-reserves",
-  Handlers.utils.hasMatchingTag("Action", "Get-Reserves"),
-  reserves
-)
-Handlers.add(
-  "suppy-redeem",
-  Handlers.utils.hasMatchingTag("Action", "Redeem"),
-  redeem.handler,
-  nil,
-  redeem.error
-)
-
-Handlers.add(
-  "token-info",
-  Handlers.utils.hasMatchingTag("Action", "Info"),
-  token.info
-)
-Handlers.add(
-  "token-total-supply",
-  Handlers.utils.hasMatchingTag("Action", "Total-Supply"),
-  token.total_supply
-)
-Handlers.add(
-  "token-balance",
-  Handlers.utils.hasMatchingTag("Action", "Balance"),
-  balance.balance
-)
-Handlers.add(
-  "token-all-balances",
-  Handlers.utils.hasMatchingTag("Action", "Balances"),
-  balance.balances
-)
-Handlers.add(
-  "token-transfer",
-  Handlers.utils.hasMatchingTag("Action", "Transfer"),
-  transfer
-)
-
 function process.handle(msg, env)
   -- setup env
   local setup_res = ao.init(msg, env)
@@ -207,6 +44,171 @@ function process.handle(msg, env)
 
   -- add reply and forward actions
   ao.add_message_actions(msg)
+
+  -- add handlers
+  -- setup must be in this order (as the first handler)
+  Handlers.once(
+    "setup",
+    function () return "continue" end,
+    function (msg, env)
+      pool.setup(msg, env)
+      token.setup(msg, env)
+      oracle.setup(msg, env)
+    end
+  )
+
+  -- oracle timeout sync (must be the second handler)
+  Handlers.add(
+    "oracle-timeout-sync",
+    Handlers.utils.continue({}),
+    oracle.timeoutSync
+  )
+  -- interest payment sync (must be the third handler)
+  Handlers.add(
+    "borrow-loan-interest-sync-dynamic",
+    Handlers.utils.continue(Handlers.utils.hasMatchingTagOf("Action", {
+      "Borrow", "Repay", "Borrow-Balance", "Borrow-Capacity", "Position", "Global-Position", "Positions", "Redeem", "Transfer"
+    })),
+    interest.syncInterests
+  )
+
+  -- temporary handlers for testnet
+  -- these are "admin" functions that will be removed
+  -- once the protocol is ready
+  Handlers.add(
+    "temp-admin-friend-add",
+    { From = ao.env.Process.Owner, Action = "Add-Friend" },
+    friend.add
+  )
+  Handlers.add(
+    "temp-admin-friend-remove",
+    { From = ao.env.Process.Owner, Action = "Remove-Friend" },
+    friend.remove
+  )
+  Handlers.add(
+    "temp-admin-friend-list",
+    { From = ao.env.Process.Owner, Action = "List-Friends" },
+    friend.list
+  )
+  Handlers.add(
+    "temp-admin-config-oracle",
+    { From = ao.env.Process.Owner, Action = "Set-Oracle" },
+    config.setOracle
+  )
+  Handlers.add(
+    "temp-admin-config-collateral-ratio",
+    { From = ao.env.Process.Owner, Action = "Set-Collateral-Ratio" },
+    config.setCollateralRatio
+  )
+  Handlers.add(
+    "temp-admin-config-liquidation-threshold",
+    { From = ao.env.Process.Owner, Action = "Set-Liquidation-Threshold" },
+    config.setLiquidationThreshold
+  )
+  --
+
+  Handlers.add(
+    "borrow-loan-interest-get",
+    Handlers.utils.hasMatchingTag("Action", "Get-APR"),
+    interest.interestRate
+  )
+  Handlers.add(
+    "borrow-loan-interest-sync-static",
+    Handlers.utils.hasMatchingTag("Action", "Sync-Interest"),
+    interest.syncInterestForUser
+  )
+  Handlers.add(
+    "borrow-loan-borrow",
+    Handlers.utils.hasMatchingTag("Action", "Borrow"),
+    borrow
+  )
+  Handlers.add(
+    "borrow-repay",
+    { From = CollateralID, Action = "Credit-Notice", ["X-Action"] = "Repay" },
+    repay.handler,
+    nil,
+    repay.error
+  )
+  Handlers.add(
+    "borrow-position-balance",
+    Handlers.utils.hasMatchingTag("Action", "Borrow-Balance"),
+    position.balance
+  )
+  Handlers.add(
+    "borrow-position-capacity",
+    Handlers.utils.hasMatchingTag("Action", "Borrow-Capacity"),
+    position.capacity
+  )
+  Handlers.add(
+    "borrow-position-collateralization",
+    Handlers.utils.hasMatchingTag("Action", "Position"),
+    position.position
+  )
+  Handlers.add(
+    "borrow-position-global-collateralization",
+    Handlers.utils.hasMatchingTag("Action", "Global-Position"),
+    position.globalPosition
+  )
+  Handlers.add(
+    "borrow-position-all-positions",
+    Handlers.utils.hasMatchingTag("Action", "Positions")
+  )
+  Handlers.add(
+    "borrow-pool-config",
+    Handlers.utils.hasMatchingTag("Action", "Get-Config"),
+    pool.config
+  )
+
+  Handlers.add(
+    "supply-mint",
+    { From = CollateralID, Action = "Credit-Notice", ["X-Action"] = "Mint" },
+    mint.handler,
+    nil,
+    mint.error
+  )
+  Handlers.add(
+    "supply-price",
+    Handlers.utils.hasMatchingTag("Action", "Get-Price"),
+    price.handler
+  )
+  Handlers.add(
+    "supply-reserves",
+    Handlers.utils.hasMatchingTag("Action", "Get-Reserves"),
+    reserves
+  )
+  Handlers.add(
+    "suppy-redeem",
+    Handlers.utils.hasMatchingTag("Action", "Redeem"),
+    redeem.handler,
+    nil,
+    redeem.error
+  )
+
+  Handlers.add(
+    "token-info",
+    Handlers.utils.hasMatchingTag("Action", "Info"),
+    token.info
+  )
+  Handlers.add(
+    "token-total-supply",
+    Handlers.utils.hasMatchingTag("Action", "Total-Supply"),
+    token.total_supply
+  )
+  Handlers.add(
+    "token-balance",
+    Handlers.utils.hasMatchingTag("Action", "Balance"),
+    balance.balance
+  )
+  Handlers.add(
+    "token-all-balances",
+    Handlers.utils.hasMatchingTag("Action", "Balances"),
+    balance.balances
+  )
+  Handlers.add(
+    "token-transfer",
+    Handlers.utils.hasMatchingTag("Action", "Transfer"),
+    transfer
+  )
 
   -- eval handlers
   local co = coroutine.create(function() return pcall(Handlers.evaluate, msg, ao.env) end)
