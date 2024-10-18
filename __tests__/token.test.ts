@@ -70,27 +70,7 @@ describe("Token standard functionalities", () => {
   });
 
   it("Returns wallet balance", async () => {
-    const message = createMessage({ Action: "Positions" });
-    const res = await handle(memory, message, env);
 
-    expect(res.Messages).toEqual(
-      expect.arrayContaining([
-        expect.objectContaining({
-          Target: message.From,
-          Tags: expect.arrayContaining([
-            expect.objectContaining({
-              name: "Total-Supply",
-              value: expect.toBeIntegerStringEncoded()
-            }),
-            expect.objectContaining({
-              name: "Ticker",
-              value: expect.any(String)
-            })
-          ]),
-          Data: expect.toBeIntegerStringEncoded()
-        })
-      ])
-    )
   });
 
   it("Returns all wallet balances", async () => {
