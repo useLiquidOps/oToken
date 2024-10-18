@@ -151,7 +151,8 @@ function process.handle(msg, env)
   )
   Handlers.add(
     "borrow-position-all-positions",
-    Handlers.utils.hasMatchingTag("Action", "Positions")
+    Handlers.utils.hasMatchingTag("Action", "Positions"),
+    position.allPositions
   )
   Handlers.add(
     "borrow-pool-config",
