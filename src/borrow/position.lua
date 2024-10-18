@@ -143,8 +143,8 @@ function mod.balance(msg)
 
   msg.reply({
     Action = "Borrow-Balance-Response",
-    ["Borrowed-Quantity"] = Loans[account],
-    ["Interest-Quantity"] = Interests[account].value
+    ["Borrowed-Quantity"] = Loans[account] or "0",
+    ["Interest-Quantity"] = Interests[account] and Interests[account].value or "0"
   })
 end
 
