@@ -7,14 +7,20 @@ local mod = {}
 function mod.interestRate(msg)
   -- helper values
   local totalLent = bint(Lent)
+  local totalPooled = totalLent + bint(Available)
   local baseRateB, rateMul = utils.floatBintRepresentation(BaseRate)
   local initRateB = utils.floatBintRepresentation(InitRate, rateMul)
+  local zero = bint.zero()
 
   -- calculate weighted base rate
-  local weightedBase = bint.udiv(
-    baseRateB * totalLent,
-    (totalLent + bint(Available))
-  )
+  local weightedBase = zero
+
+  if not bint.eq(totalPooled, zero) then
+    weightedBase = bint.udiv(
+      baseRateB * totalLent,
+      totalPooled
+    )
+  end
 
   -- full interest rate
   local interestRate = weightedBase + initRateB
