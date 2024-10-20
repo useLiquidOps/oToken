@@ -21,7 +21,12 @@ function mod.info(msg)
     Name = Name,
     Ticker = Ticker,
     Logo = Logo,
-    Denomination = tostring(Denomination)
+    Denomination = tostring(Denomination),
+    ["Collateral-Id"] = CollateralID,
+    ["Collateral-Ratio"] = tostring(CollateralRatio),
+    ["Collateral-Denomination"] = tostring(CollateralDenomination),
+    ["Liquidation-Threshold"] = tostring(LiquidationThreshold),
+    Oracle = Oracle
   })
 end
 

@@ -38,16 +38,4 @@ function mod.setup()
   Friends = Friends or json.decode(ao.env.Process.Tags.Friends or "[]")
 end
 
----@type HandlerFunction
-function mod.config(msg)
-  msg.reply({
-    Action = "Config",
-    ["Collateral-Id"] = CollateralID,
-    ["Collateral-Ratio"] = tostring(CollateralRatio),
-    ["Liquidation-Threshold"] = tostring(LiquidationThreshold),
-    Oracle = Oracle,
-    ["Collateral-Denomination"] = tostring(CollateralDenomination)
-  })
-end
-
 return mod

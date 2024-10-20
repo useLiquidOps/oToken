@@ -154,11 +154,6 @@ function process.handle(msg, env)
     Handlers.utils.hasMatchingTag("Action", "Positions"),
     position.allPositions
   )
-  Handlers.add(
-    "borrow-pool-config",
-    Handlers.utils.hasMatchingTag("Action", "Get-Config"),
-    pool.config
-  )
 
   Handlers.add(
     "supply-mint",
