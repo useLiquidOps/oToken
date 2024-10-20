@@ -218,7 +218,7 @@ function mod.allPositions(msg)
   msg.reply({
     ["Collateral-Ticker"] = CollateralTicker,
     ["Collateral-Denomination"] = tostring(CollateralDenomination),
-    Data = json.encode(positions)
+    Data = next(positions) ~= nil and json.encode(positions) or "{}"
   })
 end
 

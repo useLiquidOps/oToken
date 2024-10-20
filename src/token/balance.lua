@@ -18,7 +18,7 @@ end
 function mod.balances(msg)
   msg.reply({
     Ticker = Ticker,
-    Data = json.encode(Balances)
+    Data = next(Balances) ~= nil and json.encode(Balances) or "{}"
   })
 end
 
