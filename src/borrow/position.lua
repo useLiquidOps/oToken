@@ -64,7 +64,7 @@ end
 function mod.getGlobalCollateralization(address, timestamp)
   -- get friend values
   local friendsCollateralRes = scheduler.schedule(table.unpack(utils.map(
-    function (id) return { Target = id, Action = "Collateralization", Recipient = address } end,
+    function (id) return { Target = id, Action = "Position", Recipient = address } end,
     Friends
   )))
 
