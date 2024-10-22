@@ -14,6 +14,9 @@ function mod.schedule(...)
   local responses = {}
   local messages = {...}
 
+  -- if there are no messages to be sent, we don't do anything
+  if #messages == 0 then return {} end
+
   ---@type HandlerFunction
   local function responseHandler(msg)
     table.insert(responses, msg)
