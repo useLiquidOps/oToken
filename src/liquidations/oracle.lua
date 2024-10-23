@@ -60,12 +60,18 @@ function mod.getPrice(timestamp, cache, ...)
   -- if the cache is disabled or there is no price
   -- data cached, fetch the price
   if #pricesToSync > 0 and not cache then
-    ---@type OracleData
-    local data = ao.send({
+    ---@type string|nil
+    local rawData = ao.send({
       Target =  Oracle,
       Action = "v2.Request-Latest-Data",
       Tickers = json.encode(pricesToSync)
     }).receive().Data
+
+    -- check if there was any data returned
+    assert(rawData ~= nil and rawData ~= "", "No data returned from the oracle")
+
+    ---@type OracleData
+    local data = json.decode(rawData)
 
     for ticker, p in pairs(data) do
       -- only add data if the timestamp is up to date
