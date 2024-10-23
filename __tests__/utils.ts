@@ -19,7 +19,7 @@ export const env: Environment = {
       { name: "Base-Rate", value: "0.5" },
       { name: "Friends", value: "[]" },
       { name: "Init-Rate", value: "1.5" },
-      { name: "Oracle", value: "0000000000000000000000000000000000000000002" },
+      { name: "Oracle", value: "00000000000000000000000000000000000000ORACLE" },
       { name: "Oracle-Delay-Tolerance", value: "3600000" }
     ]
   }

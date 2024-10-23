@@ -89,12 +89,14 @@ function mod.getPrice(timestamp, cache, ...)
 
   local one = bint.one()
   for _, v in ipairs(args) do
-    local cached = PriceCache[v.ticker]
-
-    assert(cached ~= nil, "No price returned from the oracle for " .. v.ticker)
-
     if not v.quantity then v.quantity = one end
     if not bint.eq(v.quantity, zero) then
+      -- get cached value
+      local cached = PriceCache[v.ticker]
+
+      -- make sure the cached value exists
+      assert(cached ~= nil, "No price returned from the oracle for " .. v.ticker)
+
       -- the value of the quantity
       -- (USD price value is denominated for precision,
       -- but the result needs to be divided according
