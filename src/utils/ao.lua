@@ -115,6 +115,8 @@ function ao.init(msg, env)
 
   ao.clearOutbox()
 
+  if type(msg.Timestamp) == "string" then msg.Timestamp = tonumber(msg.Timestamp) end
+
   return (msg.From == msg.Owner or ao.isTrusted(msg)) and
     (not ao.isAssignment(msg) or ao.isAssignable(msg))
 end
