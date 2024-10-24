@@ -163,6 +163,13 @@ function process.handle(msg, env)
     mint.error
   )
   Handlers.add(
+    "supply-mint-refund-foreign-token",
+    function (msg)
+      return msg.Tags.Action == "Credit-Notice" and msg.From ~= CollateralID
+    end,
+    mint.invalidTokenRefund
+  )
+  Handlers.add(
     "supply-price",
     Handlers.utils.hasMatchingTag("Action", "Get-Price"),
     price.handler

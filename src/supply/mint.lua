@@ -71,4 +71,16 @@ function mint.error(msg, _, err)
   })
 end
 
+---@type HandlerFunction
+function mint.invalidTokenRefund(msg)
+  ao.send({
+    Target = msg.From,
+    Action = "Transfer",
+    Quantity = msg.Tags.Quantity,
+    Recipient = msg.Tags.Sender,
+    ["X-Action"] = "Refund",
+    ["X-Refund-Reason"] = "This process does not accept the transferred token " .. msg.From
+  })
+end
+
 return mint
