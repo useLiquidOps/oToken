@@ -16,7 +16,8 @@ function mod.setup()
   Oracle = Oracle or ao.env.Process.Tags.Oracle
 
   -- oracle delay tolerance in miliseconds
-  MaxOracleDelay = MaxOracleDelay or ao.env.Process.Tags["Oracle-Delay-Tolerance"]
+  ---@type number
+  MaxOracleDelay = MaxOracleDelay or tonumber(ao.env.Process.Tags["Oracle-Delay-Tolerance"]) or 0
 
   -- cached price
   -- this should only be used within the same request
