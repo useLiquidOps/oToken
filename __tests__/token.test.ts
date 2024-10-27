@@ -325,7 +325,11 @@ describe("Token standard functionalities", () => {
     )
 
     // check if balances have been updated correctly
-    const balancesRes = await handle(createMessage({ Action: "Balances" }));
+    const balancesRes = await handle(createMessage({
+      Action: "Balances",
+      From: testWallet,
+      Owner: testWallet
+    }));
 
     expect(balancesRes.Messages).toEqual(
       expect.arrayContaining([

@@ -28,26 +28,13 @@ local price = require ".supply.price"
 local reserves = require ".supply.reserves"
 local redeem = require ".supply.redeem"
 
-function process.handle(msg, env)
-  -- add reply and forward actions
-  ao.add_message_actions(msg)
+HandlersAdded = HandlersAdded or false
 
-  -- try to setup env
-  local setup_res = ao.init(msg, env)
+-- add handlers for inputs
+local function setup_handlers()
+  -- only add handlers once
+  if HandlersAdded then return end
 
-  if not setup_res then
-    if msg.From ~= ao.id then
-      msg.reply({
-        Target = msg.From,
-        Action = (msg.Action and msg.Action or "Unknown") .. "-Error",
-        Error = "Message or assignment not trusted"
-      })
-    end
-
-    return ao.result()
-  end
-
-  -- add handlers
   -- setup must be in this order (as the first handler)
   Handlers.once(
     "setup",
@@ -214,6 +201,31 @@ function process.handle(msg, env)
     Handlers.utils.hasMatchingTag("Action", "Transfer"),
     transfer
   )
+
+  HandlersAdded = true
+end
+
+function process.handle(msg, env)
+  -- add reply and forward actions
+  ao.add_message_actions(msg)
+
+  -- try to setup env
+  local setup_res = ao.init(msg, env)
+
+  if not setup_res then
+    if msg.From ~= ao.id then
+      msg.reply({
+        Target = msg.From,
+        Action = (msg.Action and msg.Action or "Unknown") .. "-Error",
+        Error = "Message or assignment not trusted"
+      })
+    end
+
+    return ao.result()
+  end
+
+  -- add handlers
+  setup_handlers()
 
   -- eval handlers
   local co = coroutine.create(function() return pcall(Handlers.evaluate, msg, ao.env) end)
