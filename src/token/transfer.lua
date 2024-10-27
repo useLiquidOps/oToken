@@ -20,66 +20,61 @@ local function transfer(msg)
   local quantity = bint(msg.Tags.Quantity)
   local walletBalance = bint(Balances[sender] or 0)
 
-  if bint.ule(quantity, walletBalance) then
-    -- get position data
-    local capacity, usedCapacity = position.getGlobalCollateralization(
-      sender,
-      msg.Timestamp
-    )
+  -- check if the user has enough tokens
+  assert(bint.ule(quantity, walletBalance), "Insufficient balance")
 
-    -- get the value of the tokens to be transferred in
-    -- terms of the underlying asset and then get the price
-    -- of that quantity
-    local transferValue = oracle.getPrice(msg.Timestamp, false, {
-      ticker = CollateralTicker,
-      quantity = quantity,
-      denomination = CollateralDenomination
-    })
+  -- get position data
+  local capacity, usedCapacity = position.getGlobalCollateralization(
+    sender,
+    msg.Timestamp
+  )
 
-    -- check if a price was returned
-    assert(transferValue[1] ~= nil, "No price data returned from the oracle for the transfer value")
+  -- get the value of the tokens to be transferred in
+  -- terms of the underlying asset and then get the price
+  -- of that quantity
+  local transferValue = oracle.getPrice(msg.Timestamp, false, {
+    ticker = CollateralTicker,
+    quantity = quantity,
+    denomination = CollateralDenomination
+  })
 
-    -- do not allow reserved collateral to be transferred
-    assert(
-      bint.ule(transferValue[1].price, capacity - usedCapacity),
-      "Transfer value is too high and requires higher collateralization"
-    )
+  -- check if a price was returned
+  assert(transferValue[1] ~= nil, "No price data returned from the oracle for the transfer value")
 
-    -- update balances
-    Balances[target] = tostring(bint(Balances[target] or 0) + quantity)
-    Balances[sender] = tostring(walletBalance - quantity)
+  -- do not allow reserved collateral to be transferred
+  assert(
+    bint.ule(transferValue[1].price, capacity - usedCapacity),
+    "Transfer value is too high and requires higher collateralization"
+  )
 
-    -- send notices about the transfer
-    if not msg.Tags.Cast then
-      local debitNotice = {
-        Action = "Debit-Notice",
-        Recipient = target,
-        Quantity = tostring(quantity)
-      }
-      local creditNotice = {
-        Target = target,
-        Action = "Credit-Notice",
-        Sender = sender,
-        Quantity = tostring(quantity)
-      }
+  -- update balances
+  Balances[target] = tostring(bint(Balances[target] or 0) + quantity)
+  Balances[sender] = tostring(walletBalance - quantity)
 
-      -- forwarded tags
-      for tagName, tagValue in pairs(msg.Tags) do
-        if string.sub(tagName, 1, 2) == "X-" then
-          debitNotice[tagName] = tagValue
-          creditNotice[tagName] = tagValue
-        end
+  -- send notices about the transfer
+  if not msg.Tags.Cast then
+    local debitNotice = {
+      Action = "Debit-Notice",
+      Recipient = target,
+      Quantity = tostring(quantity)
+    }
+    local creditNotice = {
+      Target = target,
+      Action = "Credit-Notice",
+      Sender = sender,
+      Quantity = tostring(quantity)
+    }
+
+    -- forwarded tags
+    for tagName, tagValue in pairs(msg.Tags) do
+      if string.sub(tagName, 1, 2) == "X-" then
+        debitNotice[tagName] = tagValue
+        creditNotice[tagName] = tagValue
       end
-
-      msg.reply(debitNotice)
-      ao.send(creditNotice)
     end
-  else
-    msg.reply({
-      Action = "Transfer-Error",
-      ["Message-Id"] = msg.Id,
-      Error = "Insufficient Balance!"
-    })
+
+    msg.reply(debitNotice)
+    ao.send(creditNotice)
   end
 end
 

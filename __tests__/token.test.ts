@@ -1,11 +1,20 @@
-import { createMessage, env, normalizeTags, setupProcess, HandleFunction, generateOracleResponse } from "./utils";
 import { expect } from "@jest/globals";
+import {
+  createMessage,
+  env,
+  normalizeTags,
+  setupProcess,
+  HandleFunction,
+  generateOracleResponse
+} from "./utils";
 
 describe("Token standard functionalities", () => {
   let handle: HandleFunction;
 
   const testWallet = "yrsibjwtvbgqjkuqoquppebfdntvrztgmupvikndumk";
   const testQty = "1000000000000000";
+  const recipientWallet = "F72_1lyx0Y9QW7m3ePcED5KRETjuaGM6j7JrbPfJAEk";
+  const transferQty = "12507";
 
   beforeAll(async () => {
     handle = await setupProcess(env);
@@ -129,56 +138,6 @@ describe("Token standard functionalities", () => {
         })
       ])
     )
-/*
-    const collateral = "0000000000000000000000000000000000000000002"
-    const oracle = "00000000000000000000000000000000000000ORACLE"
-
-    const mint1 = await handle(memory, createMessage({
-      Action: "Credit-Notice",
-      "X-Action": "Mint",
-      Owner: collateral,
-      From: collateral,
-      "From-Process": collateral,
-      Quantity: "1000000000000000",
-      Recipient: env.Process.Id,
-      Sender: "ljvCPN31XCLPkBo9FUeB7vAK0VC6-eY52-CS-6Iho8U"
-    }), env);
-    memory = mint1.Memory;
-
-    const mint2 = await handle(memory, createMessage({
-      Action: "Credit-Notice",
-      "X-Action": "Mint",
-      Owner: collateral,
-      From: collateral,
-      "From-Process": collateral,
-      Quantity: "1000000000000000",
-      Recipient: env.Process.Id,
-      Sender: "0UWVo81RdMjeE08aZBfXoHAs1MQ-AX-A2RfGmOoNFKk"
-    }), env);
-    memory = mint2.Memory;
-
-    const res = await handle(memory, createMessage({
-      Action: "Global-Position",
-      Owner: "ljvCPN31XCLPkBo9FUeB7vAK0VC6-eY52-CS-6Iho8U",
-      From: "ljvCPN31XCLPkBo9FUeB7vAK0VC6-eY52-CS-6Iho8U",
-    }), env);
-    console.log(JSON.stringify(res.Messages, null, 2))
-
-    const res2 = await handle(memory, createMessage({
-      Action: "Positions",
-      "X-Reference": res.Messages.find((msg) => msg.Tags.find(({ name }) => name === "Action")?.value === "v2.Request-Latest-Data")?.Tags?.find(({ name }) => name === "Reference")?.value || "0",
-      Owner: oracle,
-      From: oracle,
-      Data: JSON.stringify({
-        "AR": {
-          "t": 1729682180000,
-          "a": "0xDD682daEC5A90dD295d14DA4b0bec9281017b5bE",
-          "v": 17.96991872
-        }
-      })
-    }), env);
-    console.log(JSON.stringify(res2.Messages, null, 2))
-*/
   });
 
   it("Returns wallet balance for recipient", async () => {
@@ -231,8 +190,6 @@ describe("Token standard functionalities", () => {
   });
 
   it("Transfers assets", async () => {
-    const recipientWallet = "F72_1lyx0Y9QW7m3ePcED5KRETjuaGM6j7JrbPfJAEk";
-    const transferQty = "12507";
     const testForwardTag = {
       name: "X-Forward-Test",
       value: "testVal"
@@ -345,6 +302,33 @@ describe("Token standard functionalities", () => {
             [testWallet]: (BigInt(testQty) - BigInt(transferQty)).toString(),
             [recipientWallet]: transferQty
           }))
+        })
+      ])
+    );
+  });
+
+  it("Prevents transferring more than the wallet balance", async () => {
+    const msg = createMessage({
+      Action: "Transfer",
+      Quantity: (BigInt(transferQty) + 1n).toString(),
+      Recipient: testWallet,
+      From: recipientWallet,
+      Owner: recipientWallet
+    });
+
+    // send transfer
+    const res = await handle(msg);
+
+    expect(res.Messages).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          Target: msg.From,
+          Tags: expect.arrayContaining([
+            expect.objectContaining({
+              name: "Error",
+              value: expect.any(String)
+            })
+          ])
         })
       ])
     );
