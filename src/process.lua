@@ -36,11 +36,13 @@ function process.handle(msg, env)
   local setup_res = ao.init(msg, env)
 
   if not setup_res then
-    msg.reply({
-      Target = msg.From,
-      Action = (msg.Action and msg.Action or "Unknown") .. "-Error",
-      Error = "Message or assignment not trusted"
-    })
+    if msg.From ~= ao.id then
+      msg.reply({
+        Target = msg.From,
+        Action = (msg.Action and msg.Action or "Unknown") .. "-Error",
+        Error = "Message or assignment not trusted"
+      })
+    end
 
     return ao.result()
   end
