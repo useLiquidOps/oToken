@@ -3,14 +3,6 @@ local bint = require ".utils.bint"(1024)
 
 local mod = {}
 
--- Get the price of the oToken in terms of the underlying asset
-function mod.getPrice(quantity)
-  return bint.udiv(
-    totalPooled * quantity,
-    bint(TotalSupply)
-  )
-end
-
 ---@type HandlerFunction
 function mod.handler(msg)
   -- default qty

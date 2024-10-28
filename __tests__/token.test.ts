@@ -11,17 +11,20 @@ import {
 
 describe("Token standard functionalities", () => {
   let handle: HandleFunction;
+  let tags: Record<string, string>;
+  let testWallet: string;
+  let recipientWallet: string;
 
-  const testWallet = generateArweaveAddress();
   const testQty = "1000000000000000";
-  const recipientWallet = generateArweaveAddress();
   const transferQty = "12507";
 
   beforeAll(async () => {
     handle = await setupProcess(env);
+    tags = normalizeTags(env.Process.Tags);
+    testWallet = generateArweaveAddress();
+    recipientWallet = generateArweaveAddress();
 
     // mint some tokens for transfer and balance tests
-    const tags = normalizeTags(env.Process.Tags);
     await handle(createMessage({
       Action: "Credit-Notice",
       "X-Action": "Mint",
@@ -195,7 +198,6 @@ describe("Token standard functionalities", () => {
       name: "X-Forward-Test",
       value: "testVal"
     };
-    const envTags = normalizeTags(env.Process.Tags);
     const msg = createMessage({
       Action: "Transfer",
       Quantity: transferQty,
@@ -212,7 +214,7 @@ describe("Token standard functionalities", () => {
     expect(res.Messages).toEqual(
       expect.arrayContaining([
         expect.objectContaining({
-          Target: envTags["Oracle"],
+          Target: tags["Oracle"],
           Tags: expect.arrayContaining([
             expect.objectContaining({
               name: "Action",
@@ -221,7 +223,7 @@ describe("Token standard functionalities", () => {
             expect.objectContaining({
               name: "Tickers",
               value: expect.toBeJsonEncoded(
-                expect.arrayContaining([envTags["Collateral-Ticker"]])
+                expect.arrayContaining([tags["Collateral-Ticker"]])
               )
             })
           ])

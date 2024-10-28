@@ -10,13 +10,15 @@ import {
 
 describe("Minting and providing", () => {
   let handle: HandleFunction;
+  let testWallet: string;
+  let tags: Record<string, string>;
 
-  const testWallet = generateArweaveAddress();
   const testQty = "1000000000000000";
-  const tags = normalizeTags(env.Process.Tags);
 
   beforeAll(async () => {
     handle = await setupProcess(env);
+    testWallet = generateArweaveAddress();
+    tags = normalizeTags(env.Process.Tags);
   });
 
   it("Refunds 3rd party tokens", async () => {
@@ -151,4 +153,54 @@ describe("Minting and providing", () => {
       ])
     );
   });
+
+  it("Mints the correct quantity on not initial supply", async () => {
+
+  });
+
+  it.todo("Mints in proportion to the pooled tokens when there is an active borrow");
+});
+
+describe("Redeeming and burning", () => {
+  let handle: HandleFunction;
+  let testWallet: string;
+
+  beforeAll(async () => {
+    handle = await setupProcess(env);
+    testWallet = generateArweaveAddress();
+  });
+
+  it.todo("Does not handle invalid token quantities");
+
+  it.todo("Rejects redeeming more than the available balance");
+
+  it.todo("Rejects redeeming when there aren't enough available tokens");
+
+  it.todo("Rejects redeeming when there is no price data returned");
+
+  it.todo("Rejects redeeming when the redeem value is too high compared to the free borrow capacity");
+
+  it.todo("Redeems the correct quantity");
+});
+
+describe("Price and underlying asset value, reserves", () => {
+  let handle: HandleFunction;
+  let testWallet: string;
+
+  beforeAll(async () => {
+    handle = await setupProcess(env);
+    testWallet = generateArweaveAddress();
+  });
+
+  it.todo("Reserves are empty on init");
+
+  it.todo("Price is 1 when the reserves are empty");
+
+  it.todo("Reserves return the correct quantities");
+
+  it.todo("Price is the same as the input quantity on initial provide");
+
+  it.todo("Returns the correct price after the oToken:collateral ratio is not 1:1");
+
+  it.todo("Price input is 1 by default when there is no quantity provided");
 });
