@@ -154,9 +154,7 @@ describe("Minting and providing", () => {
     );
   });
 
-  it("Mints the correct quantity on not initial supply", async () => {
-
-  });
+  it.todo("Mints the correct quantity on not initial supply");
 
   it.todo("Mints in proportion to the pooled tokens when there is an active borrow");
 });
