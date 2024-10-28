@@ -29,7 +29,7 @@ export const dummyEthAddr = "0x0000000000000000000000000000000000000000";
 
 export type HandleFunction = (msg: Message, env?: Environment) => Promise<AoLoader.HandleResponse>;
 
-export async function setupProcess(defaultEnvironment: Environment): Promise<HandleFunction> {
+export async function setupProcess(defaultEnvironment: Environment, keepMemory = true): Promise<HandleFunction> {
   const wasmBinary = await fs.readFile(path.join(__dirname, "../src/process.wasm"));
 
   // get handler function
@@ -48,10 +48,22 @@ export async function setupProcess(defaultEnvironment: Environment): Promise<Han
     const res = await defaultHandle(currentMemory, msg, env || defaultEnvironment);
 
     // save memory
-    currentMemory = res.Memory;
+    if (keepMemory)
+      currentMemory = res.Memory;
 
     return res;
   };
+}
+
+export function generateArweaveAddress() {
+  let address = "";
+  const allowedChars = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-_";
+
+  while (address.length < 43) {
+    address += allowedChars[Math.floor(Math.random() * allowedChars.length)];
+  }
+
+  return address;
 }
 
 export function createMessage(message: Partial<Omit<Message, "Tags">> & { [tagName: string]: string }): Message {

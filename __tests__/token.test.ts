@@ -5,15 +5,16 @@ import {
   normalizeTags,
   setupProcess,
   HandleFunction,
-  generateOracleResponse
+  generateOracleResponse,
+  generateArweaveAddress
 } from "./utils";
 
 describe("Token standard functionalities", () => {
   let handle: HandleFunction;
 
-  const testWallet = "yrsibjwtvbgqjkuqoquppebfdntvrztgmupvikndumk";
+  const testWallet = generateArweaveAddress();
   const testQty = "1000000000000000";
-  const recipientWallet = "F72_1lyx0Y9QW7m3ePcED5KRETjuaGM6j7JrbPfJAEk";
+  const recipientWallet = generateArweaveAddress();
   const transferQty = "12507";
 
   beforeAll(async () => {
@@ -279,7 +280,7 @@ describe("Token standard functionalities", () => {
           ])
         })
       ])
-    )
+    );
 
     // check if balances have been updated correctly
     const balancesRes = await handle(createMessage({

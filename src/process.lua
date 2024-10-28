@@ -61,6 +61,15 @@ local function setup_handlers()
     interest.syncInterests
   )
 
+  -- validate incoming transfers, refund 3rd party tokens
+  Handlers.add(
+    "supply-mint-refund-foreign-token",
+    function (msg)
+      return msg.Tags.Action == "Credit-Notice" and msg.From ~= CollateralID
+    end,
+    mint.invalidTokenRefund
+  )
+
   -- temporary handlers for testnet
   -- these are "admin" functions that will be removed
   -- once the protocol is ready
@@ -150,13 +159,6 @@ local function setup_handlers()
     mint.handler,
     nil,
     mint.error
-  )
-  Handlers.add(
-    "supply-mint-refund-foreign-token",
-    function (msg)
-      return msg.Tags.Action == "Credit-Notice" and msg.From ~= CollateralID
-    end,
-    mint.invalidTokenRefund
   )
   Handlers.add(
     "supply-price",
