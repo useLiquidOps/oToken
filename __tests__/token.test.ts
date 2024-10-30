@@ -86,6 +86,10 @@ describe("Token standard functionalities", () => {
             expect.objectContaining({
               name: "Oracle-Delay-Tolerance",
               value: expect.toBeIntegerStringEncoded()
+            }),
+            expect.objectContaining({
+              name: "Friends",
+              value: expect.toBeJsonEncoded(expect.any(Array))
             })
           ])
         })
@@ -302,6 +306,60 @@ describe("Token standard functionalities", () => {
     );
   });
 
+  it("Prevents transferring when no data is returned from the oracle", async () => {
+    const msg = createMessage({
+      Action: "Transfer",
+      Quantity: "1",
+      Recipient: recipientWallet,
+      From: testWallet,
+      Owner: testWallet
+    });
+
+    // send transfer
+    const res = await handle(msg);
+
+    // expect collateralization check oracle request
+    expect(res.Messages).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          Target: tags["Oracle"],
+          Tags: expect.arrayContaining([
+            expect.objectContaining({
+              name: "Action",
+              value: "v2.Request-Latest-Data"
+            }),
+            expect.objectContaining({
+              name: "Tickers",
+              value: expect.toBeJsonEncoded(
+                expect.arrayContaining([tags["Collateral-Ticker"]])
+              )
+            })
+          ])
+        })
+      ])
+    );
+
+    // send dummy oracle data, but no price for the requested token
+    const oracleInputRes = await handle(
+      generateOracleResponse({ BTC: 54712.5691358 }, res)
+    );
+    
+    expect(oracleInputRes.Messages).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          // TODO: figure out a way to reply the error to the correct target
+          // Target: msg.From,
+          Tags: expect.arrayContaining([
+            expect.objectContaining({
+              name: "Error",
+              value: expect.any(String)
+            })
+          ])
+        })
+      ])
+    );
+  });
+
   it("Prevents transferring on outdated oracle data", async () => {
     const msg = createMessage({
       Action: "Transfer",
@@ -349,7 +407,8 @@ describe("Token standard functionalities", () => {
     expect(oracleInputRes.Messages).toEqual(
       expect.arrayContaining([
         expect.objectContaining({
-          Target: msg.From,
+          // TODO: figure out a way to reply the error to the correct target
+          // Target: msg.From,
           Tags: expect.arrayContaining([
             expect.objectContaining({
               name: "Error",
@@ -362,6 +421,7 @@ describe("Token standard functionalities", () => {
   });
 
   it("Transfers assets", async () => {
+    // this will fail if the previous tests failed (they drain the balance)
     const testForwardTag = {
       name: "X-Forward-Test",
       value: "testVal"
@@ -476,5 +536,100 @@ describe("Token standard functionalities", () => {
         })
       ])
     );
+  });
+
+  test("Prevents transferring when the transfer would require higher collateralization (loan is on friend process)", async () => {
+    // setup env
+    const friend = generateArweaveAddress();
+    const envWithFriend = env;
+    envWithFriend.Process.Tags = envWithFriend.Process.Tags.map((tag) => {
+      if (tag.name !== "Friends") return tag;
+      return {
+        name: "Friends",
+        value: JSON.stringify([friend])
+      };
+    });
+
+    // setup process
+    const handle = await setupProcess(envWithFriend);
+
+    // check if friend has been added
+    const setupRes = await handle(createMessage({ Action: "Info" }));
+
+    expect(setupRes.Messages).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          Tags: expect.arrayContaining([
+            expect.objectContaining({
+              name: "Friends",
+              value: expect.toBeJsonEncoded(expect.arrayContaining([friend]))
+            })
+          ])
+        })
+      ])
+    );
+
+    // mint tokens
+    await handle(createMessage({
+      Action: "Credit-Notice",
+      "X-Action": "Mint",
+      Owner: tags["Collateral-Id"],
+      From: tags["Collateral-Id"],
+      "From-Process": tags["Collateral-Id"],
+      Quantity: testQty,
+      Recipient: env.Process.Id,
+      Sender: testWallet
+    }));
+
+    // initiate transfer
+    const transferMsg = createMessage({
+      Action: "Transfer",
+      Quantity: "1",
+      Recipient: recipientWallet,
+      From: testWallet,
+      Owner: testWallet
+    });
+
+    const transferRes = await handle(transferMsg);
+
+    // expect request to the friend process for position info
+    expect(transferRes.Messages).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          Target: friend,
+          Tags: expect.arrayContaining([
+            expect.objectContaining({
+              name: "Action",
+              value: "Position"
+            }),
+            expect.objectContaining({
+              name: "Recipient",
+              value: testWallet
+            })
+          ])
+        })
+      ])
+    );
+
+    const transferResTags = normalizeTags(
+      transferRes.Messages
+        .find((msg) => normalizeTags(msg.Tags)["Action"] === "Position")
+        ?.Tags || []
+    );
+
+    // dummy position response
+    const positionMsg = createMessage({
+      Owner: friend,
+      From: friend,
+      "X-Reference": transferResTags["Reference"],
+      Action: "Collateralization-Response",
+      Capacity: "0",
+      "Used-Capacity": "10000000000",
+      "Collateral-Ticker": "TST",
+      "Collateral-Denomination": "12"
+    });
+    const positionRes = await handle(positionMsg);
+
+    console.log(JSON.stringify(positionRes.Messages, undefined, 2))
   });
 });

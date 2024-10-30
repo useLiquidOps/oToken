@@ -1,3 +1,5 @@
+local json = require "json"
+
 local mod = {}
 
 ---@type HandlerFunction
@@ -27,7 +29,8 @@ function mod.info(msg)
     ["Collateral-Denomination"] = tostring(CollateralDenomination),
     ["Liquidation-Threshold"] = tostring(LiquidationThreshold),
     Oracle = Oracle,
-    ["Oracle-Delay-Tolerance"] = tostring(MaxOracleDelay)
+    ["Oracle-Delay-Tolerance"] = tostring(MaxOracleDelay),
+    Friends = json.encode(Friends)
   })
 end
 
