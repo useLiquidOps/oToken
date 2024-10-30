@@ -541,6 +541,7 @@ describe("Token standard functionalities", () => {
   test("Prevents transferring when the transfer would require higher collateralization (loan is on friend process)", async () => {
     // setup env
     const friend = generateArweaveAddress();
+    const friendTicker = "TST";
     const envWithFriend = env;
     envWithFriend.Process.Tags = envWithFriend.Process.Tags.map((tag) => {
       if (tag.name !== "Friends") return tag;
@@ -584,7 +585,7 @@ describe("Token standard functionalities", () => {
     // initiate transfer
     const transferMsg = createMessage({
       Action: "Transfer",
-      Quantity: "1",
+      Quantity: testQty,
       Recipient: recipientWallet,
       From: testWallet,
       Owner: testWallet
@@ -624,12 +625,68 @@ describe("Token standard functionalities", () => {
       "X-Reference": transferResTags["Reference"],
       Action: "Collateralization-Response",
       Capacity: "0",
-      "Used-Capacity": "10000000000",
-      "Collateral-Ticker": "TST",
+      "Used-Capacity": "1000000000000",
+      "Collateral-Ticker": friendTicker,
       "Collateral-Denomination": "12"
     });
     const positionRes = await handle(positionMsg);
 
-    console.log(JSON.stringify(positionRes.Messages, undefined, 2))
+    // expect request for "AR" price only (capacity for TST/the friend is zero, so no request for that)
+    expect(positionRes.Messages).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          Target: tags["Oracle"],
+          Tags: expect.arrayContaining([
+            expect.objectContaining({
+              name: "Action",
+              value: "v2.Request-Latest-Data"
+            }),
+            expect.objectContaining({
+              name: "Tickers",
+              value: expect.toBeJsonEncoded(
+                expect.arrayContaining([tags["Collateral-Ticker"]])
+              )
+            })
+          ])
+        })
+      ])
+    );
+
+    // send dummy oracle data
+    const capacitiesOracleInputRes = await handle(
+      generateOracleResponse({ AR: 17.96991872 }, positionRes)
+    );
+
+    // expect another oracle request
+    expect(capacitiesOracleInputRes.Messages).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          Target: tags["Oracle"],
+          Tags: expect.arrayContaining([
+            expect.objectContaining({
+              name: "Action",
+              value: "v2.Request-Latest-Data"
+            }),
+            expect.objectContaining({
+              name: "Tickers",
+              value: expect.toBeJsonEncoded(
+                expect.arrayContaining([friendTicker])
+              )
+            })
+          ])
+        })
+      ])
+    );
+
+    // send dummy oracle data
+    // here we use a very large price in order to simulate
+    // an environment, where the transfer would cause
+    // the loan in the friend process to be undercollateralized.
+    // in reality, this would make the loan available for liquidation
+    const usedCapacitiesOracleInputRes = await handle(
+      generateOracleResponse({ TST: 84752959 }, capacitiesOracleInputRes)
+    );
+
+    console.log(JSON.stringify(usedCapacitiesOracleInputRes.Messages, undefined, 2))
   });
 });

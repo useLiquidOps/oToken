@@ -101,6 +101,11 @@ function mod.getGlobalCollateralization(address, timestamp)
   -- get collateralization values
   local zero = bint.zero()
 
+  -- TODO: this could be optimized
+  -- (in cases where the "usedCapacities" has some tokens that
+  -- are not in the "capacities", the prices are requested 2x.
+  -- these could be requested in one price request)
+
   ---@type Bint
   local capacity = utils.reduce(
     ---@param result Bint
