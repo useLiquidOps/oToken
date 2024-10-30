@@ -107,7 +107,7 @@ function mod.getGlobalCollateralization(address, timestamp)
     ---@param v ResultItem
     function (result, v) return result + v.price end,
     zero,
-    oracle.getPrice(timestamp, false, table.unpack(capacities))
+    oracle.getPrice(timestamp, table.unpack(capacities))
   )
   ---@type Bint
   local usedCapacity = utils.reduce(
@@ -115,9 +115,7 @@ function mod.getGlobalCollateralization(address, timestamp)
     ---@param v ResultItem
     function (result, v) return result + v.price end,
     zero,
-    -- use ONLY the cache, so in case a price that has not been
-    -- fetched correctly previously is not added here
-    oracle.getPrice(timestamp, true, table.unpack(usedCapacities))
+    oracle.getPrice(timestamp, table.unpack(usedCapacities))
   )
 
   return capacity, usedCapacity

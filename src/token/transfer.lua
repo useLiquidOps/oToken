@@ -32,7 +32,7 @@ local function transfer(msg)
   -- get the value of the tokens to be transferred in
   -- terms of the underlying asset and then get the price
   -- of that quantity
-  local transferValue = oracle.getPrice(msg.Timestamp, false, {
+  local transferValue = oracle.getPrice(msg.Timestamp, {
     ticker = CollateralTicker,
     quantity = quantity,
     denomination = CollateralDenomination

@@ -33,7 +33,7 @@ local function borrow(msg)
   -- get borrow value in USD
   -- we request this after the collateralization, because
   -- in this case the oracle might not have to sync the price
-  local borrowValue = oracle.getPrice(msg.Timestamp, false, {
+  local borrowValue = oracle.getPrice(msg.Timestamp, {
     ticker = CollateralTicker,
     quantity = quantity,
     denomination = CollateralDenomination

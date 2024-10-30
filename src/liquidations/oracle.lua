@@ -39,10 +39,9 @@ end
 -- will only provide up to date values, outdated and nil values will be
 -- filtered out
 ---@param timestamp number Current message timestamp
----@param cache boolean Force use cache
 ---@param ... PriceParam
 ---@return ResultItem[]
-function mod.getPrice(timestamp, cache, ...)
+function mod.getPrice(timestamp, ...)
   local args = {...}
   local zero = bint.zero()
 
@@ -60,7 +59,7 @@ function mod.getPrice(timestamp, cache, ...)
 
   -- if the cache is disabled or there is no price
   -- data cached, fetch the price
-  if #pricesToSync > 0 and not cache then
+  if #pricesToSync > 0 then
     ---@type string|nil
     local rawData = ao.send({
       Target =  Oracle,
