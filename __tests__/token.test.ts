@@ -6,7 +6,8 @@ import {
   setupProcess,
   HandleFunction,
   generateOracleResponse,
-  generateArweaveAddress
+  generateArweaveAddress,
+  defaultTimestamp
 } from "./utils";
 
 describe("Token standard functionalities", () => {
@@ -103,7 +104,7 @@ describe("Token standard functionalities", () => {
           Tags: expect.arrayContaining([
             expect.objectContaining({
               name: "Total-Supply",
-              value: expect.toBeIntegerStringEncoded()
+              value: testQty
             }),
             expect.objectContaining({
               name: "Ticker",
@@ -191,6 +192,173 @@ describe("Token standard functionalities", () => {
         })
       ])
     )
+  });
+
+  it("Prevents transferring to an invalid address", async () => {
+    const msg = createMessage({
+      Action: "Transfer",
+      Quantity: transferQty,
+      Recipient: "invalid",
+      From: testWallet,
+      Owner: testWallet
+    });
+
+    // send transfer
+    const res = await handle(msg);
+
+    expect(res.Messages).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          Target: msg.From,
+          Tags: expect.arrayContaining([
+            expect.objectContaining({
+              name: "Error",
+              value: expect.any(String)
+            })
+          ])
+        })
+      ])
+    );
+  });
+
+  it("Prevents the sender from transferring to themselves", async () => {
+    const msg = createMessage({
+      Action: "Transfer",
+      Quantity: transferQty,
+      Recipient: testWallet,
+      From: testWallet,
+      Owner: testWallet
+    });
+
+    // send transfer
+    const res = await handle(msg);
+
+    expect(res.Messages).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          Target: msg.From,
+          Tags: expect.arrayContaining([
+            expect.objectContaining({
+              name: "Error",
+              value: expect.any(String)
+            })
+          ])
+        })
+      ])
+    );
+  });
+
+  it("Prevents sending an invalid quantity", async () => {
+    const msg = createMessage({
+      Action: "Transfer",
+      Quantity: "-1",
+      Recipient: recipientWallet,
+      From: testWallet,
+      Owner: testWallet
+    });
+
+    // send transfer
+    const res = await handle(msg);
+
+    expect(res.Messages).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          Target: msg.From,
+          Tags: expect.arrayContaining([
+            expect.objectContaining({
+              name: "Error",
+              value: expect.any(String)
+            })
+          ])
+        })
+      ])
+    );
+  });
+
+  it("Prevents transferring more than the wallet balance", async () => {
+    const msg = createMessage({
+      Action: "Transfer",
+      Quantity: (BigInt(transferQty) + 1n).toString(),
+      Recipient: testWallet,
+      From: testWallet,
+      Owner: testWallet
+    });
+
+    // send transfer
+    const res = await handle(msg);
+
+    expect(res.Messages).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          Target: msg.From,
+          Tags: expect.arrayContaining([
+            expect.objectContaining({
+              name: "Error",
+              value: expect.any(String)
+            })
+          ])
+        })
+      ])
+    );
+  });
+
+  it("Prevents transferring on outdated oracle data", async () => {
+    const msg = createMessage({
+      Action: "Transfer",
+      Quantity: "1",
+      Recipient: recipientWallet,
+      From: testWallet,
+      Owner: testWallet
+    });
+
+    // send transfer
+    const res = await handle(msg);
+
+    // expect collateralization check oracle request
+    expect(res.Messages).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          Target: tags["Oracle"],
+          Tags: expect.arrayContaining([
+            expect.objectContaining({
+              name: "Action",
+              value: "v2.Request-Latest-Data"
+            }),
+            expect.objectContaining({
+              name: "Tickers",
+              value: expect.toBeJsonEncoded(
+                expect.arrayContaining([tags["Collateral-Ticker"]])
+              )
+            })
+          ])
+        })
+      ])
+    );
+
+    // send dummy oracle data (outdated)
+    const oracleInputRes = await handle(
+      generateOracleResponse({
+        AR: {
+          v: 17.96991872,
+          // make sure the timestamp is older than the message timestamp minus the oracle delay tolerance
+          t: parseInt(defaultTimestamp) - parseInt(tags["Oracle-Delay-Tolerance"]) - 1
+        }
+      }, res)
+    );
+
+    expect(oracleInputRes.Messages).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          Target: msg.From,
+          Tags: expect.arrayContaining([
+            expect.objectContaining({
+              name: "Error",
+              value: expect.any(String)
+            })
+          ])
+        })
+      ])
+    );
   });
 
   it("Transfers assets", async () => {
@@ -305,33 +473,6 @@ describe("Token standard functionalities", () => {
             [testWallet]: (BigInt(testQty) - BigInt(transferQty)).toString(),
             [recipientWallet]: transferQty
           }))
-        })
-      ])
-    );
-  });
-
-  it("Prevents transferring more than the wallet balance", async () => {
-    const msg = createMessage({
-      Action: "Transfer",
-      Quantity: (BigInt(transferQty) + 1n).toString(),
-      Recipient: testWallet,
-      From: recipientWallet,
-      Owner: recipientWallet
-    });
-
-    // send transfer
-    const res = await handle(msg);
-
-    expect(res.Messages).toEqual(
-      expect.arrayContaining([
-        expect.objectContaining({
-          Target: msg.From,
-          Tags: expect.arrayContaining([
-            expect.objectContaining({
-              name: "Error",
-              value: expect.any(String)
-            })
-          ])
         })
       ])
     );
