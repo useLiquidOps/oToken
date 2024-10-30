@@ -23,7 +23,10 @@ function mod.schedule(...)
 
     -- continue execution when all responses are back
     if #responses == #messages then
-      coroutine.resume(thread, responses)
+      -- if the result of the resumed coroutine is an error, then we should bubble it up to the process
+      local _, success, errmsg = coroutine.resume(thread, responses)
+
+      assert(success, errmsg)
     end
   end
 
