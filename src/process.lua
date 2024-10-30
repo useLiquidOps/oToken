@@ -241,9 +241,12 @@ function process.handle(msg, env)
   end
 
   if not status then
+    local rawError = tostring(result)
+
     msg.reply({
       Action = msg.Action and msg.Action .. "-Error" or nil,
-      Error = tostring(result)
+      Error = string.gsub(rawError, "%[[%w_.\" ]*%]:%d*: ", ""),
+      ["Raw-Error"] = rawError
     })
 
     return ao.result()
