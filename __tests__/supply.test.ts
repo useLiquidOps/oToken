@@ -248,23 +248,56 @@ describe("Redeeming and burning", () => {
 
 describe("Price and underlying asset value, reserves (empty)", () => {
   let handle: HandleFunction;
-  let testWallet: string;
-  let tags: Record<string, string>;
 
   const testQty = "4";
 
   beforeAll(async () => {
-    testWallet = generateArweaveAddress();
-    tags = normalizeTags(env.Process.Tags);
     handle = await setupProcess(env);
   });
 
   it("Reserves are empty on init", async () => {
+    const msg = createMessage({ Action: "Get-Reserves" });
+    const res = await handle(msg);
 
+    expect(res.Messages).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          Target: msg.From,
+          Tags: expect.arrayContaining([
+            expect.objectContaining({
+              name: "Available",
+              value: "0"
+            }),
+            expect.objectContaining({
+              name: "Lent",
+              value: "0"
+            })
+          ])
+        })
+      ])
+    );
   });
 
   it("Price does not allow invalid quantities", async () => {
+    const msg = createMessage({
+      Action: "Get-Price",
+      Quantity: "-12"
+    });
+    const res = await handle(msg);
 
+    expect(res.Messages).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          Target: msg.From,
+          Tags: expect.arrayContaining([
+            expect.objectContaining({
+              name: "Error",
+              value: expect.any(String)
+            })
+          ])
+        })
+      ])
+    );
   });
 
   it("Price is 1 when the reserves are empty", async () => {
