@@ -684,9 +684,49 @@ describe("Token standard functionalities", () => {
     // the loan in the friend process to be undercollateralized.
     // in reality, this would make the loan available for liquidation
     const usedCapacitiesOracleInputRes = await handle(
-      generateOracleResponse({ TST: 84752959 }, capacitiesOracleInputRes)
+      generateOracleResponse({ TST: 22.55 }, capacitiesOracleInputRes)
     );
 
-    console.log(JSON.stringify(usedCapacitiesOracleInputRes.Messages, undefined, 2))
+    // collateral price is already cached, so the process
+    // will not ask for prices anymore
+    // expect error
+    expect(usedCapacitiesOracleInputRes.Messages).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          // TODO: figure out a way to reply the error to the correct target
+          // Target: msg.From,
+          Tags: expect.arrayContaining([
+            expect.objectContaining({
+              name: "Error",
+              value: expect.any(String)
+            })
+          ])
+        })
+      ])
+    );
+
+    // expect balances to not change
+    const balancesRes = await handle(createMessage({
+      Action: "Balances",
+      From: testWallet,
+      Owner: testWallet
+    }));
+
+    expect(balancesRes.Messages).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          Target: testWallet,
+          Tags: expect.arrayContaining([
+            expect.objectContaining({
+              name: "Ticker",
+              value: expect.any(String)
+            })
+          ]),
+          Data: expect.toBeJsonEncoded(expect.objectContaining({
+            [testWallet]: testQty
+          }))
+        })
+      ])
+    );
   });
 });
