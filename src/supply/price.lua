@@ -21,13 +21,21 @@ function mod.handler(msg)
   local totalPooled = bint(Available) + bint(Lent)
 
   -- calculate price based on the underlying value of the total supply
-  local returnPrice = bint.udiv(
-    totalPooled * quantity,
-    bint(TotalSupply)
-  )
+  local returnPrice = quantity
+  local totalSupply = bint(TotalSupply)
+
+  -- price is one if the reserves are empty, otherwise
+  -- calculate it
+  if not bint.eq(totalSupply, bint.zero()) then
+    returnPrice = bint.udiv(
+      totalPooled * quantity,
+      totalSupply
+    )
+  end
 
   msg.reply({
     Action = "Price",
+    Quantity = tostring(quantity),
     Price = tostring(returnPrice)
   })
 end

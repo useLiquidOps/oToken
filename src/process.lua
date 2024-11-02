@@ -173,9 +173,7 @@ local function setup_handlers()
   Handlers.add(
     "suppy-redeem",
     Handlers.utils.hasMatchingTag("Action", "Redeem"),
-    redeem.handler,
-    nil,
-    redeem.error
+    redeem
   )
 
   Handlers.add(

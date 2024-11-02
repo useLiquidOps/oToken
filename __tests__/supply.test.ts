@@ -15,10 +15,13 @@ describe("Minting and providing", () => {
 
   const testQty = "1000000000000000";
 
-  beforeAll(async () => {
-    handle = await setupProcess(env);
+  beforeAll(() => {
     testWallet = generateArweaveAddress();
     tags = normalizeTags(env.Process.Tags);
+  });
+
+  beforeEach(async () => {
+    handle = await setupProcess(env);
   });
 
   it("Refunds 3rd party tokens", async () => {
@@ -154,23 +157,83 @@ describe("Minting and providing", () => {
     );
   });
 
-  it.todo("Mints the correct quantity on not initial supply");
-
-  it.todo("Mints in proportion to the pooled tokens when there is an active borrow");
+  // for this we need to prepare the following way:
+  // 1) mint tokens
+  // 2) borrow tokens
+  // 3) pay some interest (don't forget to change the timestamp so the interest is charged)
+  // this way, the oToken worth increases, so it'll mint less tokens than the qty supplied
+  it.todo("Mints the correct quantity with existing loans");
 });
 
 describe("Redeeming and burning", () => {
   let handle: HandleFunction;
   let testWallet: string;
+  let tags: Record<string, string>;
 
-  beforeAll(async () => {
-    handle = await setupProcess(env);
+  const testQty = "733456";
+
+  beforeAll(() => {
     testWallet = generateArweaveAddress();
+    tags = normalizeTags(env.Process.Tags);
   });
 
-  it.todo("Does not handle invalid token quantities");
+  beforeEach(async () => {
+    handle = await setupProcess(env);
+    await handle(createMessage({
+      Action: "Credit-Notice",
+      "X-Action": "Mint",
+      Owner: tags["Collateral-Id"],
+      From: tags["Collateral-Id"],
+      "From-Process": tags["Collateral-Id"],
+      Quantity: testQty,
+      Recipient: env.Process.Id,
+      Sender: testWallet
+    }));
+  });
 
-  it.todo("Rejects redeeming more than the available balance");
+  it("Does not handle invalid token quantities", async () => {
+    const msg = createMessage({
+      Action: "Redeem",
+      Quantity: "-12"
+    });
+    const res = await handle(msg);
+
+    expect(res.Messages).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          Target: msg.From,
+          Tags: expect.arrayContaining([
+            expect.objectContaining({
+              name: "Error",
+              value: expect.any(String)
+            })
+          ])
+        })
+      ])
+    );
+  });
+
+  it("Rejects redeeming more than the available balance", async () => {
+    const msg = createMessage({
+      Action: "Redeem",
+      Quantity: (BigInt(testQty) + 1n).toString()
+    });
+    const res = await handle(msg);
+
+    expect(res.Messages).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          Target: msg.From,
+          Tags: expect.arrayContaining([
+            expect.objectContaining({
+              name: "Error",
+              value: expect.any(String)
+            })
+          ])
+        })
+      ])
+    );
+  });
 
   it.todo("Rejects redeeming when there aren't enough available tokens");
 
@@ -179,24 +242,62 @@ describe("Redeeming and burning", () => {
   it.todo("Rejects redeeming when the redeem value is too high compared to the free borrow capacity");
 
   it.todo("Redeems the correct quantity");
+
+  it.todo("Redeems the correct quantity after interests");
 });
 
-describe("Price and underlying asset value, reserves", () => {
+describe("Price and underlying asset value, reserves (empty)", () => {
   let handle: HandleFunction;
   let testWallet: string;
+  let tags: Record<string, string>;
+
+  const testQty = "4";
 
   beforeAll(async () => {
-    handle = await setupProcess(env);
     testWallet = generateArweaveAddress();
+    tags = normalizeTags(env.Process.Tags);
+    handle = await setupProcess(env);
   });
 
-  it.todo("Reserves are empty on init");
+  it("Reserves are empty on init", async () => {
 
-  it.todo("Price is 1 when the reserves are empty");
+  });
 
-  it.todo("Reserves return the correct quantities");
+  it("Price does not allow invalid quantities", async () => {
+
+  });
+
+  it("Price is 1 when the reserves are empty", async () => {
+    const msg = createMessage({
+      Action: "Get-Price",
+      Quantity: testQty
+    });
+    const res = await handle(msg);
+
+    expect(res.Messages).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          Target: msg.From,
+          Tags: expect.arrayContaining([
+            expect.objectContaining({
+              name: "Price",
+              value: testQty
+            }),
+            expect.objectContaining({
+              name: "Quantity",
+              value: testQty
+            })
+          ])
+        })
+      ])
+    );
+  });
 
   it.todo("Price is the same as the input quantity on initial provide");
+});
+
+describe("Price and underlying asset value, reserves after initial provide", () => {
+  it.todo("Reserves return the correct quantities");
 
   it.todo("Returns the correct price after the oToken:collateral ratio is not 1:1");
 

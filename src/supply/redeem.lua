@@ -3,10 +3,8 @@ local oracle = require ".liquidations.oracle"
 local position = require ".borrow.position"
 local bint = require ".utils.bint"(1024)
 
-local mod = {}
-
 ---@type HandlerFunction
-function mod.handler(msg)
+local function redeem(msg)
   assert(
     assertions.isTokenQuantity(msg.Tags.Quantity),
     "Invalid redeem quantity"
@@ -88,15 +86,4 @@ function mod.handler(msg)
   })
 end
 
----@param msg Message
----@param _ Message
----@param err unknown
-function mod.error(msg, _, err)
-  msg.reply({
-    Action = "Redeem-Error",
-    ["Refund-Quantity"] = msg.Tags.Quantity,
-    Error = tostring(err),
-  })
-end
-
-return mod
+return redeem

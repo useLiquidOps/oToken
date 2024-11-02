@@ -121,7 +121,7 @@ describe("Token standard functionalities", () => {
           Data: expect.toBeIntegerStringEncoded()
         })
       ])
-    )
+    );
   });
 
   it("Returns wallet balance", async () => {
