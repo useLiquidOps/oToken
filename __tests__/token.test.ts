@@ -19,11 +19,14 @@ describe("Token standard functionalities", () => {
   const testQty = "1000000000000000";
   const transferQty = "12507";
 
-  beforeAll(async () => {
-    handle = await setupProcess(env);
+  beforeAll(() => {
     tags = normalizeTags(env.Process.Tags);
     testWallet = generateArweaveAddress();
     recipientWallet = generateArweaveAddress();
+  });
+
+  beforeEach(async () => {
+    handle = await setupProcess(env);
 
     // mint some tokens for transfer and balance tests
     await handle(createMessage({
@@ -152,7 +155,9 @@ describe("Token standard functionalities", () => {
   it("Returns wallet balance for recipient", async () => {
     const message = createMessage({
       Action: "Balance",
-      Recipient: testWallet
+      Recipient: testWallet,
+      From: testWallet,
+      Owner: testWallet
     });
     const res = await handle(message);
 
@@ -177,6 +182,19 @@ describe("Token standard functionalities", () => {
   });
 
   it("Returns all wallet balances", async () => {
+    // mint some tokens for the other wallet
+    const otherWalletBal = "475387"
+    await handle(createMessage({
+      Action: "Credit-Notice",
+      "X-Action": "Mint",
+      Owner: tags["Collateral-Id"],
+      From: tags["Collateral-Id"],
+      "From-Process": tags["Collateral-Id"],
+      Quantity: otherWalletBal,
+      Recipient: env.Process.Id,
+      Sender: recipientWallet
+    }));
+
     const msg = createMessage({ Action: "Balances" });
     const res = await handle(msg);
 
@@ -191,7 +209,8 @@ describe("Token standard functionalities", () => {
             })
           ]),
           Data: expect.toBeJsonEncoded(expect.objectContaining({
-            [testWallet]: testQty
+            [testWallet]: testQty,
+            [recipientWallet]: otherWalletBal
           }))
         })
       ])
