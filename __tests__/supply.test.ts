@@ -330,9 +330,57 @@ describe("Price and underlying asset value, reserves (empty)", () => {
 });
 
 describe("Price and underlying asset value, reserves after initial provide", () => {
-  it.todo("Reserves return the correct quantities");
+  let handle: HandleFunction;
+  let testWallet: string;
+  let tags: Record<string, string>;
+
+  const testQty = "7469";
+
+  beforeAll(() => {
+    testWallet = generateArweaveAddress();
+    tags = normalizeTags(env.Process.Tags);
+  });
+
+  beforeEach(async () => {
+    handle = await setupProcess(env);
+    await handle(createMessage({
+      Action: "Credit-Notice",
+      "X-Action": "Mint",
+      Owner: tags["Collateral-Id"],
+      From: tags["Collateral-Id"],
+      "From-Process": tags["Collateral-Id"],
+      Quantity: testQty,
+      Recipient: env.Process.Id,
+      Sender: testWallet
+    }));
+  });
+
+  it("Reserves return the correct quantities", async () => {
+    const msg = createMessage({ Action: "Get-Reserves" });
+    const res = await handle(msg);
+
+    expect(res.Messages).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          Target: msg.From,
+          Tags: expect.arrayContaining([
+            expect.objectContaining({
+              name: "Available",
+              value: testQty
+            }),
+            expect.objectContaining({
+              name: "Lent",
+              value: "0"
+            })
+          ])
+        })
+      ])
+    );
+  });
+
+  it.todo("Reserves return the correct quantities when there is an active borrow");
 
   it.todo("Returns the correct price after the oToken:collateral ratio is not 1:1");
 
-  it.todo("Price input is 1 by default when there is no quantity provided");
+  it.todo("Price input quantity is 1 by default when there is no quantity provided");
 });

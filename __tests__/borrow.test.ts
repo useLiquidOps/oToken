@@ -1,7 +1,81 @@
-describe("Borrowing", () => {
-  it.todo("Does not handle invalid token quantities");
+import {
+  createMessage,
+  generateArweaveAddress,
+  HandleFunction,
+  normalizeTags,
+  setupProcess,
+  env
+} from "./utils";
 
-  it.todo("Rejects borrow if there aren't enough tokens available");
+describe("Borrowing", () => {
+  let handle: HandleFunction;
+  let testWallet: string;
+  let tags: Record<string, string>;
+
+  const testQty = "7469";
+
+  beforeAll(() => {
+    testWallet = generateArweaveAddress();
+    tags = normalizeTags(env.Process.Tags);
+  });
+
+  beforeEach(async () => {
+    handle = await setupProcess(env);
+    await handle(createMessage({
+      Action: "Credit-Notice",
+      "X-Action": "Mint",
+      Owner: tags["Collateral-Id"],
+      From: tags["Collateral-Id"],
+      "From-Process": tags["Collateral-Id"],
+      Quantity: testQty,
+      Recipient: env.Process.Id,
+      Sender: testWallet
+    }));
+  });
+  
+  it("Does not handle invalid token quantities", async () => {
+    const msg = createMessage({
+      Action: "Borrow",
+      Quantity: "-104"
+    });
+    const res = await handle(msg);
+
+    expect(res.Messages).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          Target: msg.From,
+          Tags: expect.arrayContaining([
+            expect.objectContaining({
+              name: "Error",
+              value: expect.any(String)
+            })
+          ])
+        })
+      ])
+    );
+  });
+
+  it("Rejects borrow if there aren't enough tokens available", async () => {
+    const msg = createMessage({
+      Action: "Borrow",
+      Quantity: (BigInt(testQty) + 1n).toString()
+    });
+    const res = await handle(msg);
+
+    expect(res.Messages).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          Target: msg.From,
+          Tags: expect.arrayContaining([
+            expect.objectContaining({
+              name: "Error",
+              value: expect.any(String)
+            })
+          ])
+        })
+      ])
+    );
+  });
 
   it.todo("Rejects borrow if the oracle does not return a valid/up to date price");
 
