@@ -7,7 +7,7 @@ import path from "path";
 export const env: Environment = {
   Process: {
     Id: "0000000000000000000000000000000000000000000",
-    Owner: "0000000000000000000000000000000000000000001",
+    Owner: "000000000000000000000000000000000CONTROLLER",
     Tags: [
       { name: "Collateral-Name", value: "Arweave" },
       { name: "Collateral-Ticker", value: "AR" },

@@ -29,8 +29,7 @@ function mod.info(msg)
     ["Collateral-Denomination"] = tostring(CollateralDenomination),
     ["Liquidation-Threshold"] = tostring(LiquidationThreshold),
     Oracle = Oracle,
-    ["Oracle-Delay-Tolerance"] = tostring(MaxOracleDelay),
-    Friends = json.encode(Friends)
+    ["Oracle-Delay-Tolerance"] = tostring(MaxOracleDelay)
   })
 end
 

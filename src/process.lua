@@ -83,7 +83,7 @@ local function setup_handlers()
   )
   Handlers.add(
     "controller-friend-list",
-    { From = ao.env.Process.Owner, Action = "List-Friends" },
+    Handlers.utils.hasMatchingTag("Action", "List-Friends"),
     friend.list
   )
   Handlers.add(

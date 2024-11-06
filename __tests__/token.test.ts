@@ -89,10 +89,6 @@ describe("Token standard functionalities", () => {
             expect.objectContaining({
               name: "Oracle-Delay-Tolerance",
               value: expect.toBeIntegerStringEncoded()
-            }),
-            expect.objectContaining({
-              name: "Friends",
-              value: expect.toBeJsonEncoded(expect.any(Array))
             })
           ])
         })
@@ -574,17 +570,22 @@ describe("Token standard functionalities", () => {
     const handle = await setupProcess(envWithFriend);
 
     // check if friend has been added
-    const setupRes = await handle(createMessage({ Action: "Info" }));
+    const friendsListRes = await handle(createMessage({
+      Action: "List-Friends"
+    }));
 
-    expect(setupRes.Messages).toEqual(
+    expect(friendsListRes.Messages).toEqual(
       expect.arrayContaining([
         expect.objectContaining({
           Tags: expect.arrayContaining([
             expect.objectContaining({
-              name: "Friends",
-              value: expect.toBeJsonEncoded(expect.arrayContaining([friend]))
+              name: "Action",
+              value: "Friend-List"
             })
-          ])
+          ]),
+          Data: expect.toBeJsonEncoded(
+            expect.arrayContaining([friend])
+          )
         })
       ])
     );
