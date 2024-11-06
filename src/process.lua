@@ -22,6 +22,7 @@ local borrow = require ".borrow.borrow"
 local interest = require ".borrow.interest"
 
 local oracle = require ".liquidations.oracle"
+local liquidate = require ".liquidations.liquidate"
 
 local mint = require ".supply.mint"
 local price = require ".supply.price"
@@ -101,7 +102,18 @@ local function setup_handlers()
     { From = ao.env.Process.Owner, Action = "Set-Liquidation-Threshold" },
     config.setLiquidationThreshold
   )
-  --
+  Handlers.add(
+    "liquidate",
+    {
+      From = CollateralID,
+      Action = "Credit-Notice",
+      Sender = ao.env.Process.Owner,
+      ["X-Action"] = "Liquidate"
+    },
+    liquidate.handler,
+    nil,
+    liquidate.error
+  )
 
   Handlers.add(
     "borrow-loan-interest-get",

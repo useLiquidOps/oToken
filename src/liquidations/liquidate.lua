@@ -1,8 +1,8 @@
 local mod = {}
 
 ---@type HandlerFunction
-function mod.liquidate()
-
+function mod.handler(msg)
+  
 end
 
 ---@param msg Message
