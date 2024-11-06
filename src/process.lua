@@ -8,8 +8,8 @@ local process = { _version = "0.0.1" }
 
 local coroutine = require "coroutine"
 
-local friend = require ".temp_admin.friend"
-local config = require ".temp_admin.config"
+local friend = require ".controller.friend"
+local config = require ".controller.config"
 
 local balance = require ".token.balance"
 local token = require ".token.token"
@@ -70,36 +70,34 @@ local function setup_handlers()
     mint.invalidTokenRefund
   )
 
-  -- temporary handlers for testnet
-  -- these are "admin" functions that will be removed
-  -- once the protocol is ready
+  -- communication with the controller
   Handlers.add(
-    "temp-admin-friend-add",
+    "controller-friend-add",
     { From = ao.env.Process.Owner, Action = "Add-Friend" },
     friend.add
   )
   Handlers.add(
-    "temp-admin-friend-remove",
+    "controller-friend-remove",
     { From = ao.env.Process.Owner, Action = "Remove-Friend" },
     friend.remove
   )
   Handlers.add(
-    "temp-admin-friend-list",
+    "controller-friend-list",
     { From = ao.env.Process.Owner, Action = "List-Friends" },
     friend.list
   )
   Handlers.add(
-    "temp-admin-config-oracle",
+    "controller-config-oracle",
     { From = ao.env.Process.Owner, Action = "Set-Oracle" },
     config.setOracle
   )
   Handlers.add(
-    "temp-admin-config-collateral-ratio",
+    "controller-config-collateral-ratio",
     { From = ao.env.Process.Owner, Action = "Set-Collateral-Ratio" },
     config.setCollateralRatio
   )
   Handlers.add(
-    "temp-admin-config-liquidation-threshold",
+    "controller-config-liquidation-threshold",
     { From = ao.env.Process.Owner, Action = "Set-Liquidation-Threshold" },
     config.setLiquidationThreshold
   )
