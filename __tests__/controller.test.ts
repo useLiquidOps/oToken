@@ -239,7 +239,7 @@ describe("Config tests", () => {
       ])
     );
 
-    // expect error when trying to set the collateral ratio not from the controller
+    // expect error when trying to set the collateral factor not from the controller
     const collateralRatioRes = await handle(createMessage({
       Action: "Set-Collateral-Factor",
       ["Collateral-Factor"]: "1.25",
@@ -261,7 +261,7 @@ describe("Config tests", () => {
       ])
     );
 
-    // expect error when trying to set the collateral ratio not from the controller
+    // expect error when trying to set the collateral factor not from the controller
     const liquidationThresholdSet = await handle(createMessage({
       Action: "Set-Liquidation-Threshold",
       ["Liquidation-Threshold"]: "1.05",

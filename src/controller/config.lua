@@ -24,7 +24,7 @@ end
 
 ---@type HandlerFunction
 function config.setCollateralFactor(msg)
-  -- validate collateral ratio
+  -- validate collateral factor
   local factor = tonumber(msg.Tags["Collateral-Factor"])
 
   assert(
