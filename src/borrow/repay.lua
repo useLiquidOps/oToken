@@ -17,6 +17,73 @@ function repay.handler(msg)
   -- repay on behalf of someone else
   local target = msg.Tags["X-On-Behalf"] or msg.Tags.Sender
 
+  -- execute repay
+  local refundQty, actualRepaidQty = repay.repayToPool(
+    target,
+    quantity,
+    msg.Timestamp
+  )
+
+  -- refund the sender, if necessary
+  if not bint.eq(refundQty, bint.zero()) then
+    ao.send({
+      Target = msg.From,
+      Action = "Transfer",
+      Quantity = tostring(refundQty),
+      Recipient = msg.Tags.Sender
+    })
+  end
+
+  -- notify the sender
+  ao.send({
+    Target = msg.Tags.Sender,
+    Action = "Repay-Confirmation",
+    ["Repaid-Quantity"] = tostring(actualRepaidQty),
+    ["Refund-Quantity"] = tostring(refundQty)
+  })
+
+  -- if this was paid on behalf of someone else
+  -- we will also notify them
+  if target ~= msg.Tags.Sender then
+    ao.send({
+      Target = target,
+      Action = "Repay-Confirmation",
+      ["Repaid-Quantity"] = tostring(actualRepaidQty),
+      ["Repaid-By"] = msg.Tags.Sender
+    })
+  end
+end
+
+---@param msg Message
+---@param _ Message
+---@param err unknown
+function repay.error(msg, _, err)
+  local prettyError, rawError = utils.prettyError(err)
+
+  ao.send({
+    Target = msg.From,
+    Action = "Transfer",
+    Quantity = msg.Tags.Quantity,
+    Recipient = msg.Tags.Sender
+  })
+  ao.send({
+    Target = msg.Tags.Sender,
+    Action = "Repay-Error",
+    Error = prettyError,
+    ["Raw-Error"] = rawError,
+    ["Refund-Quantity"] = msg.Tags.Quantity
+  })
+end
+
+-- This function executes a repay. This is used both
+-- in the actual repay handler, as well as the borrow
+-- liquidation
+-- It returns the amount of tokens that need to be
+-- refunded and the amount of tokens repaid
+---@param target string Target to repay the loan for
+---@param quantity Bint Amount of tokens to be repaid
+---@param timestamp number Message timestamp
+function repay.repayToPool(target, quantity, timestamp)
   assert(
     assertions.isAddress(target),
     "Invalid repay target address"
@@ -24,7 +91,7 @@ function repay.handler(msg)
 
   -- fixup interest
   if not Interests[target] then
-    Interests[target] = { value = "0", updated = msg.Timestamp }
+    Interests[target] = { value = "0", updated = timestamp }
   end
 
   -- borrow & interest balances for the target
@@ -76,55 +143,7 @@ function repay.handler(msg)
   Available = tostring(bint(Available) + actualRepaidQty)
   Lent = tostring(bint(Lent) - actualRepaidQty)
 
-  -- refund the sender, if necessary
-  if not bint.eq(refundQty, zero) then
-    ao.send({
-      Target = msg.From,
-      Action = "Transfer",
-      Quantity = tostring(refundQty),
-      Recipient = msg.Tags.Sender
-    })
-  end
-
-  -- notify the sender
-  ao.send({
-    Target = msg.Tags.Sender,
-    Action = "Repay-Confirmation",
-    ["Repaid-Quantity"] = tostring(actualRepaidQty),
-    ["Refunded-Quantity"] = tostring(refundQty)
-  })
-
-  -- if this was paid on behalf of someone else
-  -- we will also notify them
-  if target ~= msg.Tags.Sender then
-    ao.send({
-      Target = target,
-      Action = "Repay-Confirmation",
-      ["Repaid-Quantity"] = tostring(actualRepaidQty),
-      ["Repaid-By"] = msg.Tags.Sender
-    })
-  end
-end
-
----@param msg Message
----@param _ Message
----@param err unknown
-function repay.error(msg, _, err)
-  local prettyError, rawError = utils.prettyError(err)
-
-  ao.send({
-    Target = msg.From,
-    Action = "Transfer",
-    Quantity = msg.Tags.Quantity,
-    Recipient = msg.Tags.Sender
-  })
-  ao.send({
-    Target = msg.Tags.Sender,
-    Action = "Repay-Error",
-    Error = prettyError,
-    ["Raw-Error"] = rawError,
-    ["Refund-Quantity"] = msg.Tags.Quantity
-  })
+  return refundQty, actualRepaidQty
 end
 
 return repay

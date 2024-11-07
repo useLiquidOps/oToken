@@ -59,7 +59,7 @@ local function setup_handlers()
   Handlers.add(
     "borrow-loan-interest-sync-dynamic",
     Handlers.utils.continue(Handlers.utils.hasMatchingTagOf("Action", {
-      "Borrow", "Repay", "Borrow-Balance", "Borrow-Capacity", "Position", "Global-Position", "Positions", "Redeem", "Transfer"
+      "Borrow", "Repay", "Borrow-Balance", "Borrow-Capacity", "Position", "Global-Position", "Positions", "Redeem", "Transfer", "Liquidate-Borrow"
     })),
     interest.syncInterests
   )
