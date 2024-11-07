@@ -39,7 +39,7 @@ function mod.liquidateBorrow(msg)
       Target = msg.From,
       Action = "Transfer",
       Quantity = tostring(refundQty),
-      Recipient = msg.Tags.Sender
+      Recipient = liquidator
     })
   end
 
@@ -57,6 +57,7 @@ function mod.liquidateBorrow(msg)
   ao.send({
     Target = target,
     Action = "Liquidation-Notice",
+    ["Liquidate-Action"] = "Borrow",
     ["Liquidated-Token"] = CollateralID,
     ["Liquidated-Quantity"] = tostring(actualRepaidQty),
     Liquidator = liquidator
@@ -122,6 +123,14 @@ function mod.liquidatePosition(msg)
   -- amount of tokens to transfer out
   local quantity = bint(msg.Tags.Quantity)
 
+  -- liquidator wallet
+  local liquidator = msg.Tags.Liquidator
+
+  assert(
+    assertions.isAddress(liquidator),
+    "Invalid liquidator address"
+  )
+
   -- liquidation target
   local target = msg.Tags["Liquidation-Target"]
 
@@ -165,7 +174,37 @@ function mod.liquidatePosition(msg)
   Available = tostring(availableTokens - quantity)
   TotalSupply = tostring(totalSupply - qtyValueInoToken)
 
-  -- TODO: notify, transfer
+  -- transfer to the liquidator
+  ao.send({
+    Target = CollateralID,
+    Action = "Transfer",
+    Quantity = tostring(quantity),
+    Recipient = liquidator
+  })
+
+  -- notify liquidator
+  ao.send({
+    Target = liquidator,
+    Action = "Liquidate-Position-Confirmation",
+    ["Liquidated-Token"] = CollateralID,
+    ["Earned-Quantity"] = tostring(quantity),
+    ["Liquidation-Target"] = target
+  })
+
+  -- notify the liquidated user
+  ao.send({
+    Target = target,
+    Action = "Liquidate-Notice",
+    ["Liquidate-Action"] = "Position",
+    ["Liquidated-Position-Quantity"] = tostring(qtyValueInoToken),
+    Liquidator = liquidator
+  })
+
+  -- reply to the controller
+  msg.reply({
+    Action = "Liquidate-Position-Confirmation",
+    ["Liquidated-Position-Quantity"] = tostring(qtyValueInoToken)
+  })
 end
 
 return mod
