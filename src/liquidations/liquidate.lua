@@ -1,8 +1,18 @@
 local mod = {}
 
 ---@type HandlerFunction
-function mod.handler(msg)
+function mod.removeBorrow(msg)
+
+end
+
+---@type HandlerFunction
+function mod.refillPool()
   
+end
+
+---@type HandlerFunction
+function mod.handler(msg)
+
 end
 
 ---@param msg Message

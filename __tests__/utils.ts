@@ -14,7 +14,7 @@ export const env: Environment = {
       { name: "Logo", value: "0000000000000000000000000000000000000000002" },
       { name: "Collateral-Id", value: "0000000000000000000000000000000000000000002" },
       { name: "Collateral-Denomination", value: "12" },
-      { name: "Collateral-Ratio", value: "2" },
+      { name: "Collateral-Factor", value: "2" },
       { name: "Liquidation-Threshold", value: "1.2" },
       { name: "Base-Rate", value: "0.5" },
       { name: "Friends", value: "[]" },

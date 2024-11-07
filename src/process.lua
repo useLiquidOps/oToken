@@ -93,9 +93,9 @@ local function setup_handlers()
     config.setOracle
   )
   Handlers.add(
-    "controller-config-collateral-ratio",
-    { From = ao.env.Process.Owner, Action = "Set-Collateral-Ratio" },
-    config.setCollateralRatio
+    "controller-config-collateral-factor",
+    { From = ao.env.Process.Owner, Action = "Set-Collateral-Factor" },
+    config.setCollateralFactor
   )
   Handlers.add(
     "controller-config-liquidation-threshold",

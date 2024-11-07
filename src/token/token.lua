@@ -25,7 +25,7 @@ function mod.info(msg)
     Logo = Logo,
     Denomination = tostring(Denomination),
     ["Collateral-Id"] = CollateralID,
-    ["Collateral-Ratio"] = tostring(CollateralRatio),
+    ["Collateral-Factor"] = tostring(CollateralFactor),
     ["Collateral-Denomination"] = tostring(CollateralDenomination),
     ["Liquidation-Threshold"] = tostring(LiquidationThreshold),
     Oracle = Oracle,

@@ -241,8 +241,8 @@ describe("Config tests", () => {
 
     // expect error when trying to set the collateral ratio not from the controller
     const collateralRatioRes = await handle(createMessage({
-      Action: "Set-Collateral-Ratio",
-      ["Collateral-Ratio"]: "1.25",
+      Action: "Set-Collateral-Factor",
+      ["Collateral-Factor"]: "1.25",
       Owner: invalidOwner,
       From: invalidOwner
     }));
@@ -347,10 +347,10 @@ describe("Config tests", () => {
     );
   });
 
-  test("Does not update collateral ratio with an invalid value", async () => {
+  test("Does not update collateral factor with an invalid value", async () => {
     const res = await handle(createMessage({
-      Action: "Set-Collateral-Ratio",
-      "Collateral-Ratio": "invalid"
+      Action: "Set-Collateral-Factor",
+      "Collateral-Factor": "invalid"
     }));
 
     expect(res.Messages).toEqual(
@@ -368,11 +368,11 @@ describe("Config tests", () => {
     );
   });
 
-  test("Updates the collateral ratio", async () => {
-    const newRatio = "3.5";
+  test("Updates the collateral factor", async () => {
+    const newFactor = "3.5";
     const res = await handle(createMessage({
-      Action: "Set-Collateral-Ratio",
-      "Collateral-Ratio": newRatio
+      Action: "Set-Collateral-Factor",
+      "Collateral-Factor": newFactor
     }));
 
     expect(res.Messages).toEqual(
@@ -382,11 +382,11 @@ describe("Config tests", () => {
           Tags: expect.arrayContaining([
             expect.objectContaining({
               name: "Action",
-              value: "Collateral-Ratio-Set"
+              value: "Collateral-Factor-Set"
             }),
             expect.objectContaining({
-              name: "Collateral-Ratio",
-              value: newRatio
+              name: "Collateral-Factor",
+              value: newFactor
             })
           ])
         })
@@ -402,8 +402,8 @@ describe("Config tests", () => {
           Target: controller,
           Tags: expect.arrayContaining([
             expect.objectContaining({
-              name: "Collateral-Ratio",
-              value: newRatio
+              name: "Collateral-Factor",
+              value: newFactor
             })
           ])
         })
@@ -433,10 +433,10 @@ describe("Config tests", () => {
   });
 
   test("Updates the liquidation threshold ratio", async () => {
-    const newRatio = "3.5";
+    const newFactor = "3.5";
     const res = await handle(createMessage({
       Action: "Set-Liquidation-Threshold",
-      "Liquidation-Threshold": newRatio
+      "Liquidation-Threshold": newFactor
     }));
 
     expect(res.Messages).toEqual(
@@ -450,7 +450,7 @@ describe("Config tests", () => {
             }),
             expect.objectContaining({
               name: "Liquidation-Threshold",
-              value: newRatio
+              value: newFactor
             })
           ])
         })
@@ -467,7 +467,7 @@ describe("Config tests", () => {
           Tags: expect.arrayContaining([
             expect.objectContaining({
               name: "Liquidation-Threshold",
-              value: newRatio
+              value: newFactor
             })
           ])
         })

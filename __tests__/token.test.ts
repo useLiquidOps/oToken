@@ -71,7 +71,7 @@ describe("Token standard functionalities", () => {
               value: expect.toBeArweaveAddress()
             }),
             expect.objectContaining({
-              name: "Collateral-Ratio",
+              name: "Collateral-Factor",
               value: expect.toBeFloatStringEncoded()
             }),
             expect.objectContaining({

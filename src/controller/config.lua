@@ -23,22 +23,22 @@ function config.setOracle(msg)
 end
 
 ---@type HandlerFunction
-function config.setCollateralRatio(msg)
+function config.setCollateralFactor(msg)
   -- validate collateral ratio
-  local ratio = tonumber(msg.Tags["Collateral-Ratio"])
+  local factor = tonumber(msg.Tags["Collateral-Factor"])
 
   assert(
-    ratio ~= nil and type(ratio) == "number",
+    factor ~= nil and type(factor) == "number",
     "Invalid ratio provided"
   )
 
   -- update
-  CollateralRatio = ratio
+  CollateralFactor = factor
 
   -- notify the user
   msg.reply({
-    Action = "Collateral-Ratio-Set",
-    ["Collateral-Ratio"] = tostring(ratio)
+    Action = "Collateral-Factor-Set",
+    ["Collateral-Factor"] = tostring(factor)
   })
 end
 
