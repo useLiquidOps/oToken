@@ -29,6 +29,8 @@ local price = require ".supply.price"
 local reserves = require ".supply.reserves"
 local redeem = require ".supply.redeem"
 
+local utils = require ".utils.utils"
+
 HandlersAdded = HandlersAdded or false
 
 -- add handlers for inputs
@@ -102,17 +104,23 @@ local function setup_handlers()
     { From = ao.env.Process.Owner, Action = "Set-Liquidation-Threshold" },
     config.setLiquidationThreshold
   )
+
   Handlers.add(
-    "liquidate",
+    "liquidate-borrow",
     {
       From = CollateralID,
       Action = "Credit-Notice",
       Sender = ao.env.Process.Owner,
-      ["X-Action"] = "Liquidate"
+      ["X-Action"] = "Liquidate-Borrow"
     },
-    liquidate.handler,
+    liquidate.liquidateBorrow,
     nil,
-    liquidate.error
+    liquidate.refund
+  )
+  Handlers.add(
+    "liquidate-position",
+    { From = ao.env.Process.Owner, Action = "Liquidate-Position" },
+    liquidate.liquidatePosition
   )
 
   Handlers.add(
@@ -249,11 +257,11 @@ function process.handle(msg, env)
   end
 
   if not status then
-    local rawError = tostring(result)
+    local prettyError, rawError = utils.prettyError(result)
 
     msg.reply({
       Action = msg.Action and msg.Action .. "-Error" or nil,
-      Error = string.gsub(rawError, "%[[%w_.\" ]*%]:%d*: ", ""),
+      Error = prettyError,
       ["Raw-Error"] = rawError
     })
 

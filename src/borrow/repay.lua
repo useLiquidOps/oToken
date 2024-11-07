@@ -1,5 +1,6 @@
 local assertions = require ".utils.assertions"
 local bint = require ".utils.bint"(1024)
+local utils = require ".utils.utils"
 
 local repay = {}
 
@@ -109,6 +110,8 @@ end
 ---@param _ Message
 ---@param err unknown
 function repay.error(msg, _, err)
+  local prettyError, rawError = utils.prettyError(err)
+
   ao.send({
     Target = msg.From,
     Action = "Transfer",
@@ -118,7 +121,8 @@ function repay.error(msg, _, err)
   ao.send({
     Target = msg.Tags.Sender,
     Action = "Repay-Error",
-    Error = tostring(err),
+    Error = prettyError,
+    ["Raw-Error"] = rawError,
     ["Refund-Quantity"] = msg.Tags.Quantity
   })
 end

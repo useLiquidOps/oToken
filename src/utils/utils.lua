@@ -278,4 +278,13 @@ function utils.floatBintRepresentation(raw, floatMul)
   return repr, floatMul
 end
 
+-- Create a pretty error message from any Lua error 
+-- (returns the pretty error and the raw stringified error)
+---@param err unknown Original error message
+function utils.prettyError(err)
+  local rawError = tostring(err)
+
+  return string.gsub(rawError, "%[[%w_.\" ]*%]:%d*: ", ""), rawError
+end
+
 return utils
