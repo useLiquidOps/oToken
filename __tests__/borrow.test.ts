@@ -80,6 +80,8 @@ describe("Borrowing", () => {
 
   it.todo("Rejects borrow if the oracle does not return a valid/up to date price");
 
+  it.todo("Rejects borrow if it would damage the collateralization factor");
+
   it.todo("Rejects borrow if it wouldn't be collateralized");
 
   it.todo("Borrows the correct quantity");

@@ -186,7 +186,7 @@ function mod.liquidatePosition(msg)
   ao.send({
     Target = liquidator,
     Action = "Liquidate-Position-Confirmation",
-    ["Liquidated-Token"] = CollateralID,
+    ["Earned-Token"] = CollateralID,
     ["Earned-Quantity"] = tostring(quantity),
     ["Liquidation-Target"] = target
   })
