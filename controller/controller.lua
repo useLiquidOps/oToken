@@ -87,6 +87,33 @@ Handlers.add(
 )
 
 Handlers.add(
+  "unlist",
+  { From = ao.id, Action = "Unlist" },
+  function (msg)
+    -- token to be removed
+    local token = msg.Tags.Token
+
+    assert(
+      assertions.isAddress(token),
+      "Invalid token address"
+    )
+    assert(Tokens[token] ~= nil, "Token is not listed")
+
+    -- id of the oToken for this token
+    local oToken = Tokens[token]
+
+    -- unlist
+    Tokens[token] = nil
+
+    msg.reply({
+      Action = "Token-Unlisted",
+      Token = token,
+      ["Removed-Id"] = oToken
+    })
+  end
+)
+
+Handlers.add(
   "liquidate",
   { Action = "Credit-Notice", ["X-Action"] = "Liquidate" },
   function (msg)
@@ -102,15 +129,23 @@ Handlers.add(
     -- (the token that is paying for the loan = transferred token)
     local liquidatedToken = msg.From
 
-    -- TODO: check if token is listed
+    assert(
+      Tokens[liquidatedToken] ~= nil,
+      "Cannot liquidate the incoming token as it is not listed"
+    )
 
     -- the token of the position that will be liquidated
     -- (this will be sent to the liquidator as a reward)
     local positionToken = msg.Tags["X-Position-Token"]
 
-    -- TODO: check if token is listed
+    assert(
+      Tokens[positionToken] ~= nil,
+      "Cannot liquidate for the position token as it is not listed"
+    )
 
     -- TODO: check user position
+
+    -- TODO: check if user position includes the desired token
 
     -- TODO: check queue
 
