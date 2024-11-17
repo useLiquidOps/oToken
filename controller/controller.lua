@@ -74,6 +74,15 @@ Handlers.add(
     -- spawn new oToken process
     local spawnResult = ao.spawn(Module, config).receive()
 
+    -- notify all other tokens
+    for _, oToken in pairs(Tokens) do
+      ao.send({
+        Target = oToken,
+        Action = "Add-Friend",
+        Friend = spawnResult.Tags.Process
+      })
+    end
+
     -- add token to tokens list
     Tokens[token] = spawnResult.Tags.Process
 
@@ -105,10 +114,29 @@ Handlers.add(
     -- unlist
     Tokens[token] = nil
 
+    -- notify all other tokens
+    for _, friend in pairs(Tokens) do
+      ao.send({
+        Target = friend,
+        Action = "Remove-Friend",
+        Friend = oToken
+      })
+    end
+
     msg.reply({
       Action = "Token-Unlisted",
       Token = token,
       ["Removed-Id"] = oToken
+    })
+  end
+)
+
+Handlers.add(
+  "get-tokens",
+  { Action = "Get-Tokens" },
+  function (msg)
+    msg.reply({
+      Data = json.encode(Tokens)
     })
   end
 )
