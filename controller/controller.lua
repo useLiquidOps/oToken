@@ -17,6 +17,16 @@ ProtocolLogo = ""
 ---@type table<string, string>
 Tokens = {}
 
+-- TODO: should queues have timeouts?
+
+-- queue for operations in oTokens that involve
+-- the collateral/collateralization
+---@type string[]
+CollateralQueue = {}
+
+-- queue for liquidations
+LiquidationQueue = {}
+
 Handlers.add(
   "list",
   { From = ao.id, Action = "List" },
@@ -175,7 +185,8 @@ Handlers.add(
 
     -- TODO: check if user position includes the desired token
 
-    -- TODO: check queue
+    -- TODO: check liquidation queue
+    -- TODO: should we check collateral queue as well, or should that be a priority
 
     -- TODO: queue the liquidation at this point, because
     -- the user position has been checked, so the liquidation is valid
@@ -189,6 +200,88 @@ Handlers.add(
     -- TODO: step 2: liquidate the position (transfer out the reward)
 
     -- TODO: send confirmation to the liquidator
+  end
+)
+
+Handlers.add(
+  "add-collateral-queue",
+  function (msg)
+    if msg.Action ~= "Add-To-Queue" then return false end
+
+    -- more efficient than using utils for this
+    for _, v in pairs(Tokens) do
+      if v == msg.From then return true end
+    end
+
+    return false
+  end,
+  function (msg)
+    local user = msg.Tags.User
+
+    -- validate address
+    if not assertions.isAddress(user) then
+      return msg.reply({ Error = "Invalid user address" })
+    end
+
+    -- add to queue
+    -- no need to check if it has already been added,
+    -- we'll filter all of them out when the user is
+    -- removed from it
+    table.insert(CollateralQueue, user)
+
+    msg.reply({ ["Queued-User"] = user })
+  end
+)
+
+Handlers.add(
+  "remove-collateral-queue",
+  function (msg)
+    if msg.Action ~= "Remove-From-Queue" then return false end
+
+    -- more efficient than using utils for this
+    for _, v in pairs(Tokens) do
+      if v == msg.From then return true end
+    end
+
+    return false
+  end,
+  function (msg)
+    local user = msg.Tags.User
+
+    -- validate address
+    if not assertions.isAddress(user) then
+      return msg.reply({ Error = "Invalid user address" })
+    end
+
+    -- filter out user
+    CollateralQueue = utils.filter(
+      function (v) return v ~= user end,
+      CollateralQueue
+    )
+
+    msg.reply({ ["Unqueued-User"] = user })
+  end
+)
+
+Handlers.add(
+  "check-queue",
+  { Action = "Check-Queue-For" },
+  function (msg)
+    local user = msg.Tags.User
+
+    -- validate address
+    if not assertions.isAddress(user) then
+      return msg.reply({ ["In-Queue"] = "false" })
+    end
+
+    -- the user is queued if they're either in the collateral
+    -- or the liquidation queues
+    return msg.reply({
+      ["In-Queue"] = json.encode(
+        utils.includes(user, CollateralQueue) or
+        utils.includes(user, LiquidationQueue)
+      )
+    })
   end
 )
 
