@@ -160,6 +160,9 @@ Handlers.add(
     -- liquidation target
     local target = msg.Tags["X-Target"]
 
+    -- liquidator address
+    local liquidator = msg.Tags.Sender
+
     assert(
       assertions.isAddress(target),
       "Invalid liquidation target"
@@ -197,12 +200,17 @@ Handlers.add(
     )))
 
     -- check if user position includes the desired token
+    local selectedPosition = utils.find(function (pos) return pos.From == Tokens[positionToken] end, positions)
+
     assert(
-      utils.find(function (pos) return pos.From == Tokens[positionToken] end, positions) ~= nil,
+      selectedPosition ~= nil,
       "User does not have a position in that token"
     )
 
     -- TODO: convert positions to usd
+
+    -- TODO: check if the user has enough tokens as collateral
+    -- in the desired token
 
     -- TODO: should we check collateral queue as well, or should that be a priority
 
@@ -229,15 +237,36 @@ Handlers.add(
 
     -- check loan liquidation result
     if loanLiquidationRes.Tags.Error then
+      -- remove from queue
+      LiquidationQueue = utils.filter(
+        function (v) return v ~= target end,
+        LiquidationQueue
+      )
+
       return msg.reply({
         Error = "Failed to liquidate loan (" .. loanLiquidationRes.Tags.Error .. ")"
       })
     end
 
     -- liquidate the position (transfer out the reward)
+    local positionLiquidationRes = ao.send({
+      Target = Tokens[positionToken],
+      Action = "Liquidate-Position",
+      Quantity = "", -- TODO
+      Liquidator = liquidator,
+      ["Liquidation-Target"] = target
+    }).receive()
 
+    -- TODO: if failed reset liquidation
 
-    -- TODO: send confirmation to the liquidator
+    -- send confirmation to the liquidator
+    ao.send({
+      Target = liquidator,
+      Action = "Liquidate-Confirmation",
+      ["Liquidation-Target"] = target,
+      ["From-Quantity"] = msg.Tags.Quantity,
+      ["To-Quantity"] = "" -- TODO
+    })
   end
 )
 
