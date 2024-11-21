@@ -70,7 +70,8 @@ function mod.liquidateBorrow(msg)
     ["Liquidated-Quantity"] = tostring(actualRepaidQty),
     ["Refund-Quantity"] = msg.Tags.Quantity,
     Liquidator = msg.Tags["X-Liquidator"],
-    ["Liquidation-Target"] = msg.Tags["X-Target"]
+    ["Liquidation-Target"] = msg.Tags["X-Target"],
+    ["X-Reference"] = msg.Tags.Reference
   })
 end
 
@@ -95,7 +96,8 @@ function mod.refund(msg, _, err)
     ["Raw-Error"] = rawError,
     ["Refund-Quantity"] = msg.Tags.Quantity,
     Liquidator = msg.Tags["X-Liquidator"],
-    ["Liquidation-Target"] = msg.Tags["X-Target"]
+    ["Liquidation-Target"] = msg.Tags["X-Target"],
+    ["X-Reference"] = msg.Tags.Reference
   })
 
   if liquidator then

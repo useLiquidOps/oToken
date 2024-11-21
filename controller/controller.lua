@@ -1,6 +1,8 @@
+local coroutine = require "coroutine"
 local utils = require ".utils"
 local json = require "json"
 local assertions = {}
+local scheduler = {}
 local tokens = {}
 
 -- oToken module ID
@@ -163,6 +165,13 @@ Handlers.add(
       "Invalid liquidation target"
     )
 
+    -- check liquidation queue
+    -- TODO: find a better way to do this
+    assert(
+      not utils.includes(target, LiquidationQueue),
+      "User is already queued for liquidation"
+    )
+
     -- token to be liquidated 
     -- (the token that is paying for the loan = transferred token)
     local liquidatedToken = msg.From
@@ -181,23 +190,52 @@ Handlers.add(
       "Cannot liquidate for the position token as it is not listed"
     )
 
-    -- TODO: check user position
+    -- check user position
+    local positions = scheduler.schedule(table.unpack(utils.map(
+      function (id) return { Target = id, Action = "Position", Recipient = target } end,
+      utils.values(Tokens)
+    )))
 
-    -- TODO: check if user position includes the desired token
+    -- check if user position includes the desired token
+    assert(
+      utils.find(function (pos) return pos.From == Tokens[positionToken] end, positions) ~= nil,
+      "User does not have a position in that token"
+    )
 
-    -- TODO: check liquidation queue
+    -- TODO: convert positions to usd
+
     -- TODO: should we check collateral queue as well, or should that be a priority
 
     -- TODO: queue the liquidation at this point, because
     -- the user position has been checked, so the liquidation is valid
     -- we don't want anyone to be able to liquidate from this point
+    table.insert(LiquidationQueue, target)
 
-    -- TODO: step 1: liquidate the loan
-
-    -- TODO: check loan liquidation result
     -- TODO: timeout here? (what if this doesn't return in time, the liquidation remains in a pending state)
 
-    -- TODO: step 2: liquidate the position (transfer out the reward)
+    -- liquidate the loan
+    ao.send({
+      Target = msg.From,
+      Action = "Transfer",
+      Quantity = msg.Tags.Quantity,
+      Recipient = Tokens[msg.From]
+    })
+
+    -- get result of liquidation
+    local loanLiquidationRes = Handlers.receive({
+      From = Tokens[msg.From],
+      ["X-Reference"] = tostring(ao.reference)
+    })
+
+    -- check loan liquidation result
+    if loanLiquidationRes.Tags.Error then
+      return msg.reply({
+        Error = "Failed to liquidate loan (" .. loanLiquidationRes.Tags.Error .. ")"
+      })
+    end
+
+    -- liquidate the position (transfer out the reward)
+
 
     -- TODO: send confirmation to the liquidator
   end
@@ -354,4 +392,43 @@ function tokens.spawnProtocolLogo(collateralLogo)
   })
 
   return spawnedImage.Id
+end
+
+function scheduler.schedule(...)
+  -- get the running handler's thread
+  local thread = coroutine.running()
+
+  -- repsonse handler
+  local responses = {}
+  local messages = {...}
+
+  -- if there are no messages to be sent, we don't do anything
+  if #messages == 0 then return {} end
+
+  ---@type HandlerFunction
+  local function responseHandler(msg)
+    table.insert(responses, msg)
+
+    -- continue execution when all responses are back
+    if #responses == #messages then
+      -- if the result of the resumed coroutine is an error, then we should bubble it up to the process
+      local _, success, errmsg = coroutine.resume(thread, responses)
+
+      assert(success, errmsg)
+    end
+  end
+
+  -- send messages
+  for _, msg in ipairs(messages) do
+    ao.send(msg)
+
+    -- wait for response
+    Handlers.once(
+      { From = msg.Target, ["X-Reference"] = tostring(ao.reference) },
+      responseHandler
+    )
+  end
+
+  -- yield execution, till all responses are back
+  return coroutine.yield({ From = messages[#messages], ["X-Reference"] = tostring(ao.reference) })
 end
