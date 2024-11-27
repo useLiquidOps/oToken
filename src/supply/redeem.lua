@@ -51,15 +51,12 @@ local function redeem(msg)
   )
 
   -- get position data
-  local capacity, usedCapacity = position.getGlobalCollateralization(
-    sender,
-    msg.Timestamp
-  )
+  local capacity, usedCapacity = position.getGlobalCollateralization(sender)
 
   -- get the value of the tokens to be burned in
   -- terms of the underlying asset and then get the price
   -- of that quantity
-  local burnValue = oracle.getPrice(msg.Timestamp, {
+  local burnValue = oracle.getPrice({
     ticker = CollateralTicker,
     quantity = quantity,
     denomination = CollateralDenomination

@@ -60,8 +60,7 @@ end
 
 -- Get the global collateralization state (across all friend oTokens) in denominated USD
 ---@param address string Address to get the collateralization for
----@param timestamp number Current message timestamp
-function mod.getGlobalCollateralization(address, timestamp)
+function mod.getGlobalCollateralization(address)
   -- get friend values
   local friendsCollateralRes = scheduler.schedule(table.unpack(utils.map(
     function (id) return { Target = id, Action = "Position", Recipient = address } end,
@@ -112,7 +111,7 @@ function mod.getGlobalCollateralization(address, timestamp)
     ---@param v ResultItem
     function (result, v) return result + v.price end,
     zero,
-    oracle.getPrice(timestamp, table.unpack(capacities))
+    oracle.getPrice(table.unpack(capacities))
   )
   ---@type Bint
   local usedCapacity = utils.reduce(
@@ -120,7 +119,7 @@ function mod.getGlobalCollateralization(address, timestamp)
     ---@param v ResultItem
     function (result, v) return result + v.price end,
     zero,
-    oracle.getPrice(timestamp, table.unpack(usedCapacities))
+    oracle.getPrice(table.unpack(usedCapacities))
   )
 
   return capacity, usedCapacity
@@ -175,7 +174,7 @@ function mod.globalPosition(msg)
   local account = msg.Tags.Recipient or msg.From
 
   -- reach out to friend processes
-  local capacity, usedCapacity = mod.getGlobalCollateralization(account, msg.Timestamp)
+  local capacity, usedCapacity = mod.getGlobalCollateralization(account)
 
   msg.reply({
     Capacity = tostring(capacity),

@@ -24,15 +24,12 @@ local function transfer(msg)
   assert(bint.ule(quantity, walletBalance), "Insufficient balance")
 
   -- get position data
-  local capacity, usedCapacity = position.getGlobalCollateralization(
-    sender,
-    msg.Timestamp
-  )
+  local capacity, usedCapacity = position.getGlobalCollateralization(sender)
 
   -- get the value of the tokens to be transferred in
   -- terms of the underlying asset and then get the price
   -- of that quantity
-  local transferValue = oracle.getPrice(msg.Timestamp, {
+  local transferValue = oracle.getPrice({
     ticker = CollateralTicker,
     quantity = quantity,
     denomination = CollateralDenomination

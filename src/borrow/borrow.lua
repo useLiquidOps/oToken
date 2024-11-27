@@ -45,15 +45,12 @@ local function borrow(msg)
   local account = msg.From
 
   -- get position data
-  local capacity, usedCapacity = position.getGlobalCollateralization(
-    account,
-    msg.Timestamp
-  )
+  local capacity, usedCapacity = position.getGlobalCollateralization(account)
 
   -- get borrow value in USD
   -- we request this after the collateralization, because
   -- in this case the oracle might not have to sync the price
-  local borrowValue = oracle.getPrice(msg.Timestamp, {
+  local borrowValue = oracle.getPrice({
     ticker = CollateralTicker,
     quantity = quantity,
     denomination = CollateralDenomination

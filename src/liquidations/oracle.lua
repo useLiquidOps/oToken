@@ -38,10 +38,9 @@ end
 -- Get the price/value of a quantity of the provided assets. The function
 -- will only provide up to date values, outdated and nil values will be
 -- filtered out
----@param timestamp number Current message timestamp
 ---@param ... PriceParam
 ---@return ResultItem[]
-function mod.getPrice(timestamp, ...)
+function mod.getPrice(...)
   local args = {...}
   local zero = bint.zero()
 
@@ -75,7 +74,7 @@ function mod.getPrice(timestamp, ...)
 
     for ticker, p in pairs(data) do
       -- only add data if the timestamp is up to date
-      if p.t + MaxOracleDelay >= timestamp then
+      if p.t + MaxOracleDelay >= Timestamp then
         PriceCache[ticker] = {
           price = p.v,
           timestamp = p.t
