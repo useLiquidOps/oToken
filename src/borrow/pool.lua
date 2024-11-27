@@ -3,7 +3,7 @@ local json = require "json"
 local mod = {}
 
 ---@type HandlerFunction
-function mod.setup()
+function mod.setup(msg)
   -- token that can be lent/borrowed
   CollateralID = CollateralID or ao.env.Process.Tags["Collateral-Id"]
 
@@ -36,6 +36,15 @@ function mod.setup()
   -- other oToken processes
   ---@type string[]
   Friends = Friends or json.decode(ao.env.Process.Tags.Friends or "[]")
+
+  -- global current timestamp for the oracle
+  Timestamp = msg.Timestamp
+end
+
+-- This syncs the global timestamp using the current message
+---@type HandlerFunction
+function mod.syncTimestamp(msg)
+  Timestamp = msg.Timestamp
 end
 
 return mod

@@ -49,6 +49,16 @@ local function setup_handlers()
     end
   )
 
+  -- current timestamp sync
+  -- (this is required for coroutines, so they always
+  -- have the up-to-date timestamp and they don't have
+  -- to rely on the resumed handler's timestamp)
+  Handlers.add(
+    "timestamp-sync",
+    Handlers.utils.continue({}),
+    pool.syncTimestamp
+  )
+
   -- oracle timeout sync (must be the second handler)
   Handlers.add(
     "oracle-timeout-sync",
