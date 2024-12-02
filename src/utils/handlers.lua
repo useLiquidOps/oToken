@@ -1,3 +1,6 @@
+-- Copyright (c) 2024 Forward Research
+-- Code from the aos codebase: https://github.com/permaweb/aos
+
 --- The Handlers library provides a flexible way to manage and execute a series of handlers based on patterns. Each handler consists of a pattern function, a handle function, and a name. This library is suitable for scenarios where different actions need to be taken based on varying input criteria. Returns the handlers table.
 -- @module handlers
 
