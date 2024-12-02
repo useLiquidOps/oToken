@@ -20,9 +20,9 @@
 -- @field evaluate The evaluate function
 local handlers = { _version = "0.0.5" }
 local coroutine = require('coroutine')
-local utils = require('.utils')
+local utils = require('.utils.utils')
 
-handlers.utils = require('.handlers-utils')
+handlers.utils = require('.utils.handlers-utils')
 -- if update we need to keep defined handlers
 if Handlers then
   handlers.list = Handlers.list or {}
