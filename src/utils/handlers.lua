@@ -78,14 +78,31 @@ end
 -- processing of one message until another is received that matches the pattern.
 -- @function receive
 -- @tparam {table | function} pattern The pattern to check for in the message
-function handlers.receive(pattern)
+-- @tparam {table | nil} timeout Timeout after which the handler will error
+function handlers.receive(pattern, timeout)
   local self = coroutine.running()
-  handlers.once(pattern, function (msg)
+  local function resume(msg, expired)
     -- If the result of the resumed coroutine is an error then we should bubble it up to the process
-    local _, success, errmsg = coroutine.resume(self, msg)
+    local _, success, errmsg = coroutine.resume(self, msg, expired)
 
     assert(success, errmsg)
-  end)
+  end
+
+  handlers.advanced({
+    name = "_once_" .. tostring(handlers.onceNonce),
+    position = "prepend",
+    pattern = pattern,
+    maxRuns = 1,
+    timeout = timeout,
+    handle = function (msg)
+      resume(msg, false)
+    end,
+    onRemove = function ()
+      resume({}, true)
+    end
+  })
+  handlers.onceNonce = handlers.onceNonce + 1
+
   return coroutine.yield(pattern)
 end
 
