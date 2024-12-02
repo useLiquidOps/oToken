@@ -197,11 +197,16 @@ function ao.send(msg)
               resolver)
     end
 
-  message.receive = function(...)
-    local from = message.Target
-    if select("#", ...) == 1 then from = select(1, ...) end
-    return
-      Handlers.receive({From = from, ["X-Reference"] = referenceString})
+  message.receive = function(from, timeout)
+    if from == nil then from = message.Target end
+
+    local result, expired = Handlers.receive({
+      From = from,
+      ["X-Reference"] = referenceString
+    }, timeout)
+    assert(not expired, "Response expired")
+
+    return result
   end
 
   return message
@@ -267,13 +272,15 @@ function ao.spawn(module, msg)
     }, callback)
   end
 
-  spawn.receive = function()
-    return Handlers.receive({
+  spawn.receive = function(timeout)
+    local result, expired = Handlers.receive({
       Action = "Spawned",
       From = ao.id,
       ["Reference"] = spawnRef
-    })
+    }, timeout)
+    assert(not expired, "Response expired")
 
+    return result
   end
 
   return spawn
