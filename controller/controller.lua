@@ -224,18 +224,12 @@ Handlers.add(
     -- TODO: timeout here? (what if this doesn't return in time, the liquidation remains in a pending state)
 
     -- liquidate the loan
-    ao.send({
+    local loanLiquidationRes = ao.send({
       Target = msg.From,
       Action = "Transfer",
       Quantity = msg.Tags.Quantity,
       Recipient = Tokens[msg.From]
-    })
-
-    -- get result of liquidation
-    local loanLiquidationRes = Handlers.receive({
-      From = Tokens[msg.From],
-      ["X-Reference"] = tostring(ao.reference)
-    })
+    }).receive(Tokens[msg.From])
 
     -- check loan liquidation result
     if loanLiquidationRes.Tags.Error then
@@ -408,19 +402,13 @@ function tokens.spawnProtocolLogo(collateralLogo)
 
   -- message that spawns the logo
   -- we're sending this to ourselves
-  ao.send({
+  ---@type Message
+  local spawnedImage = ao.send({
     Target = ao.id,
     Action = "Spawn-Logo",
     ["Content-Type"] = "image/svg+xml",
     Data = logoPart1 .. "/" .. collateralLogo .. logoPart2
-  })
-
-  -- now receive the message we are sending ourselves
-  ---@type Message
-  local spawnedImage = Handlers.receive({
-    From = ao.id,
-    Reference = tostring(ao.reference)
-  })
+  }).receive(ao.id)
 
   return spawnedImage.Id
 end
