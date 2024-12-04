@@ -97,7 +97,8 @@ function handlers.receive(pattern, timeout)
     handle = function (msg)
       resume(msg, false)
     end,
-    onRemove = function ()
+    onRemove = function (reason)
+      if reason ~= "timeout" then return end
       resume({}, true)
     end
   })
@@ -318,19 +319,33 @@ function handlers.advanced(config)
   )
 
   if config.timeout then
-    assert(type(config.timeout) == 'table', 'Invalid timeout: must be a table')
     assert(
-      config.timeout.type == 'milliseconds' or config.timeout.type == 'blocks',
-      'Invalid timeout.type: must be of ("milliseconds" or "blocks")'
+      type(config.timeout) == 'table' or type(config.timeout) == 'number',
+      'Invalid timeout: must be a table or a number'
     )
-    assert(
-      type(config.timeout.value) == 'number',
-      'Invalid timeout.value: must be an integer'
-    )
+
+    if type(config.timeout) == 'table' then
+      assert(
+        config.timeout.type == 'milliseconds' or config.timeout.type == 'blocks',
+        'Invalid timeout.type: must be of ("milliseconds" or "blocks")'
+      )
+      assert(
+        type(config.timeout.value) == 'number',
+        'Invalid timeout.value: must be an integer'
+      )
+    end
   end
 
   -- generate resolver for the handler
   config.handle = handlers.generateResolver(config.handle)
+
+  -- handle timeout when it is a number (blocks)
+  if type(config.timeout) == 'number' then
+    config.timeout = {
+      type = 'blocks',
+      value = config.timeout
+    }
+  end
 
   -- if the handler already exists, find it and update
   local idx = findIndexByProp(handlers.list, 'name', config.name)
@@ -407,7 +422,7 @@ function handlers.evaluate(msg, env)
       end
 
       -- ensure the handler hasn't timed out yet
-      if o.timeout then
+      if o.timeout ~= nil then
         -- remove handler if it timed out
         if (o.timeout.type == 'milliseconds' and o.timeout.value < msg.Timestamp) or (o.timeout.type == 'blocks' and o.timeout.value < msg["Block-Height"]) then
           if o.onRemove ~= nil then o.onRemove("timeout") end
