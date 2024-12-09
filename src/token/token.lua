@@ -24,6 +24,7 @@ function mod.info(msg)
     Ticker = Ticker,
     Logo = Logo,
     Denomination = tostring(Denomination),
+    ["Total-Supply"] = TotalSupply,
     ["Collateral-Id"] = CollateralID,
     ["Collateral-Factor"] = tostring(CollateralFactor),
     ["Collateral-Denomination"] = tostring(CollateralDenomination),
