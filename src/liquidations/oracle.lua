@@ -15,7 +15,7 @@ function mod.setup()
   -- oracle process id
   Oracle = Oracle or ao.env.Process.Tags.Oracle
 
-  -- oracle delay tolerance in miliseconds
+  -- oracle delay tolerance in milliseconds
   ---@type number
   MaxOracleDelay = MaxOracleDelay or tonumber(ao.env.Process.Tags["Oracle-Delay-Tolerance"]) or 0
 
@@ -64,7 +64,10 @@ function mod.getPrice(...)
       Target =  Oracle,
       Action = "v2.Request-Latest-Data",
       Tickers = json.encode(pricesToSync)
-    }).receive().Data
+    }).receive({
+      type = "milliseconds",
+      value = Block + 1
+    }).Data
 
     -- check if there was any data returned
     assert(rawData ~= nil and rawData ~= "", "No data returned from the oracle")

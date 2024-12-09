@@ -33,7 +33,7 @@ function mod.schedule(...)
       -- TODO: is this an optimal timeout?
       timeout = {
         type = "milliseconds",
-        value = Timestamp + 1
+        value = Block + 1
       },
       handle = function (_msg)
         table.insert(responses, _msg)
