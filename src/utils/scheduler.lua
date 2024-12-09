@@ -68,7 +68,7 @@ function mod.schedule(...)
   })
 
   -- check if expired
-  assert(not expired, "Response expired")
+  assert(not expired, "A scheduled response has expired")
 
   return result
 end
