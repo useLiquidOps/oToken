@@ -58,6 +58,7 @@ function mod.schedule(...)
         assert(success, errmsg)
       end
     })
+    Handlers.onceNonce = Handlers.onceNonce + 1
   end
 
   -- yield execution, till all responses are back
