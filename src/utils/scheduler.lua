@@ -31,10 +31,7 @@ function mod.schedule(...)
       },
       maxRuns = 1,
       -- TODO: is this an optimal timeout?
-      timeout = {
-        type = "milliseconds",
-        value = Block + 1
-      },
+      timeout = Block + 1,
       handle = function (_msg)
         table.insert(responses, _msg)
 

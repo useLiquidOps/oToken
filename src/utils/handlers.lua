@@ -425,7 +425,10 @@ function handlers.evaluate(msg, env)
       if o.timeout ~= nil then
         -- remove handler if it timed out
         if (o.timeout.type == 'milliseconds' and o.timeout.value < msg.Timestamp) or (o.timeout.type == 'blocks' and o.timeout.value < msg["Block-Height"]) then
-          if o.onRemove ~= nil then o.onRemove("timeout") end
+          if o.onRemove ~= nil then
+            o.onRemove("timeout")
+            o.onRemove = nil
+          end
           handlers.remove(o.name)
           match = 0
         end
@@ -485,7 +488,10 @@ function handlers.evaluate(msg, env)
         if o.maxRuns ~= nil and o.maxRuns ~= "inf" then
           o.maxRuns = o.maxRuns - 1
           if o.maxRuns == 0 then
-            if o.onRemove ~= nil then o.onRemove("expired") end
+            if o.onRemove ~= nil then
+              o.onRemove("expired")
+              o.onRemove = nil
+            end
             handlers.remove(o.name)
           end
         end

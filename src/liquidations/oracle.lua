@@ -64,10 +64,7 @@ function mod.getPrice(...)
       Target =  Oracle,
       Action = "v2.Request-Latest-Data",
       Tickers = json.encode(pricesToSync)
-    }).receive({
-      type = "milliseconds",
-      value = Block + 1
-    }).Data
+    }).receive(nil, Block + 1).Data
 
     -- check if there was any data returned
     assert(rawData ~= nil and rawData ~= "", "No data returned from the oracle")
