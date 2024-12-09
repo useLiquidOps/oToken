@@ -12,6 +12,6 @@
     "typescript": "^5.5.4"
   },
   "dependencies": {
-    "@permaweb/ao-loader": "^0.0.42"
+    "@permaweb/ao-loader": "^0.0.43"
   }
 }

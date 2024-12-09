@@ -74,7 +74,7 @@ export function createMessage(message: Partial<Omit<Message, "Tags">> & { [tagNa
     Target: env.Process.Id,
     Owner: env.Process.Owner,
     From: env.Process.Owner,
-    ["Block-Height"]: "1",
+    ["Block-Height"]: 1,
     Timestamp: defaultTimestamp,
     Module: "examplemodule",
     Cron: false,

@@ -37,14 +37,16 @@ function mod.setup(msg)
   ---@type string[]
   Friends = Friends or json.decode(ao.env.Process.Tags.Friends or "[]")
 
-  -- global current timestamp for the oracle
+  -- global current timestamp and block for the oracle
   Timestamp = msg.Timestamp
+  Block = msg["Block-Height"]
 end
 
--- This syncs the global timestamp using the current message
+-- This syncs the global timestamp anc block using the current message
 ---@type HandlerFunction
 function mod.syncTimestamp(msg)
   Timestamp = msg.Timestamp
+  Block = msg["Block-Height"]
 end
 
 return mod

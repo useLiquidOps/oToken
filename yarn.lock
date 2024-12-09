@@ -510,10 +510,10 @@
     "@jridgewell/resolve-uri" "^3.1.0"
     "@jridgewell/sourcemap-codec" "^1.4.14"
 
-"@permaweb/ao-loader@^0.0.42":
-  version "0.0.42"
-  resolved "https://registry.yarnpkg.com/@permaweb/ao-loader/-/ao-loader-0.0.42.tgz#e9baa81134be2ce84affaa4c7b95b0406493d0e2"
-  integrity sha512-xQiixn7jcb2x7+TtOPO8nARPlgVbFTTHQzSYgARW3rDGfBWw5mGb2Ax3bspdsiuKKaLxF+dxl6A8v2DprlLWjQ==
+"@permaweb/ao-loader@^0.0.43":
+  version "0.0.43"
+  resolved "https://registry.yarnpkg.com/@permaweb/ao-loader/-/ao-loader-0.0.43.tgz#bf980be06ec397ad475a023550b5526bf53e2a9b"
+  integrity sha512-xPYzyKSCqtL0U8oUcCrW+uPpm7IcMncM5IPVGCGKljxA3IQA/HI8S5XA6tcZUaDRCl8VSVsJzqOgkdzy1JGi5w==
   dependencies:
     "@permaweb/wasm-metering" "^0.2.2"
 

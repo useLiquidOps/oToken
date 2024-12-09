@@ -69,7 +69,17 @@ local function setup_handlers()
   Handlers.add(
     "borrow-loan-interest-sync-dynamic",
     Handlers.utils.continue(Handlers.utils.hasMatchingTagOf("Action", {
-      "Borrow", "Repay", "Borrow-Balance", "Borrow-Capacity", "Position", "Global-Position", "Positions", "Redeem", "Transfer", "Liquidate-Borrow"
+      "Borrow",
+      "Repay",
+      "Borrow-Balance",
+      "Borrow-Capacity",
+      "Position",
+      "Global-Position",
+      "Positions",
+      "Redeem",
+      "Transfer",
+      "Liquidate-Borrow",
+      "Mint"
     })),
     interest.syncInterests
   )
@@ -115,18 +125,17 @@ local function setup_handlers()
     config.setLiquidationThreshold
   )
 
-  Handlers.add(
-    "liquidate-borrow",
-    {
+  Handlers.advanced({
+    name = "liquidate-borrow",
+    pattern = {
       From = CollateralID,
       Action = "Credit-Notice",
       Sender = ao.env.Process.Owner,
       ["X-Action"] = "Liquidate-Borrow"
     },
-    liquidate.liquidateBorrow,
-    nil,
-    liquidate.refund
-  )
+    handle = liquidate.liquidateBorrow,
+    errorHandler = liquidate.refund
+  })
   Handlers.add(
     "liquidate-position",
     { From = ao.env.Process.Owner, Action = "Liquidate-Position" },
@@ -148,13 +157,16 @@ local function setup_handlers()
     Handlers.utils.hasMatchingTag("Action", "Borrow"),
     borrow
   )
-  Handlers.add(
-    "borrow-repay",
-    { From = CollateralID, Action = "Credit-Notice", ["X-Action"] = "Repay" },
-    repay.handler,
-    nil,
-    repay.error
-  )
+  Handlers.advanced({
+    name = "borrow-repay",
+    pattern = {
+      From = CollateralID,
+      Action = "Credit-Notice",
+      ["X-Action"] = "Repay"
+    },
+    handle = repay.handler,
+    errorHandler = repay.error
+  })
   Handlers.add(
     "borrow-position-balance",
     Handlers.utils.hasMatchingTag("Action", "Borrow-Balance"),
@@ -181,13 +193,16 @@ local function setup_handlers()
     position.allPositions
   )
 
-  Handlers.add(
-    "supply-mint",
-    { From = CollateralID, Action = "Credit-Notice", ["X-Action"] = "Mint" },
-    mint.handler,
-    nil,
-    mint.error
-  )
+  Handlers.advanced({
+    name = "supply-mint",
+    pattern = {
+      From = CollateralID,
+      Action = "Credit-Notice",
+      ["X-Action"] = "Mint"
+    },
+    handle = mint.handler,
+    errorHandler = mint.error
+  })
   Handlers.add(
     "supply-price",
     Handlers.utils.hasMatchingTag("Action", "Get-Price"),
