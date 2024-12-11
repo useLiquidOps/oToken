@@ -10,6 +10,7 @@ local coroutine = require "coroutine"
 
 local friend = require ".controller.friend"
 local config = require ".controller.config"
+local queue = require ".controller.queue"
 
 local balance = require ".token.balance"
 local token = require ".token.token"
@@ -68,19 +69,21 @@ local function setup_handlers()
   -- interest payment sync (must be the third handler)
   Handlers.add(
     "borrow-loan-interest-sync-dynamic",
-    Handlers.utils.continue(Handlers.utils.hasMatchingTagOf("Action", {
-      "Borrow",
-      "Repay",
-      "Borrow-Balance",
-      "Borrow-Capacity",
-      "Position",
-      "Global-Position",
-      "Positions",
-      "Redeem",
-      "Transfer",
-      "Liquidate-Borrow",
-      "Mint"
-    })),
+    Handlers.utils.continue(
+      Handlers.utils.hasMatchingTagOf("Action", {
+        "Borrow",
+        "Repay",
+        "Borrow-Balance",
+        "Borrow-Capacity",
+        "Position",
+        "Global-Position",
+        "Positions",
+        "Redeem",
+        "Transfer",
+        "Liquidate-Borrow",
+        "Mint"
+      })
+    ),
     interest.syncInterests
   )
 
@@ -91,6 +94,27 @@ local function setup_handlers()
       return msg.Tags.Action == "Credit-Notice" and msg.From ~= CollateralID
     end,
     mint.invalidTokenRefund
+  )
+
+  -- reject operations from queued users
+  Handlers.add(
+    "controller-queue-guard",
+    Handlers.utils.continue(
+      Handlers.utils.hasMatchingTagOf("Action", {
+        "Borrow",
+        "Repay",
+        "Borrow-Balance",
+        "Borrow-Capacity",
+        "Position",
+        "Global-Position",
+        "Positions",
+        "Redeem",
+        "Transfer",
+        "Liquidate-Borrow",
+        "Mint"
+      })
+    ),
+    queue.queueGuard
   )
 
   -- communication with the controller
