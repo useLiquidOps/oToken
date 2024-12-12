@@ -97,21 +97,15 @@ local function setup_handlers()
   )
 
   -- reject operations from queued users
+  -- all actions that use coroutines and are not readonly
+  -- should be queued on call
   Handlers.add(
     "controller-queue-guard",
     Handlers.utils.continue(
       Handlers.utils.hasMatchingTagOf("Action", {
-        "Borrow",
-        "Repay",
-        "Borrow-Balance",
-        "Borrow-Capacity",
-        "Position",
-        "Global-Position",
-        "Positions",
         "Redeem",
         "Transfer",
-        "Liquidate-Borrow",
-        "Mint"
+        "Borrow"
       })
     ),
     queue.queueGuard

@@ -20,17 +20,44 @@ end
 -- Add or remove a user from the queue in the controller
 ---@param address string User address
 ---@param queued boolean User queue status
----@return boolean
+---@return { receive: fun(): boolean }
 function mod.setQueued(address, queued)
   -- try to update the queue
-  ---@type Message
-  local res = ao.send({
+  local msg = ao.send({
     Target = ao.env.Process.Owner,
     Action = queued and "Add-To-Queue" or "Remove-From-Queue",
     User = address
-  }).receive(nil, Block + 1)
+  })
 
-  return res.Tags[queued and "Queued-User" or "Unqueued-User"] == address
+  -- helper function to get if the operation succeeded
+  local function succeeded(res)
+    return res.Tags[queued and "Queued-User" or "Unqueued-User"] == address
+  end
+
+  return {
+    -- Wait for the response before continuing
+    receive = function ()
+      -- wait for response message
+      local res = msg.receive(nil, Block + 1)
+
+      -- get if the operation succeeded
+      return succeeded(res)
+    end,
+    -- Notify the user that we could not unqueue them
+    notifyOnFailedQueue = function ()
+      msg.onReply(function (_msg)
+        -- don't do anything if the operation succeeds
+        if succeeded(_msg) then return end
+
+        -- indicate failure
+        ao.send({
+          Target = address,
+          Action = "Queue-Error",
+          Error = "Failed to unqueue user " .. address
+        })
+      end)
+    end
+  }
 end
 
 -- Ensures that queued users are rejected and refunded
@@ -46,7 +73,7 @@ function mod.queueGuard(msg)
   end
 
   -- update and set queue
-  local res = mod.setQueued(sender, true)
+  local res = mod.setQueued(sender, true).receive()
 
   -- if we weren't able to queue the user,
   -- then they have already been queued
