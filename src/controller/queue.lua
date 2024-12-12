@@ -1,26 +1,9 @@
 local mod = {}
 
--- Check if a user is queued in the controller. This could be
--- due to an ongoing operation involving the collateral or
--- a cooldown
----@param address string User address
----@return boolean
-function mod.isQueued(address)
-  -- check queue
-  ---@type Message
-  local res = ao.send({
-    Target = ao.env.Process.Owner,
-    Action = "Check-Queue-For",
-    User = address
-  }).receive(nil, Block + 1)
-
-  return res.Tags["In-Queue"] == "true"
-end
-
 -- Add or remove a user from the queue in the controller
 ---@param address string User address
 ---@param queued boolean User queue status
----@return { receive: fun(): boolean }
+---@return { receive: fun(): boolean; notifyOnFailedQueue: function }
 function mod.setQueued(address, queued)
   -- try to update the queue
   local msg = ao.send({
@@ -30,6 +13,7 @@ function mod.setQueued(address, queued)
   })
 
   -- helper function to get if the operation succeeded
+  ---@param res Message Resulting message
   local function succeeded(res)
     return res.Tags[queued and "Queued-User" or "Unqueued-User"] == address
   end
@@ -77,7 +61,8 @@ function mod.queueGuard(msg)
 
   -- if we weren't able to queue the user,
   -- then they have already been queued
-  -- first, we refund the user
+  -- first, we refund the user if the
+  -- message resulted from a transfer
   if not res and isCreditNotice then
     ao.send({
       Target = msg.From,

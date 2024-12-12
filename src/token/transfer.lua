@@ -1,10 +1,13 @@
 local assertions = require ".utils.assertions"
 local oracle = require ".liquidations.oracle"
 local position = require ".borrow.position"
+local queue = require ".controller.queue"
 local bint = require ".utils.bint"(1024)
 
----@param msg Message
-local function transfer(msg)
+local mod = {}
+
+---@type HandlerFunction
+function mod.transfer(msg)
   -- transfer target and sender
   local target = msg.Tags.Recipient or msg.Target
   local sender = msg.From
@@ -73,6 +76,19 @@ local function transfer(msg)
     msg.reply(debitNotice)
     ao.send(creditNotice)
   end
+
+  -- unqueue and notify if it failed
+  queue
+    .setQueued(sender, false)
+    .notifyOnFailedQueue()
 end
 
-return transfer
+---@param msg Message
+function mod.error(msg)
+  -- unqueue on error and notify if it failed
+  queue
+    .setQueued(msg.From, false)
+    .notifyOnFailedQueue()
+end
+
+return mod

@@ -1,10 +1,13 @@
 local assertions = require ".utils.assertions"
 local oracle = require ".liquidations.oracle"
 local position = require ".borrow.position"
+local queue = require ".controller.queue"
 local bint = require ".utils.bint"(1024)
 
+local mod = {}
+
 ---@type HandlerFunction
-local function redeem(msg)
+function mod.redeem(msg)
   assert(
     assertions.isTokenQuantity(msg.Tags.Quantity),
     "Invalid redeem quantity"
@@ -81,6 +84,19 @@ local function redeem(msg)
     ["Earned-Quantity"] = tostring(rewardQty),
     ["Burned-Quantity"] = tostring(quantity)
   })
+
+  -- unqueue and notify if it failed
+  queue
+    .setQueued(sender, false)
+    .notifyOnFailedQueue()
 end
 
-return redeem
+---@param msg Message
+function mod.error(msg)
+  -- unqueue on error and notify if it failed
+  queue
+    .setQueued(msg.From, false)
+    .notifyOnFailedQueue()
+end
+
+return mod
