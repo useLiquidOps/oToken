@@ -155,6 +155,13 @@ export function normalizeTags(tags: Tag[]) {
   return normalized;
 }
 
+export function getMessageByAction(action: string, messages: Message[]) {
+  return messages
+    .find((msg) => msg.Tags.find(
+      (tag) => tag.name === "Action" && tag.value == action
+    ))
+}
+
 expect.extend({
   toBeIntegerStringEncoded(actual: unknown) {
     const pass = typeof actual === "string" && actual.match(/^-?\d+$/) !== null;
