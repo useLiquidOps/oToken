@@ -45,7 +45,7 @@ function mod.setQueued(address, queued)
 end
 
 -- Ensures that queued users are rejected and refunded
----@type HandlerFunction
+---@param msg Message Current message
 function mod.queueGuard(msg)
   -- default sender of the interaction is the message sender
   local sender = msg.From
@@ -61,21 +61,28 @@ function mod.queueGuard(msg)
 
   -- if we weren't able to queue the user,
   -- then they have already been queued
-  -- first, we refund the user if the
-  -- message resulted from a transfer
-  if not res and isCreditNotice then
-    ao.send({
-      Target = msg.From,
-      Action = "Transfer",
-      Quantity = msg.Tags.Quantity,
-      Recipient = msg.Tags.Sender,
-      ["X-Action"] = "Refund",
-      ["X-Refund-Reason"] = "The sender is already queued for an operation"
+  -- (an operation is already in progress)
+  if not res then
+    msg.reply({
+      Action = msg.Tags.Action .. "-Error",
+      Error = "The sender is already queued for an operation"
     })
+
+    -- first, we refund the user if the
+    -- message resulted from a transfer
+    if isCreditNotice then
+      ao.send({
+        Target = msg.From,
+        Action = "Transfer",
+        Quantity = msg.Tags.Quantity,
+        Recipient = msg.Tags.Sender,
+        ["X-Action"] = "Refund",
+        ["X-Refund-Reason"] = "The sender is already queued for an operation"
+      })
+    end
   end
 
-  -- error if the user is already in the queue
-  assert(res, "The sender is already queued for an operation")
+  return res
 end
 
 return mod
