@@ -1,3 +1,5 @@
+local utils = require ".utils.utils"
+
 local mod = {}
 
 -- Add or remove a user from the queue in the controller
@@ -77,7 +79,8 @@ function mod.useQueue(handle, errorHandler)
         -- no error handler, we just reply with the error
         msg.reply({
           Action = msg.Tags.Action .. "-Error",
-          Error = err
+          Error = err,
+          ["Raw-Error"] = err
         })
       end
 
@@ -92,9 +95,19 @@ function mod.useQueue(handle, errorHandler)
       .setQueued(sender, false)
       .notifyOnFailedQueue()
 
-    -- call optional error handler
-    if errorHandler ~= nil and not status then
-      errorHandler(msg, env, err or "Unknown error")
+    if not status then
+      if errorHandler ~= nil then
+        errorHandler(msg, env, err or "Unknown error")
+      else
+        -- prettify error
+        local prettyError, rawError = utils.prettyError(err)
+
+        msg.reply({
+          Action = "Mint-Error",
+          Error = prettyError,
+          ["Raw-Error"] = rawError
+        })
+      end
     end
   end
 end
