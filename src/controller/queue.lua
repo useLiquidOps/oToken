@@ -44,45 +44,59 @@ function mod.setQueued(address, queued)
   }
 end
 
--- Ensures that queued users are rejected and refunded
----@param msg Message Current message
-function mod.queueGuard(msg)
-  -- default sender of the interaction is the message sender
-  local sender = msg.From
-  local isCreditNotice = msg.Tags.Action == "Credit-Notice"
+-- Make a handle function use the global queue of the controller
+-- (this can only be used for handlers that don't continue execution)
+---@param handle HandlerFunction Handle function to wrap
+---@param errorHandler fun(msg: Message, env: Message, err: unknown)? Optional error handler
+---@return HandlerFunction
+function mod.useQueue(handle, errorHandler)
+  return function (msg, env)
+    -- default sender of the interaction is the message sender
+    local sender = msg.From
+    local isCreditNotice = msg.Tags.Action == "Credit-Notice"
 
-  -- if the message is a credit notice, update the sender
-  if isCreditNotice then
-    sender = msg.Tags.Sender
-  end
-
-  -- update and set queue
-  local res = mod.setQueued(sender, true).receive()
-
-  -- if we weren't able to queue the user,
-  -- then they have already been queued
-  -- (an operation is already in progress)
-  if not res then
-    msg.reply({
-      Action = msg.Tags.Action .. "-Error",
-      Error = "The sender is already queued for an operation"
-    })
-
-    -- first, we refund the user if the
-    -- message resulted from a transfer
+    -- if the message is a credit notice, update the sender
     if isCreditNotice then
-      ao.send({
-        Target = msg.From,
-        Action = "Transfer",
-        Quantity = msg.Tags.Quantity,
-        Recipient = msg.Tags.Sender,
-        ["X-Action"] = "Refund",
-        ["X-Refund-Reason"] = "The sender is already queued for an operation"
-      })
+      sender = msg.Tags.Sender
+    end
+
+    -- update and set queue
+    local res = mod.setQueued(sender, true).receive()
+
+    -- if we weren't able to queue the user,
+    -- then they have already been queued
+    -- (an operation is already in progress)
+    if not res then
+      local err = "The sender is already queued for an operation"
+
+      -- call the error handler (if there is one)
+      -- with a queue error
+      if errorHandler ~= nil then
+        errorHandler(msg, env, err)
+      else
+        -- no error handler, we just reply with the error
+        msg.reply({
+          Action = msg.Tags.Action .. "-Error",
+          Error = err
+        })
+      end
+
+      return
+    end
+
+    -- call the handler
+    local status, err = pcall(handle, msg, env)
+
+    -- unqueue and notify if it failed
+    mod
+      .setQueued(sender, false)
+      .notifyOnFailedQueue()
+
+    -- call optional error handler
+    if errorHandler ~= nil and not status then
+      errorHandler(msg, env, err or "Unknown error")
     end
   end
-
-  return res
 end
 
 return mod

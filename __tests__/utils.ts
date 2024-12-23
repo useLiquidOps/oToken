@@ -159,7 +159,7 @@ export function getMessageByAction(action: string, messages: Message[]) {
   return messages
     .find((msg) => msg.Tags.find(
       (tag) => tag.name === "Action" && tag.value == action
-    ))
+    ));
 }
 
 expect.extend({
