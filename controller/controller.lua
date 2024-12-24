@@ -286,10 +286,12 @@ Handlers.add(
       return msg.reply({ Error = "Invalid user address" })
     end
 
+    -- check if the user has already been added
+    if utils.includes(user, CollateralQueue) or utils.includes(user, LiquidationQueue) then
+      return msg.reply({ Error = "User already queued" })
+    end
+
     -- add to queue
-    -- no need to check if it has already been added,
-    -- we'll filter all of them out when the user is
-    -- removed from it
     table.insert(CollateralQueue, user)
 
     msg.reply({ ["Queued-User"] = user })

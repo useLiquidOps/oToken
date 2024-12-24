@@ -10,6 +10,7 @@ local coroutine = require "coroutine"
 
 local friend = require ".controller.friend"
 local config = require ".controller.config"
+local queue = require ".controller.queue"
 
 local balance = require ".token.balance"
 local token = require ".token.token"
@@ -68,19 +69,21 @@ local function setup_handlers()
   -- interest payment sync (must be the third handler)
   Handlers.add(
     "borrow-loan-interest-sync-dynamic",
-    Handlers.utils.continue(Handlers.utils.hasMatchingTagOf("Action", {
-      "Borrow",
-      "Repay",
-      "Borrow-Balance",
-      "Borrow-Capacity",
-      "Position",
-      "Global-Position",
-      "Positions",
-      "Redeem",
-      "Transfer",
-      "Liquidate-Borrow",
-      "Mint"
-    })),
+    Handlers.utils.continue(
+      Handlers.utils.hasMatchingTagOf("Action", {
+        "Borrow",
+        "Repay",
+        "Borrow-Balance",
+        "Borrow-Capacity",
+        "Position",
+        "Global-Position",
+        "Positions",
+        "Redeem",
+        "Transfer",
+        "Liquidate-Borrow",
+        "Mint"
+      })
+    ),
     interest.syncInterests
   )
 
@@ -155,7 +158,8 @@ local function setup_handlers()
   Handlers.add(
     "borrow-loan-borrow",
     Handlers.utils.hasMatchingTag("Action", "Borrow"),
-    borrow
+    -- needs unqueueing because of coroutines
+    queue.useQueue(borrow)
   )
   Handlers.advanced({
     name = "borrow-repay",
@@ -213,10 +217,11 @@ local function setup_handlers()
     Handlers.utils.hasMatchingTag("Action", "Get-Reserves"),
     reserves
   )
+  -- needs unqueueing because of coroutines
   Handlers.add(
-    "suppy-redeem",
+    "supply-redeem",
     Handlers.utils.hasMatchingTag("Action", "Redeem"),
-    redeem
+    queue.useQueue(redeem)
   )
 
   Handlers.add(
@@ -239,10 +244,11 @@ local function setup_handlers()
     Handlers.utils.hasMatchingTag("Action", "Balances"),
     balance.balances
   )
+  -- needs unqueueing because of coroutines
   Handlers.add(
     "token-transfer",
     Handlers.utils.hasMatchingTag("Action", "Transfer"),
-    transfer
+    queue.useQueue(transfer)
   )
 
   HandlersAdded = true

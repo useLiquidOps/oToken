@@ -3,7 +3,7 @@ local oracle = require ".liquidations.oracle"
 local position = require ".borrow.position"
 local bint = require ".utils.bint"(1024)
 
----@param msg Message
+---@type HandlerFunction
 local function transfer(msg)
   -- transfer target and sender
   local target = msg.Tags.Recipient or msg.Target

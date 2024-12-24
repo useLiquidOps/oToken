@@ -5,7 +5,8 @@ import {
   HandleFunction,
   normalizeTags,
   setupProcess,
-  env
+  env,
+  getMessageByAction
 } from "./utils";
 
 describe("Borrowing", () => {
@@ -33,13 +34,91 @@ describe("Borrowing", () => {
       Sender: testWallet
     }));
   });
+
+  it("Rejects borrow if the user is already in the queue in the controller", async () => {
+    const msg = createMessage({
+      Action: "Borrow",
+      Quantity: "1"
+    });
+    const queueRes = await handle(msg);
+
+    expect(queueRes.Messages).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          Target: env.Process.Owner,
+          Tags: expect.arrayContaining([
+            expect.objectContaining({
+              name: "Action",
+              value: "Add-To-Queue"
+            }),
+            expect.objectContaining({
+              name: "User",
+              value: msg.From
+            })
+          ])
+        })
+      ])
+    );
+
+    const queueResTags = normalizeTags(
+      getMessageByAction("Add-To-Queue", queueRes.Messages)?.Tags || []
+    );
+
+    // reply with in-queue response
+    const res = await handle(createMessage({
+      "Error": "Could not queue user",
+      "X-Reference": queueResTags["Reference"]
+    }));
+
+    expect(res.Messages).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          //Target: testWallet,
+          Tags: expect.arrayContaining([
+            expect.objectContaining({
+              name: "Error",
+              value: expect.any(String)
+            })
+          ])
+        })
+      ])
+    );
+  });
   
   it("Does not handle invalid token quantities", async () => {
     const msg = createMessage({
       Action: "Borrow",
       Quantity: "-104"
     });
-    const res = await handle(msg);
+    const queueRes = await handle(msg);
+
+    expect(queueRes.Messages).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          Target: env.Process.Owner,
+          Tags: expect.arrayContaining([
+            expect.objectContaining({
+              name: "Action",
+              value: "Add-To-Queue"
+            }),
+            expect.objectContaining({
+              name: "User",
+              value: msg.From
+            })
+          ])
+        })
+      ])
+    );
+
+    const queueResTags = normalizeTags(
+      getMessageByAction("Add-To-Queue", queueRes.Messages)?.Tags || []
+    );
+
+    // queue response
+    const res = await handle(createMessage({
+      "Queued-User": msg.From,
+      "X-Reference": queueResTags["Reference"]
+    }));
 
     expect(res.Messages).toEqual(
       expect.arrayContaining([
@@ -49,6 +128,19 @@ describe("Borrowing", () => {
             expect.objectContaining({
               name: "Error",
               value: expect.any(String)
+            })
+          ])
+        }),
+        expect.objectContaining({
+          Target: env.Process.Owner,
+          Tags: expect.arrayContaining([
+            expect.objectContaining({
+              name: "Action",
+              value: "Remove-From-Queue"
+            }),
+            expect.objectContaining({
+              name: "User",
+              value: msg.From
             })
           ])
         })
@@ -61,7 +153,35 @@ describe("Borrowing", () => {
       Action: "Borrow",
       Quantity: (BigInt(testQty) + 1n).toString()
     });
-    const res = await handle(msg);
+    const queueRes = await handle(msg);
+
+    expect(queueRes.Messages).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          Target: env.Process.Owner,
+          Tags: expect.arrayContaining([
+            expect.objectContaining({
+              name: "Action",
+              value: "Add-To-Queue"
+            }),
+            expect.objectContaining({
+              name: "User",
+              value: msg.From
+            })
+          ])
+        })
+      ])
+    );
+
+    const queueResTags = normalizeTags(
+      getMessageByAction("Add-To-Queue", queueRes.Messages)?.Tags || []
+    );
+
+    // queue response
+    const res = await handle(createMessage({
+      "Queued-User": msg.From,
+      "X-Reference": queueResTags["Reference"]
+    }));
 
     expect(res.Messages).toEqual(
       expect.arrayContaining([
@@ -71,6 +191,19 @@ describe("Borrowing", () => {
             expect.objectContaining({
               name: "Error",
               value: expect.any(String)
+            })
+          ])
+        }),
+        expect.objectContaining({
+          Target: env.Process.Owner,
+          Tags: expect.arrayContaining([
+            expect.objectContaining({
+              name: "Action",
+              value: "Remove-From-Queue"
+            }),
+            expect.objectContaining({
+              name: "User",
+              value: msg.From
             })
           ])
         })
