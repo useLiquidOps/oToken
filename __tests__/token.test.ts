@@ -317,6 +317,19 @@ describe("Token standard functionalities", () => {
               value: expect.any(String)
             })
           ])
+        }),
+        expect.objectContaining({
+          Target: env.Process.Owner,
+          Tags: expect.arrayContaining([
+            expect.objectContaining({
+              name: "Action",
+              value: "Remove-From-Queue"
+            }),
+            expect.objectContaining({
+              name: "User",
+              value: testWallet
+            })
+          ])
         })
       ])
     );
@@ -332,7 +345,35 @@ describe("Token standard functionalities", () => {
     });
 
     // send transfer
-    const res = await handle(msg);
+    const queueRes = await handle(msg);
+
+    expect(queueRes.Messages).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          Target: env.Process.Owner,
+          Tags: expect.arrayContaining([
+            expect.objectContaining({
+              name: "Action",
+              value: "Add-To-Queue"
+            }),
+            expect.objectContaining({
+              name: "User",
+              value: testWallet
+            })
+          ])
+        })
+      ])
+    );
+
+    const queueResTags = normalizeTags(
+      getMessageByAction("Add-To-Queue", queueRes.Messages)?.Tags || []
+    );
+
+    // queue response
+    const res = await handle(createMessage({
+      "Queued-User": testWallet,
+      "X-Reference": queueResTags["Reference"]
+    }));
 
     expect(res.Messages).toEqual(
       expect.arrayContaining([
@@ -342,6 +383,19 @@ describe("Token standard functionalities", () => {
             expect.objectContaining({
               name: "Error",
               value: expect.any(String)
+            })
+          ])
+        }),
+        expect.objectContaining({
+          Target: env.Process.Owner,
+          Tags: expect.arrayContaining([
+            expect.objectContaining({
+              name: "Action",
+              value: "Remove-From-Queue"
+            }),
+            expect.objectContaining({
+              name: "User",
+              value: testWallet
             })
           ])
         })
@@ -359,7 +413,35 @@ describe("Token standard functionalities", () => {
     });
 
     // send transfer
-    const res = await handle(msg);
+    const queueRes = await handle(msg);
+
+    expect(queueRes.Messages).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          Target: env.Process.Owner,
+          Tags: expect.arrayContaining([
+            expect.objectContaining({
+              name: "Action",
+              value: "Add-To-Queue"
+            }),
+            expect.objectContaining({
+              name: "User",
+              value: testWallet
+            })
+          ])
+        })
+      ])
+    );
+
+    const queueResTags = normalizeTags(
+      getMessageByAction("Add-To-Queue", queueRes.Messages)?.Tags || []
+    );
+
+    // queue response
+    const res = await handle(createMessage({
+      "Queued-User": testWallet,
+      "X-Reference": queueResTags["Reference"]
+    }));
 
     expect(res.Messages).toEqual(
       expect.arrayContaining([
@@ -369,6 +451,19 @@ describe("Token standard functionalities", () => {
             expect.objectContaining({
               name: "Error",
               value: expect.any(String)
+            })
+          ])
+        }),
+        expect.objectContaining({
+          Target: env.Process.Owner,
+          Tags: expect.arrayContaining([
+            expect.objectContaining({
+              name: "Action",
+              value: "Remove-From-Queue"
+            }),
+            expect.objectContaining({
+              name: "User",
+              value: testWallet
             })
           ])
         })
@@ -386,7 +481,35 @@ describe("Token standard functionalities", () => {
     });
 
     // send transfer
-    const res = await handle(msg);
+    const queueRes = await handle(msg);
+
+    expect(queueRes.Messages).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          Target: env.Process.Owner,
+          Tags: expect.arrayContaining([
+            expect.objectContaining({
+              name: "Action",
+              value: "Add-To-Queue"
+            }),
+            expect.objectContaining({
+              name: "User",
+              value: testWallet
+            })
+          ])
+        })
+      ])
+    );
+
+    const queueResTags = normalizeTags(
+      getMessageByAction("Add-To-Queue", queueRes.Messages)?.Tags || []
+    );
+
+    // queue response
+    const res = await handle(createMessage({
+      "Queued-User": testWallet,
+      "X-Reference": queueResTags["Reference"]
+    }));
 
     expect(res.Messages).toEqual(
       expect.arrayContaining([
@@ -396,6 +519,19 @@ describe("Token standard functionalities", () => {
             expect.objectContaining({
               name: "Error",
               value: expect.any(String)
+            })
+          ])
+        }),
+        expect.objectContaining({
+          Target: env.Process.Owner,
+          Tags: expect.arrayContaining([
+            expect.objectContaining({
+              name: "Action",
+              value: "Remove-From-Queue"
+            }),
+            expect.objectContaining({
+              name: "User",
+              value: testWallet
             })
           ])
         })
@@ -413,7 +549,35 @@ describe("Token standard functionalities", () => {
     });
 
     // send transfer
-    const res = await handle(msg);
+    const queueRes = await handle(msg);
+
+    expect(queueRes.Messages).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          Target: env.Process.Owner,
+          Tags: expect.arrayContaining([
+            expect.objectContaining({
+              name: "Action",
+              value: "Add-To-Queue"
+            }),
+            expect.objectContaining({
+              name: "User",
+              value: testWallet
+            })
+          ])
+        })
+      ])
+    );
+
+    const queueResTags = normalizeTags(
+      getMessageByAction("Add-To-Queue", queueRes.Messages)?.Tags || []
+    );
+
+    // queue response
+    const res = await handle(createMessage({
+      "Queued-User": testWallet,
+      "X-Reference": queueResTags["Reference"]
+    }));
 
     // expect collateralization check oracle request
     expect(res.Messages).toEqual(
@@ -452,6 +616,19 @@ describe("Token standard functionalities", () => {
               value: expect.any(String)
             })
           ])
+        }),
+        expect.objectContaining({
+          Target: env.Process.Owner,
+          Tags: expect.arrayContaining([
+            expect.objectContaining({
+              name: "Action",
+              value: "Remove-From-Queue"
+            }),
+            expect.objectContaining({
+              name: "User",
+              value: testWallet
+            })
+          ])
         })
       ])
     );
@@ -467,7 +644,35 @@ describe("Token standard functionalities", () => {
     });
 
     // send transfer
-    const res = await handle(msg);
+    const queueRes = await handle(msg);
+
+    expect(queueRes.Messages).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          Target: env.Process.Owner,
+          Tags: expect.arrayContaining([
+            expect.objectContaining({
+              name: "Action",
+              value: "Add-To-Queue"
+            }),
+            expect.objectContaining({
+              name: "User",
+              value: testWallet
+            })
+          ])
+        })
+      ])
+    );
+
+    const queueResTags = normalizeTags(
+      getMessageByAction("Add-To-Queue", queueRes.Messages)?.Tags || []
+    );
+
+    // queue response
+    const res = await handle(createMessage({
+      "Queued-User": testWallet,
+      "X-Reference": queueResTags["Reference"]
+    }));
 
     // expect collateralization check oracle request
     expect(res.Messages).toEqual(
@@ -512,6 +717,19 @@ describe("Token standard functionalities", () => {
               value: expect.any(String)
             })
           ])
+        }),
+        expect.objectContaining({
+          Target: env.Process.Owner,
+          Tags: expect.arrayContaining([
+            expect.objectContaining({
+              name: "Action",
+              value: "Remove-From-Queue"
+            }),
+            expect.objectContaining({
+              name: "User",
+              value: testWallet
+            })
+          ])
         })
       ])
     );
@@ -533,7 +751,35 @@ describe("Token standard functionalities", () => {
     });
 
     // send transfer
-    const res = await handle(msg);
+    const queueRes = await handle(msg);
+
+    expect(queueRes.Messages).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          Target: env.Process.Owner,
+          Tags: expect.arrayContaining([
+            expect.objectContaining({
+              name: "Action",
+              value: "Add-To-Queue"
+            }),
+            expect.objectContaining({
+              name: "User",
+              value: testWallet
+            })
+          ])
+        })
+      ])
+    );
+
+    const queueResTags = normalizeTags(
+      getMessageByAction("Add-To-Queue", queueRes.Messages)?.Tags || []
+    );
+
+    // queue response
+    const res = await handle(createMessage({
+      "Queued-User": testWallet,
+      "X-Reference": queueResTags["Reference"]
+    }));
 
     // expect collateralization check oracle request
     expect(res.Messages).toEqual(
@@ -603,6 +849,19 @@ describe("Token standard functionalities", () => {
             expect.objectContaining({
               name: testForwardTag.name,
               value: testForwardTag.value
+            })
+          ])
+        }),
+        expect.objectContaining({
+          Target: env.Process.Owner,
+          Tags: expect.arrayContaining([
+            expect.objectContaining({
+              name: "Action",
+              value: "Remove-From-Queue"
+            }),
+            expect.objectContaining({
+              name: "User",
+              value: testWallet
             })
           ])
         })
@@ -693,7 +952,35 @@ describe("Token standard functionalities", () => {
       Owner: testWallet
     });
 
-    const transferRes = await handle(transferMsg);
+    const queueRes = await handle(transferMsg);
+
+    expect(queueRes.Messages).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          Target: env.Process.Owner,
+          Tags: expect.arrayContaining([
+            expect.objectContaining({
+              name: "Action",
+              value: "Add-To-Queue"
+            }),
+            expect.objectContaining({
+              name: "User",
+              value: testWallet
+            })
+          ])
+        })
+      ])
+    );
+
+    const queueResTags = normalizeTags(
+      getMessageByAction("Add-To-Queue", queueRes.Messages)?.Tags || []
+    );
+
+    // queue response
+    const transferRes = await handle(createMessage({
+      "Queued-User": testWallet,
+      "X-Reference": queueResTags["Reference"]
+    }));
 
     // expect request to the friend process for position info
     expect(transferRes.Messages).toEqual(
@@ -801,6 +1088,19 @@ describe("Token standard functionalities", () => {
             expect.objectContaining({
               name: "Error",
               value: expect.any(String)
+            })
+          ])
+        }),
+        expect.objectContaining({
+          Target: env.Process.Owner,
+          Tags: expect.arrayContaining([
+            expect.objectContaining({
+              name: "Action",
+              value: "Remove-From-Queue"
+            }),
+            expect.objectContaining({
+              name: "User",
+              value: testWallet
             })
           ])
         })
