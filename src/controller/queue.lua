@@ -76,12 +76,8 @@ function mod.useQueue(handle, errorHandler)
       if errorHandler ~= nil then
         errorHandler(msg, env, err)
       else
-        -- no error handler, we just reply with the error
-        msg.reply({
-          Action = msg.Tags.Action .. "-Error",
-          Error = err,
-          ["Raw-Error"] = err
-        })
+        -- no error handler, throw the error
+        error(err)
       end
 
       return
@@ -99,14 +95,8 @@ function mod.useQueue(handle, errorHandler)
       if errorHandler ~= nil then
         errorHandler(msg, env, err or "Unknown error")
       else
-        -- prettify error
-        local prettyError, rawError = utils.prettyError(err)
-
-        msg.reply({
-          Action = "Mint-Error",
-          Error = prettyError,
-          ["Raw-Error"] = rawError
-        })
+        -- no error handler, throw the error
+        error(err)
       end
     end
   end
