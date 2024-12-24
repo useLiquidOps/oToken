@@ -47,7 +47,6 @@ function mod.setQueued(address, queued)
 end
 
 -- Make a handle function use the global queue of the controller
--- (this can only be used for handlers that don't continue execution)
 ---@param handle HandlerFunction Handle function to wrap
 ---@param errorHandler fun(msg: Message, env: Message, err: unknown)? Optional error handler
 ---@return HandlerFunction
