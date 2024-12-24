@@ -1,14 +1,11 @@
 local assertions = require ".utils.assertions"
 local oracle = require ".liquidations.oracle"
 local position = require ".borrow.position"
-local queue = require ".controller.queue"
 local bint = require ".utils.bint"(1024)
 local utils = require ".utils.utils"
 
-local mod = {}
-
 ---@type HandlerFunction
-function mod.borrow(msg)
+local function borrow(msg)
   assert(
     assertions.isTokenQuantity(msg.Tags.Quantity),
     "Invalid borrow quantity"
@@ -87,19 +84,6 @@ function mod.borrow(msg)
     Action = "Borrow-Confirmation",
     ["Borrowed-Quantity"] = tostring(quantity)
   })
-
-  -- unqueue and notify if it failed
-  queue
-    .setQueued(account, false)
-    .notifyOnFailedQueue()
 end
 
----@param msg Message
-function mod.error(msg)
-  -- unqueue on error and notify if it failed
-  queue
-    .setQueued(msg.From, false)
-    .notifyOnFailedQueue()
-end
-
-return mod
+return borrow

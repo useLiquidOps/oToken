@@ -155,13 +155,12 @@ local function setup_handlers()
     Handlers.utils.hasMatchingTag("Action", "Sync-Interest"),
     interest.syncInterestForUser
   )
-  -- needs unqueueing because of coroutines
-  Handlers.advanced({
-    name = "borrow-loan-borrow",
-    pattern = { Action = "Borrow" },
-    handle = borrow.borrow,
-    errorHandler = borrow.error
-  })
+  Handlers.add(
+    "borrow-loan-borrow",
+    Handlers.utils.hasMatchingTag("Action", "Borrow"),
+    -- needs unqueueing because of coroutines
+    queue.useQueue(borrow)
+  )
   Handlers.advanced({
     name = "borrow-repay",
     pattern = {
@@ -219,12 +218,11 @@ local function setup_handlers()
     reserves
   )
   -- needs unqueueing because of coroutines
-  Handlers.advanced({
-    name = "suppy-redeem",
-    pattern = { Action = "Redeem" },
-    handle = redeem.redeem,
-    errorHandler = redeem.error
-  })
+  Handlers.add(
+    "supply-redeem",
+    Handlers.utils.hasMatchingTag("Action", "Redeem"),
+    queue.useQueue(redeem)
+  )
 
   Handlers.add(
     "token-info",
@@ -247,12 +245,11 @@ local function setup_handlers()
     balance.balances
   )
   -- needs unqueueing because of coroutines
-  Handlers.advanced({
-    name = "token-transfer",
-    pattern = { Action = "Transfer" },
-    handle = transfer.transfer,
-    errorHandler = transfer.error
-  })
+  Handlers.add(
+    "token-transfer",
+    Handlers.utils.hasMatchingTag("Action", "Transfer"),
+    queue.useQueue(transfer)
+  )
 
   HandlersAdded = true
 end
