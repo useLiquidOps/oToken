@@ -1,4 +1,5 @@
 local assertions = require ".utils.assertions"
+local bint = require ".utils.bint"(1024)
 
 local config = {}
 
@@ -59,6 +60,30 @@ function config.setLiquidationThreshold(msg)
   msg.reply({
     Action = "Liquidation-Threshold-Set",
     ["Liquidation-Threshold"] = tostring(threshold)
+  })
+end
+
+---@type HandlerFunction
+function config.setValueLimit(msg)
+  local newLimit = msg.Tags["Value-Limit"]
+
+  -- validate limit
+  assert(
+    assertions.isTokenQuantity(newLimit),
+    "Invalid value limit"
+  )
+  assert(
+    bint.ult(bint.zero(), bint(newLimit)),
+    "Value limit must be higher than zero"
+  )
+
+  -- update
+  ValueLimit = newLimit
+
+  -- notify the sender
+  msg.reply({
+    Action = "Value-Limit-Set",
+    ["Value-Limit"] = newLimit
   })
 end
 
