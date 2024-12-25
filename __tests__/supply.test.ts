@@ -62,7 +62,9 @@ describe("Minting and providing", () => {
             }),
             expect.objectContaining({
               name: "X-Refund-Reason",
-              value: expect.any(String)
+              value: expect.stringContaining(
+                "This process does not accept the transferred token"
+              )
             })
           ])
         })
