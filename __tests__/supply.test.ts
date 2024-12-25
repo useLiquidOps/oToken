@@ -422,6 +422,97 @@ describe("Redeeming and burning", () => {
     );
   });
 
+  it("Rejects redeeming more than the value limit", async () => {
+    const valueLimit = BigInt(tags["Value-Limit"]);
+
+    for (let i = 0; i < 2; i++) {
+      await handle(createMessage({
+        Action: "Credit-Notice",
+        "X-Action": "Mint",
+        Owner: tags["Collateral-Id"],
+        From: tags["Collateral-Id"],
+        "From-Process": tags["Collateral-Id"],
+        Quantity: tags["Value-Limit"],
+        Recipient: env.Process.Id,
+        Sender: env.Process.Owner
+      }));
+    }
+
+    expect((await handle(createMessage({ Action: "Get-Reserves" }))).Messages).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          Tags: expect.arrayContaining([
+            expect.objectContaining({
+              name: "Available",
+              value: (BigInt(testQty) + valueLimit * 2n).toString()
+            })
+          ])
+        })
+      ])
+    );
+
+    const msg = createMessage({
+      Action: "Redeem",
+      Quantity: (valueLimit + 1n).toString()
+    });
+    const queueRes = await handle(msg);
+
+    expect(queueRes.Messages).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          Target: env.Process.Owner,
+          Tags: expect.arrayContaining([
+            expect.objectContaining({
+              name: "Action",
+              value: "Add-To-Queue"
+            }),
+            expect.objectContaining({
+              name: "User",
+              value: msg.From
+            })
+          ])
+        })
+      ])
+    );
+
+    const queueResTags = normalizeTags(
+      getMessageByAction("Add-To-Queue", queueRes.Messages)?.Tags || []
+    );
+
+    // queue response
+    const res = await handle(createMessage({
+      "Queued-User": msg.From,
+      "X-Reference": queueResTags["Reference"]
+    }));
+
+    expect(res.Messages).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          Target: msg.From,
+          Tags: expect.arrayContaining([
+            expect.objectContaining({
+              name: "Error",
+              value: expect.any(String)
+            })
+          ])
+        }),
+        expect.objectContaining({
+          Target: env.Process.Owner,
+          Tags: expect.arrayContaining([
+            expect.objectContaining({
+              name: "Action",
+              value: "Remove-From-Queue"
+            }),
+            expect.objectContaining({
+              name: "User",
+              value: msg.From
+            })
+          ])
+        })
+      ])
+    );
+  });
+
   it.todo("Rejects redeeming when there aren't enough available tokens");
 
   it.todo("Rejects redeeming when there is no price data returned");
