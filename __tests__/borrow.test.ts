@@ -77,7 +77,9 @@ describe("Borrowing", () => {
           Tags: expect.arrayContaining([
             expect.objectContaining({
               name: "Error",
-              value: expect.any(String)
+              value: expect.stringContaining(
+                "The sender is already queued for an operation"
+              )
             })
           ])
         })
@@ -146,7 +148,9 @@ describe("Borrowing", () => {
           Tags: expect.arrayContaining([
             expect.objectContaining({
               name: "Error",
-              value: expect.any(String)
+              value: expect.stringContaining(
+                "Invalid borrow quantity"
+              )
             })
           ])
         }),
@@ -209,7 +213,9 @@ describe("Borrowing", () => {
           Tags: expect.arrayContaining([
             expect.objectContaining({
               name: "Error",
-              value: expect.any(String)
+              value: expect.stringContaining(
+                "Not enough tokens available to be lent"
+              )
             })
           ])
         }),
