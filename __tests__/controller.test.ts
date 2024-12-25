@@ -36,7 +36,9 @@ describe("Friend tests", () => {
           Tags: expect.arrayContaining([
             expect.objectContaining({
               name: "Error",
-              value: expect.any(String)
+              value: expect.stringContaining(
+                "The request could not be handled"
+              )
             })
           ])
         })
@@ -58,7 +60,9 @@ describe("Friend tests", () => {
           Tags: expect.arrayContaining([
             expect.objectContaining({
               name: "Error",
-              value: expect.any(String)
+              value: expect.stringContaining(
+                "The request could not be handled"
+              )
             })
           ])
         })
@@ -79,7 +83,9 @@ describe("Friend tests", () => {
           Tags: expect.arrayContaining([
             expect.objectContaining({
               name: "Error",
-              value: expect.any(String)
+              value: expect.stringContaining(
+                "Invalid friend address"
+              )
             })
           ])
         })
@@ -148,7 +154,9 @@ describe("Friend tests", () => {
           Tags: expect.arrayContaining([
             expect.objectContaining({
               name: "Error",
-              value: expect.any(String)
+              value: expect.stringContaining(
+                "Address is not a friend yet"
+              )
             })
           ])
         })
@@ -232,7 +240,9 @@ describe("Config tests", () => {
           Tags: expect.arrayContaining([
             expect.objectContaining({
               name: "Error",
-              value: expect.any(String)
+              value: expect.stringContaining(
+                "The request could not be handled"
+              )
             })
           ])
         })
@@ -254,7 +264,9 @@ describe("Config tests", () => {
           Tags: expect.arrayContaining([
             expect.objectContaining({
               name: "Error",
-              value: expect.any(String)
+              value: expect.stringContaining(
+                "The request could not be handled"
+              )
             })
           ])
         })
@@ -276,7 +288,9 @@ describe("Config tests", () => {
           Tags: expect.arrayContaining([
             expect.objectContaining({
               name: "Error",
-              value: expect.any(String)
+              value: expect.stringContaining(
+                "The request could not be handled"
+              )
             })
           ])
         })
@@ -297,7 +311,9 @@ describe("Config tests", () => {
           Tags: expect.arrayContaining([
             expect.objectContaining({
               name: "Error",
-              value: expect.any(String)
+              value: expect.stringContaining(
+                "Invalid oracle ID"
+              )
             })
           ])
         })
@@ -360,7 +376,9 @@ describe("Config tests", () => {
           Tags: expect.arrayContaining([
             expect.objectContaining({
               name: "Error",
-              value: expect.any(String)
+              value: expect.stringContaining(
+                "Invalid ratio provided"
+              )
             })
           ])
         })
@@ -424,7 +442,9 @@ describe("Config tests", () => {
           Tags: expect.arrayContaining([
             expect.objectContaining({
               name: "Error",
-              value: expect.any(String)
+              value: expect.stringContaining(
+                "Invalid threshold provided"
+              )
             })
           ])
         })
