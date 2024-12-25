@@ -22,6 +22,12 @@ local function borrow(msg)
   -- is never broken
   assert(bint.ult(quantity, available), "Not enough tokens available to be lent")
 
+  -- validate value limit
+  assert(
+    bint.ule(quantity, bint(ValueLimit)),
+    "Borrow quantity is above the allowed limit"
+  )
+
   -- multiply the collateral factor by 1000
   -- we do this, so that we can calculate with more precise
   -- ratios below, while using bigintegers

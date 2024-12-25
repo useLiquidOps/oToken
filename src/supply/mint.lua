@@ -14,6 +14,12 @@ function mint.handler(msg)
   -- quantity of tokens supplied
   local quantity = bint(msg.Tags.Quantity)
 
+  -- validate value limit
+  assert(
+    bint.ule(quantity, bint(ValueLimit)),
+    "Mint quantity is above the allowed limit"
+  )
+
   -- transfer sender
   local sender = msg.Tags.Sender
 
