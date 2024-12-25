@@ -259,7 +259,28 @@ describe("Token standard functionalities", () => {
           Tags: expect.arrayContaining([
             expect.objectContaining({
               name: "Error",
-              value: expect.any(String)
+              value: expect.stringContaining(
+                "The sender is already queued for an operation"
+              )
+            })
+          ])
+        })
+      ])
+    );
+
+    // do not include unqueue message
+    expect(res.Messages).toEqual(
+      expect.not.arrayContaining([
+        expect.objectContaining({
+          Target: env.Process.Owner,
+          Tags: expect.arrayContaining([
+            expect.objectContaining({
+              name: "Action",
+              value: "Remove-From-Queue"
+            }),
+            expect.objectContaining({
+              name: "User",
+              value: testWallet
             })
           ])
         })
@@ -314,7 +335,9 @@ describe("Token standard functionalities", () => {
           Tags: expect.arrayContaining([
             expect.objectContaining({
               name: "Error",
-              value: expect.any(String)
+              value: expect.stringContaining(
+                "Invalid address"
+              )
             })
           ])
         }),
@@ -382,7 +405,9 @@ describe("Token standard functionalities", () => {
           Tags: expect.arrayContaining([
             expect.objectContaining({
               name: "Error",
-              value: expect.any(String)
+              value: expect.stringContaining(
+                "Target cannot be the sender"
+              )
             })
           ])
         }),
@@ -450,7 +475,9 @@ describe("Token standard functionalities", () => {
           Tags: expect.arrayContaining([
             expect.objectContaining({
               name: "Error",
-              value: expect.any(String)
+              value: expect.stringContaining(
+                "Invalid transfer quantity"
+              )
             })
           ])
         }),
@@ -475,9 +502,7 @@ describe("Token standard functionalities", () => {
     const msg = createMessage({
       Action: "Transfer",
       Quantity: (BigInt(transferQty) + 1n).toString(),
-      Recipient: testWallet,
-      From: testWallet,
-      Owner: testWallet
+      Recipient: testWallet
     });
 
     // send transfer
@@ -494,7 +519,7 @@ describe("Token standard functionalities", () => {
             }),
             expect.objectContaining({
               name: "User",
-              value: testWallet
+              value: msg.From
             })
           ])
         })
@@ -507,7 +532,7 @@ describe("Token standard functionalities", () => {
 
     // queue response
     const res = await handle(createMessage({
-      "Queued-User": testWallet,
+      "Queued-User": msg.From,
       "X-Reference": queueResTags["Reference"]
     }));
 
@@ -518,7 +543,9 @@ describe("Token standard functionalities", () => {
           Tags: expect.arrayContaining([
             expect.objectContaining({
               name: "Error",
-              value: expect.any(String)
+              value: expect.stringContaining(
+                "Insufficient balance"
+              )
             })
           ])
         }),
@@ -531,7 +558,7 @@ describe("Token standard functionalities", () => {
             }),
             expect.objectContaining({
               name: "User",
-              value: testWallet
+              value: msg.From
             })
           ])
         })
@@ -613,7 +640,9 @@ describe("Token standard functionalities", () => {
           Tags: expect.arrayContaining([
             expect.objectContaining({
               name: "Error",
-              value: expect.any(String)
+              value: expect.stringContaining(
+                "No price returned from the oracle"
+              )
             })
           ])
         }),
@@ -714,7 +743,9 @@ describe("Token standard functionalities", () => {
           Tags: expect.arrayContaining([
             expect.objectContaining({
               name: "Error",
-              value: expect.any(String)
+              value: expect.stringContaining(
+                "No price returned from the oracle"
+              )
             })
           ])
         }),
@@ -1087,7 +1118,9 @@ describe("Token standard functionalities", () => {
           Tags: expect.arrayContaining([
             expect.objectContaining({
               name: "Error",
-              value: expect.any(String)
+              value: expect.stringContaining(
+                "Transfer value is too high and requires higher collateralization"
+              )
             })
           ])
         }),

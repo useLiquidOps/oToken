@@ -241,6 +241,25 @@ describe("Redeeming and burning", () => {
         })
       ])
     );
+
+    // do not include unqueue message
+    expect(res.Messages).toEqual(
+      expect.not.arrayContaining([
+        expect.objectContaining({
+          Target: env.Process.Owner,
+          Tags: expect.arrayContaining([
+            expect.objectContaining({
+              name: "Action",
+              value: "Remove-From-Queue"
+            }),
+            expect.objectContaining({
+              name: "User",
+              value: msg.From
+            })
+          ])
+        })
+      ])
+    );
   });
 
   it("Does not handle invalid token quantities", async () => {
