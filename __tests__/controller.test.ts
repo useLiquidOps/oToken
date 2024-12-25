@@ -474,4 +474,87 @@ describe("Config tests", () => {
       ])
     );
   });
+
+  test("Does not update the value limit with an invalid value", async () => {
+    const invalidQtyRes = await handle(createMessage({
+      Action: "Set-Value-Limit",
+      "Value-Limit": "invalid"
+    }));
+
+    expect(invalidQtyRes.Messages).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          Target: controller,
+          Tags: expect.arrayContaining([
+            expect.objectContaining({
+              name: "Error",
+              value: expect.any(String)
+            })
+          ])
+        })
+      ])
+    );
+
+    const zeroQtyRes = await handle(createMessage({
+      Action: "Set-Value-Limit",
+      "Value-Limit": "0"
+    }));
+
+    expect(zeroQtyRes.Messages).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          Target: controller,
+          Tags: expect.arrayContaining([
+            expect.objectContaining({
+              name: "Error",
+              value: expect.any(String)
+            })
+          ])
+        })
+      ])
+    );
+  });
+
+  test("Updates the value limit", async () => {
+    const newValueLimit = "457385";
+    const res = await handle(createMessage({
+      Action: "Set-Value-Limit",
+      "Value-Limit": newValueLimit
+    }));
+
+    expect(res.Messages).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          Target: controller,
+          Tags: expect.arrayContaining([
+            expect.objectContaining({
+              name: "Action",
+              value: "Value-Limit-Set"
+            }),
+            expect.objectContaining({
+              name: "Value-Limit",
+              value: newValueLimit
+            })
+          ])
+        })
+      ])
+    );
+
+    // expect updated info
+    const infoRes = await handle(createMessage({ Action: "Info" }));
+
+    expect(infoRes.Messages).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          Target: controller,
+          Tags: expect.arrayContaining([
+            expect.objectContaining({
+              name: "Value-Limit",
+              value: newValueLimit
+            })
+          ])
+        })
+      ])
+    );
+  });
 });
