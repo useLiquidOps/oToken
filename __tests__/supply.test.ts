@@ -123,6 +123,59 @@ describe("Minting and providing", () => {
     );
   });
 
+  it("Does not handle mint quantity above the value limit", async () => {
+    const depositQty = (BigInt(tags["Value-Limit"]) + 1n).toString();
+    const res = await handle(createMessage({
+      Action: "Credit-Notice",
+      "X-Action": "Mint",
+      Owner: tags["Collateral-Id"],
+      From: tags["Collateral-Id"],
+      "From-Process": tags["Collateral-Id"],
+      Quantity: depositQty,
+      Recipient: env.Process.Id,
+      Sender: testWallet
+    }));
+
+    expect(res.Messages).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          Target: tags["Collateral-Id"],
+          Tags: expect.arrayContaining([
+            expect.objectContaining({
+              name: "Action",
+              value: "Transfer"
+            }),
+            expect.objectContaining({
+              name: "Recipient",
+              value: testWallet
+            }),
+            expect.objectContaining({
+              name: "Quantity",
+              value: depositQty
+            })
+          ])
+        }),
+        expect.objectContaining({
+          Target: testWallet,
+          Tags: expect.arrayContaining([
+            expect.objectContaining({
+              name: "Action",
+              value: "Mint-Error"
+            }),
+            expect.objectContaining({
+              name: "Error",
+              value: expect.any(String)
+            }),
+            expect.objectContaining({
+              name: "Refund-Quantity",
+              value: depositQty
+            })
+          ])
+        })
+      ])
+    );
+  });
+
   it("Mints the correct quantity on initial supply", async () => {
     const res = await handle(createMessage({
       Action: "Credit-Notice",
