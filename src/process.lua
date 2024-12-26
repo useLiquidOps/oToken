@@ -71,21 +71,30 @@ local function setup_handlers()
   -- interest payment sync (must be the third handler)
   Handlers.add(
     "borrow-loan-interest-sync-dynamic",
-    Handlers.utils.continue(
-      Handlers.utils.hasMatchingTagOf("Action", {
-        "Borrow",
-        "Repay",
-        "Borrow-Balance",
-        "Borrow-Capacity",
-        "Position",
-        "Global-Position",
-        "Positions",
-        "Redeem",
-        "Transfer",
-        "Liquidate-Borrow",
-        "Mint"
-      })
-    ),
+    function (msg)
+      if
+        utils.includes(msg.Tags.Action, {
+          "Borrow",
+          "Borrow-Balance",
+          "Borrow-Capacity",
+          "Position",
+          "Global-Position",
+          "Positions",
+          "Redeem",
+          "Transfer"
+        })
+        or
+        utils.includes(msg.Tags["X-Action"], {
+          "Repay",
+          "Mint",
+          "Liquidate-Borrow"
+        })
+      then
+        return "continue"
+      end
+
+      return false
+    end,
     interest.syncInterests
   )
 
@@ -101,15 +110,16 @@ local function setup_handlers()
   -- apply cooldown limit for user interactions
   Handlers.advanced({
     name = "controller-cooldown-gate",
-    pattern = Handlers.utils.continue(
-      Handlers.utils.hasMatchingTagOf("Action", {
-        "Borrow",
-        "Repay",
-        "Redeem",
-        "Transfer",
-        "Mint"
-      })
-    ),
+    pattern = function (msg)
+      if
+        utils.includes(msg.Tags.Action, { "Borrow", "Redeem", "Transfer" }) or
+        utils.includes(msg.Tags["X-Action"], { "Repay", "Mint" })
+      then
+        return "continue"
+      end
+
+      return false
+    end,
     handle = cooldown.gate,
     errorHandler = cooldown.refund
   })
