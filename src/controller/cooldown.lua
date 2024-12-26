@@ -15,7 +15,22 @@ end
 -- interactions if the user is on cooldown
 ---@type HandlerFunction
 function mod.gate(msg)
-  
+  -- user interacting with the protocol
+  local sender = msg.From
+
+  -- if this was a transfer, the sender needs to be updated
+  if msg.Tags.Action == "Credit-Notice" then
+    sender = msg.Tags.Sender
+  end
+
+  -- validate that the user cooldown is over
+  assert(
+    (Cooldowns[sender] or 0) <= msg["Block-Height"],
+    "User is on a cooldown"
+  )
+
+  -- add user cooldown
+  Cooldowns[sender] = msg["Block-Height"] + CooldownPeriod
 end
 
 -- Refunds the user and sends the cooldown error
