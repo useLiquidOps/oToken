@@ -11,6 +11,7 @@ local coroutine = require "coroutine"
 local friend = require ".controller.friend"
 local config = require ".controller.config"
 local queue = require ".controller.queue"
+local cooldown = require ".controller.cooldown"
 
 local balance = require ".token.balance"
 local token = require ".token.token"
@@ -47,6 +48,7 @@ local function setup_handlers()
       pool.setup(msg, env)
       token.setup(msg, env)
       oracle.setup(msg, env)
+      cooldown.setup(msg, env)
     end
   )
 
@@ -94,6 +96,21 @@ local function setup_handlers()
       return msg.Tags.Action == "Credit-Notice" and msg.From ~= CollateralID
     end,
     mint.invalidTokenRefund
+  )
+
+  -- apply cooldown limit for user interactions
+  Handlers.add(
+    "controller-cooldown-gate",
+    Handlers.utils.continue(
+      Handlers.utils.hasMatchingTagOf("Action", {
+        "Borrow",
+        "Repay",
+        "Redeem",
+        "Transfer",
+        "Mint"
+      })
+    ),
+    cooldown.gate
   )
 
   -- communication with the controller
