@@ -99,9 +99,9 @@ local function setup_handlers()
   )
 
   -- apply cooldown limit for user interactions
-  Handlers.add(
-    "controller-cooldown-gate",
-    Handlers.utils.continue(
+  Handlers.advanced({
+    name = "controller-cooldown-gate",
+    pattern = Handlers.utils.continue(
       Handlers.utils.hasMatchingTagOf("Action", {
         "Borrow",
         "Repay",
@@ -110,8 +110,9 @@ local function setup_handlers()
         "Mint"
       })
     ),
-    cooldown.gate
-  )
+    handle = cooldown.gate,
+    errorHandler = cooldown.refund
+  })
 
   -- communication with the controller
   Handlers.add(
