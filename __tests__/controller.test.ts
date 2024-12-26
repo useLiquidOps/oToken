@@ -4,7 +4,8 @@ import {
   HandleFunction,
   env,
   createMessage,
-  generateArweaveAddress
+  generateArweaveAddress,
+  normalizeTags
 } from "./utils"
 
 describe("Friend tests", () => {
@@ -468,6 +469,100 @@ describe("Config tests", () => {
             expect.objectContaining({
               name: "Liquidation-Threshold",
               value: newFactor
+            })
+          ])
+        })
+      ])
+    );
+  });
+});
+
+describe("Cooldown tests", () => {
+  let handle: HandleFunction;
+  let tags: Record<string, string>;
+  let testWallet: string;
+
+  // test cooldown in blocks
+  const cooldown = 5;
+  const testQty = "168";
+
+  beforeAll(async () => {
+    const envWithCooldown = env;
+
+    // update cooldown
+    const cd = envWithCooldown.Process.Tags.find(
+      (tag) => tag.name === "Cooldown-Period"
+    );
+    if (cd) cd.value = cooldown.toString();
+
+    handle = await setupProcess(envWithCooldown);
+    tags = normalizeTags(env.Process.Tags);
+    testWallet = generateArweaveAddress();
+  });
+
+  test("Rejects minting while cooldown is not over", async () => {
+    // send initial mint, expect it to succeed
+    const initialBlock = 10;
+    const initialMint = await handle(createMessage({
+      Action: "Credit-Notice",
+      "X-Action": "Mint",
+      Owner: tags["Collateral-Id"],
+      From: tags["Collateral-Id"],
+      "From-Process": tags["Collateral-Id"],
+      Quantity: testQty,
+      Recipient: env.Process.Id,
+      Sender: testWallet,
+      // @ts-expect-error
+      ["Block-Height"]: initialBlock
+    }));
+
+    expect(initialMint.Messages).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          Target: testWallet,
+          Tags: expect.arrayContaining([
+            expect.objectContaining({
+              name: "Action",
+              value: "Mint-Confirmation"
+            }),
+            expect.objectContaining({
+              name: "Mint-Quantity",
+              value: testQty
+            }),
+            expect.objectContaining({
+              name: "Supplied-Quantity",
+              value: testQty
+            })
+          ])
+        })
+      ])
+    );
+
+    // this should fail, because the cooldown is 5 blocks
+    const nextBlock = initialBlock + 1;
+    const withinCooldownMint = await handle(createMessage({
+      Action: "Redeem",
+      Owner: testWallet,
+      From: testWallet,
+      Quantity: testQty,
+      // @ts-expect-error
+      ["Block-Height"]: nextBlock
+    }));
+
+    expect(withinCooldownMint.Messages).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          Target: testWallet,
+          Tags: expect.arrayContaining([
+            expect.objectContaining({
+              name: "Action",
+              value: "Redeem-Error"
+            }),
+            expect.objectContaining({
+              name: "Error",
+              value: expect.stringContaining(
+                "Sender is on cooldown for " + (initialBlock + cooldown - nextBlock) + " more block(s)"
+              )
             })
           ])
         })
