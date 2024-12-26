@@ -481,6 +481,7 @@ describe("Cooldown tests", () => {
   let handle: HandleFunction;
   let tags: Record<string, string>;
   let testWallet: string;
+  let initialBlock = 10;
 
   // test cooldown in blocks
   const cooldown = 5;
@@ -500,9 +501,10 @@ describe("Cooldown tests", () => {
     testWallet = generateArweaveAddress();
   });
 
+  afterEach(() => initialBlock += cooldown + 1);
+
   test("Rejects minting while cooldown is not over", async () => {
     // send initial mint, expect it to succeed
-    const initialBlock = 10;
     const initialMint = await handle(createMessage({
       Action: "Credit-Notice",
       "X-Action": "Mint",
