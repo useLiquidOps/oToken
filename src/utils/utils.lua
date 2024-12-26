@@ -235,30 +235,46 @@ utils.prop = utils.curry(function (propName, object)
   return object[propName]
 end, 2)
 
--- @param {any} val
--- @param {table<Array>} t
-utils.includes = utils.curry(function (val, t)
+-- Checks if an array includes a specific value (of primitive type)
+---@param val unknown Value to check for
+---@param t unknown[] Array to find the value in
+---@return boolean
+function utils.includes(val, t)
   assert(type(t) == "table", "argument needs to be a table")
-  return utils.find(function (v) return v == val end, t) ~= nil
-end, 2)
 
--- @param {table} t
-utils.keys = function (t)
+  return utils.find(function (v) return v == val end, t) ~= nil
+end
+
+-- Get the keys of a table as an array
+---@generic T : unknown
+---@param t table<T, unknown>
+---@return T[]
+function utils.keys(t)
   assert(type(t) == "table", "argument needs to be a table")
+
   local keys = {}
+
   for key in pairs(t) do
     table.insert(keys, key)
   end
+
   return keys
 end
 
--- @param {table} t
-utils.values = function (t)
+-- Get the values of a table as an array
+---@generic T : unknown
+---@param t table<unknown, T>
+---@return T[]
+function utils.values(t)
   assert(type(t) == "table", "argument needs to be a table")
+
   local values = {}
+
+  -- get values
   for _, value in pairs(t) do
     table.insert(values, value)
   end
+
   return values
 end
 
