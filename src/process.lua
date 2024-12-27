@@ -174,6 +174,12 @@ local function setup_handlers()
   )
 
   Handlers.add(
+    "controller-cooldown-list",
+    Handlers.utils.hasMatchingTag("Action", "Cooldowns"),
+    cooldown.list
+  )
+
+  Handlers.add(
     "borrow-loan-interest-get",
     Handlers.utils.hasMatchingTag("Action", "Get-APR"),
     interest.interestRate

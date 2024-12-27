@@ -1,3 +1,5 @@
+local json = require "json"
+
 local mod = {}
 
 -- Initializes the cooldown map
@@ -65,6 +67,15 @@ function mod.refund(msg)
 
   -- stop execution
   return "break"
+end
+
+-- List all users on cooldown
+---@type HandlerFunction
+function mod.list(msg)
+  msg.reply({
+    ["Cooldown-Period"] = tostring(CooldownPeriod),
+    Data = next(Cooldowns) ~= nil and json.encode(Cooldowns) or "{}"
+  })
 end
 
 return mod
