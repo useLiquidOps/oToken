@@ -684,6 +684,10 @@ describe("Cooldown tests", () => {
             expect.objectContaining({
               name: "Cooldown-Period",
               value: cooldown.toString()
+            }),
+            expect.objectContaining({
+              name: "Request-Block-Height",
+              value: expect.toBeIntegerStringEncoded()
             })
           ]),
           Data: "{}"
@@ -745,6 +749,10 @@ describe("Cooldown tests", () => {
             expect.objectContaining({
               name: "Cooldown-Period",
               value: cooldown.toString()
+            }),
+            expect.objectContaining({
+              name: "Request-Block-Height",
+              value: expect.toBeIntegerStringEncoded()
             })
           ]),
           Data: expect.toBeJsonEncoded(expect.objectContaining({

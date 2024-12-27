@@ -93,7 +93,22 @@ end
 function mod.list(msg)
   msg.reply({
     ["Cooldown-Period"] = tostring(CooldownPeriod),
+    ["Request-Block-Height"] = tostring(msg["Block-Height"]),
     Data = next(Cooldowns) ~= nil and json.encode(Cooldowns) or "{}"
+  })
+end
+
+-- Get if an address is on cooldown
+---@type HandlerFunction
+function mod.isOnCooldown(msg)
+  local userCooldown = Cooldowns[msg.From] or 0
+  local onCooldown = userCooldown > msg["Block-Height"]
+
+  msg.reply({
+    ["On-Cooldown"] = json.encode(onCooldown),
+    ["Cooldown-Expires"] = onCooldown and tostring(userCooldown) or nil,
+    ["Cooldown-Period"] = tostring(CooldownPeriod),
+    ["Request-Block-Height"] = tostring(msg["Block-Height"])
   })
 end
 
