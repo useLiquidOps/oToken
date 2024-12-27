@@ -5,7 +5,8 @@ import {
   env,
   createMessage,
   generateArweaveAddress,
-  normalizeTags
+  normalizeTags,
+  getMessageByAction
 } from "./utils"
 
 describe("Friend tests", () => {
@@ -641,7 +642,53 @@ describe("Cooldown tests", () => {
         })
       ])
     );
+
+    const queueResTags = normalizeTags(
+      getMessageByAction("Add-To-Queue", afterCooldownRedeem.Messages)?.Tags || []
+    );
+
+    // queue response
+    const res = await handle(createMessage({
+      Error: "Could not queue user",
+      "X-Reference": queueResTags["Reference"]
+    }));
+
+    expect(res.Messages).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          //Target: testWallet,
+          Tags: expect.arrayContaining([
+            expect.objectContaining({
+              name: "Error",
+              value: "The sender is already queued for an operation"
+            })
+          ])
+        })
+      ])
+    );
   });
 
-  it.todo("Returns empty cooldown list");
+  it("Returns empty cooldown list initially", async () => {
+    const msg = createMessage({
+      Action: "Cooldowns",
+      // @ts-expect-error
+      ["Block-Height"]: block
+    });
+    const res = await handle(msg);
+
+    expect(res.Messages).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          Target: msg.From,
+          Tags: expect.arrayContaining([
+            expect.objectContaining({
+              name: "Cooldown-Period",
+              value: cooldown.toString()
+            })
+          ]),
+          Data: "{}"
+        })
+      ])
+    );
+  });
 });

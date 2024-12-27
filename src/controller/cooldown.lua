@@ -28,7 +28,7 @@ function mod.sync(msg)
 
   -- remove
   for _, address in ipairs(expired) do
-    expired[address] = nil
+    Cooldowns[address] = nil
   end
 end
 
