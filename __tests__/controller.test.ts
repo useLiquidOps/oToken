@@ -691,4 +691,67 @@ describe("Cooldown tests", () => {
       ])
     );
   });
+
+  it("Returns cooldown list with the user on cooldown", async () => {
+    const mint = await handle(createMessage({
+      Action: "Credit-Notice",
+      "X-Action": "Mint",
+      Owner: tags["Collateral-Id"],
+      From: tags["Collateral-Id"],
+      "From-Process": tags["Collateral-Id"],
+      Quantity: testQty,
+      Recipient: env.Process.Id,
+      Sender: testWallet,
+      // @ts-expect-error
+      ["Block-Height"]: block
+    }));
+
+    expect(mint.Messages).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          Target: testWallet,
+          Tags: expect.arrayContaining([
+            expect.objectContaining({
+              name: "Action",
+              value: "Mint-Confirmation"
+            }),
+            expect.objectContaining({
+              name: "Mint-Quantity",
+              value: testQty
+            }),
+            expect.objectContaining({
+              name: "Supplied-Quantity",
+              value: testQty
+            })
+          ])
+        })
+      ])
+    );
+
+    block++;
+
+    const msg = createMessage({
+      Action: "Cooldowns",
+      // @ts-expect-error
+      ["Block-Height"]: block
+    });
+    const res = await handle(msg);
+
+    expect(res.Messages).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          Target: msg.From,
+          Tags: expect.arrayContaining([
+            expect.objectContaining({
+              name: "Cooldown-Period",
+              value: cooldown.toString()
+            })
+          ]),
+          Data: expect.toBeJsonEncoded(expect.objectContaining({
+            [testWallet]: expect.any(Number)
+          }))
+        })
+      ])
+    );
+  });
 });
