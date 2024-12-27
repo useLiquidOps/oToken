@@ -5,6 +5,11 @@ local bint = require ".utils.bint"(1024)
 
 local utils = { _version = "0.0.5" }
 
+-- Given a pattern, a value, and a message, returns whether there is a pattern match
+---@param pattern Pattern|nil The pattern to match
+---@param value Pattern The value to check for in the pattern
+---@param msg Message The message to check for the pattern
+---@return boolean
 function utils.matchesPattern(pattern, value, msg)
   -- If the key is not in the message, then it does not match
   if(not pattern) then
@@ -49,6 +54,10 @@ function utils.matchesPattern(pattern, value, msg)
   return false
 end
 
+-- Given a message and a spec, returns whetehr there is a spec match
+---@param msg Message The message to check for in the spec
+---@param spec Spec The spec to check for in the message
+---@return boolean
 function utils.matchesSpec(msg, spec)
   if type(spec) == 'function' then
     return spec(msg)
@@ -60,6 +69,7 @@ function utils.matchesSpec(msg, spec)
   --   - Function execution on the tag, optionally using the msg as the second argument
   --   - Table of patterns, where ANY of the sub-patterns matching the tag will result in a match
   end
+
   if type(spec) == 'table' then
     for key, pattern in pairs(spec) do
       if not msg[key] then
@@ -71,29 +81,36 @@ function utils.matchesSpec(msg, spec)
     end
     return true
   end
+
   if type(spec) == 'string' and msg.Action and msg.Action == spec then
     return true
   end
+
   return false
 end
 
 local function isArray(table)
   if type(table) == "table" then
-      local maxIndex = 0
-      for k, v in pairs(table) do
-          if type(k) ~= "number" or k < 1 or math.floor(k) ~= k then
-              return false -- If there's a non-integer key, it's not an array
-          end
-          maxIndex = math.max(maxIndex, k)
+    local maxIndex = 0
+
+    for k, _ in pairs(table) do
+      if type(k) ~= "number" or k < 1 or math.floor(k) ~= k then
+        return false -- If there's a non-integer key, it's not an array
       end
-      -- If the highest numeric index is equal to the number of elements, it's an array
-      return maxIndex == #table
+      maxIndex = math.max(maxIndex, k)
+    end
+
+    -- If the highest numeric index is equal to the number of elements, it's an array
+    return maxIndex == #table
   end
+
   return false
 end
 
--- @param {function} fn
--- @param {number} arity
+-- Allows currying usage of a function
+---@param fn function
+---@param arity number
+---@return function
 utils.curry = function (fn, arity)
   assert(type(fn) == "function", "function is required as first argument")
   arity = arity or debug.getinfo(fn, "u").nparams
@@ -112,34 +129,41 @@ utils.curry = function (fn, arity)
   end
 end
 
---- Concat two Array Tables.
--- @param {table<Array>} a
--- @param {table<Array>} b
-utils.concat = utils.curry(function (a, b)
+-- Concat two Array Tables
+---@generic T : unknown
+---@param a T[] First array
+---@param b T[] Second array
+---@return T[]
+function utils.concat(a, b)
   assert(type(a) == "table", "first argument should be a table that is an array")
   assert(type(b) == "table", "second argument should be a table that is an array")
   assert(isArray(a), "first argument should be a table")
   assert(isArray(b), "second argument should be a table")
 
   local result = {}
+
   for i = 1, #a do
-      result[#result + 1] = a[i]
+    result[#result + 1] = a[i]
   end
   for i = 1, #b do
-      result[#result + 1] = b[i]
+    result[#result + 1] = b[i]
   end
-  return result
-  --return table.concat(a,b)
-end, 2)
 
---- reduce applies a function to a table
--- @param {function} fn
--- @param {any} initial
--- @param {table<Array>} t
-utils.reduce = utils.curry(function (fn, initial, t)
+  return result
+end
+
+-- Reduce executes the provided reducer function for all array elements, finally providing one (unified) result
+---@generic T : unknown
+---@param fn fun(accumulator: T, current: T, key: integer): T Provided reducer function
+---@param initial T? Initial value
+---@param t T[] Array to reduce
+---@return T
+function utils.reduce(fn, initial, t)
   assert(type(fn) == "function", "first argument should be a function that accepts (result, value, key)")
   assert(type(t) == "table" and isArray(t), "third argument should be a table that is an array")
+
   local result = initial
+
   for k, v in pairs(t) do
     if result == nil then
       result = v
@@ -147,11 +171,17 @@ utils.reduce = utils.curry(function (fn, initial, t)
       result = fn(result, v, k)
     end
   end
-  return result
-end, 3)
 
---- @type function(fn: function, data: table)
-utils.map = utils.curry(function (fn, data)
+  return result
+end
+
+-- Create a new array filled with the results of calling the provided map function on each element in the array
+---@generic T : unknown
+---@generic H : unknown
+---@param fn fun(val: T, key: unknown): H The map function. It receives the current array element and key
+---@param data T[] The array to map
+---@return H[]
+function utils.map(fn, data)
   assert(type(fn) == "function", "first argument should be a unary function")
   assert(type(data) == "table" and isArray(data), "second argument should be an Array")
 
@@ -161,53 +191,68 @@ utils.map = utils.curry(function (fn, data)
   end
 
   return utils.reduce(map, {}, data)
-end, 2)
+end
 
--- @param {function} fn
--- @param {table<Array>} data
-utils.filter = utils.curry(function (fn, data)
+-- This function creates a new array from a portion of the original, only keeping the elements that passed a provided filter function's test
+---@generic T : unknown
+---@param fn fun(val: T): boolean Filter function
+---@param data T[] Array to filter
+---@return T[]
+function utils.filter(fn, data)
   assert(type(fn) == "function", "first argument should be a unary function")
   assert(type(data) == "table" and isArray(data), "second argument should be an Array")
 
-  local function filter (result, v, _k)
+  local function filter(result, v, _k)
     if fn(v) then
       table.insert(result, v)
     end
+
     return result
   end
 
-  return utils.reduce(filter,{}, data)
-end, 2)
+  return utils.reduce(filter, {}, data)
+end
 
--- @param {function} fn
--- @param {table<Array>} t
-utils.find = utils.curry(function (fn, t)
+-- This function returns the first element that matches in a provided function
+---@generic T : unknown
+---@param fn fun(val: T): boolean The find function that receives the current element and returns true if it matches, false if it doesn't
+---@param t T[] Array to find the element in
+---@return T|nil, integer|nil
+function utils.find(fn, t)
   assert(type(fn) == "function", "first argument should be a unary function")
   assert(type(t) == "table", "second argument should be a table that is an array")
+
   for i, v in pairs(t) do
     if fn(v) then
       return v, i
     end
   end
-end, 2)
+end
 
--- @param {string} propName
--- @param {string} value 
--- @param {table} object
-utils.propEq = utils.curry(function (propName, value, object)
+-- Checks if a specified property of a table equals with the provided value
+---@param propName string Name of the property to check
+---@param value unknown Expected value
+---@param object table Table to check
+---@return boolean
+function utils.propEq(propName, value, object)
   assert(type(propName) == "string", "first argument should be a string")
   -- assert(type(value) == "string", "second argument should be a string")
   assert(type(object) == "table", "third argument should be a table<object>")
-  
-  return object[propName] == value
-end, 3)
 
--- @param {table<Array>} data
-utils.reverse = function (data)
+  return object[propName] == value
+end
+
+-- Puts an array in reverse order
+---@generic T : unknown
+---@param data T[]
+---@returns T[]
+function utils.reverse(data)
   assert(type(data) == "table", "argument needs to be a table that is an array")
+
   return utils.reduce(
     function (result, v, i)
       result[#data - i + 1] = v
+
       return result
     end,
     {},
@@ -215,50 +260,73 @@ utils.reverse = function (data)
   )
 end
 
--- @param {function} ... 
-utils.compose = utils.curry(function (...)
+-- Chain multiple array mutations together and execute them in reverse order on the provided array
+---@param ... function
+---@return unknown
+function utils.compose(...)
   local mutations = utils.reverse({...})
 
   return function (v)
     local result = v
+
     for _, fn in pairs(mutations) do
       assert(type(fn) == "function", "each argument needs to be a function")
       result = fn(result)
     end
+
     return result
   end
-end, 2)
+end
 
--- @param {string} propName
--- @param {table} object
-utils.prop = utils.curry(function (propName, object) 
+-- Returns the property value that belongs to the property name provided from an object
+---@generic T
+---@param propName string Name of the property to return
+---@param object table The table to return the property value from
+---@return T
+function utils.prop(propName, object)
   return object[propName]
-end, 2)
+end
 
--- @param {any} val
--- @param {table<Array>} t
-utils.includes = utils.curry(function (val, t)
+-- Checks if an array includes a specific value (of primitive type)
+---@param val unknown Value to check for
+---@param t unknown[] Array to find the value in
+---@return boolean
+function utils.includes(val, t)
   assert(type(t) == "table", "argument needs to be a table")
+
   return utils.find(function (v) return v == val end, t) ~= nil
-end, 2)
+end
 
--- @param {table} t
-utils.keys = function (t)
+-- Get the keys of a table as an array
+---@generic T : unknown
+---@param t table<T, unknown>
+---@return T[]
+function utils.keys(t)
   assert(type(t) == "table", "argument needs to be a table")
+
   local keys = {}
+
   for key in pairs(t) do
     table.insert(keys, key)
   end
+
   return keys
 end
 
--- @param {table} t
-utils.values = function (t)
+-- Get the values of a table as an array
+---@generic T : unknown
+---@param t table<unknown, T>
+---@return T[]
+function utils.values(t)
   assert(type(t) == "table", "argument needs to be a table")
+
   local values = {}
+
+  -- get values
   for _, value in pairs(t) do
     table.insert(values, value)
   end
+
   return values
 end
 
