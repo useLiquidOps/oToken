@@ -762,4 +762,123 @@ describe("Cooldown tests", () => {
       ])
     );
   });
+
+  it("Returns no user cooldown if the user is not on a cooldown", async () => {
+    const res = await handle(createMessage({
+      Action: "Is-Cooldown",
+      From: testWallet,
+      Owner: testWallet,
+      // @ts-expect-error
+      ["Block-Height"]: block
+    }));
+
+    expect(res.Messages).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          Target: testWallet,
+          Tags: expect.arrayContaining([
+            expect.objectContaining({
+              name: "On-Cooldown",
+              value: "false"
+            }),
+            expect.objectContaining({
+              name: "Cooldown-Period",
+              value: cooldown.toString()
+            }),
+            expect.objectContaining({
+              name: "Request-Block-Height",
+              value: expect.toBeIntegerStringEncoded()
+            })
+          ])
+        })
+      ])
+    );
+    expect(res.Messages).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          Target: testWallet,
+          Tags: expect.not.arrayContaining([
+            expect.objectContaining({
+              name: "Cooldown-Expires",
+              value: expect.toBeIntegerStringEncoded()
+            })
+          ])
+        })
+      ])
+    );
+  });
+
+  it("Returns the user cooldown correctly", async () => {
+    const expiryBlock = block + cooldown;
+    const mint = await handle(createMessage({
+      Action: "Credit-Notice",
+      "X-Action": "Mint",
+      Owner: tags["Collateral-Id"],
+      From: tags["Collateral-Id"],
+      "From-Process": tags["Collateral-Id"],
+      Quantity: testQty,
+      Recipient: env.Process.Id,
+      Sender: testWallet,
+      // @ts-expect-error
+      ["Block-Height"]: block
+    }));
+
+    expect(mint.Messages).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          Target: testWallet,
+          Tags: expect.arrayContaining([
+            expect.objectContaining({
+              name: "Action",
+              value: "Mint-Confirmation"
+            }),
+            expect.objectContaining({
+              name: "Mint-Quantity",
+              value: testQty
+            }),
+            expect.objectContaining({
+              name: "Supplied-Quantity",
+              value: testQty
+            })
+          ])
+        })
+      ])
+    );
+
+    block++;
+
+    const res = await handle(createMessage({
+      Action: "Is-Cooldown",
+      From: testWallet,
+      Owner: testWallet,
+      // @ts-expect-error
+      ["Block-Height"]: block
+    }));
+
+    expect(res.Messages).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          Target: testWallet,
+          Tags: expect.arrayContaining([
+            expect.objectContaining({
+              name: "On-Cooldown",
+              value: "true"
+            }),
+            expect.objectContaining({
+              name: "Cooldown-Period",
+              value: cooldown.toString()
+            }),
+            expect.objectContaining({
+              name: "Request-Block-Height",
+              value: expect.toBeIntegerStringEncoded()
+            }),
+            expect.objectContaining({
+              name: "Cooldown-Expires",
+              value: expiryBlock.toString()
+            })
+          ])
+        })
+      ])
+    );
+  });
 });
