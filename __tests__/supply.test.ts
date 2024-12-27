@@ -62,7 +62,9 @@ describe("Minting and providing", () => {
             }),
             expect.objectContaining({
               name: "X-Refund-Reason",
-              value: expect.any(String)
+              value: expect.stringContaining(
+                "This process does not accept the transferred token"
+              )
             })
           ])
         })
@@ -111,7 +113,9 @@ describe("Minting and providing", () => {
             }),
             expect.objectContaining({
               name: "Error",
-              value: expect.any(String)
+              value: expect.stringContaining(
+                "Invalid incoming transfer quantity"
+              )
             }),
             expect.objectContaining({
               name: "Refund-Quantity",
@@ -235,7 +239,28 @@ describe("Redeeming and burning", () => {
           Tags: expect.arrayContaining([
             expect.objectContaining({
               name: "Error",
-              value: expect.any(String)
+              value: expect.stringContaining(
+                "The sender is already queued for an operation"
+              )
+            })
+          ])
+        })
+      ])
+    );
+
+    // do not include unqueue message
+    expect(res.Messages).toEqual(
+      expect.not.arrayContaining([
+        expect.objectContaining({
+          Target: env.Process.Owner,
+          Tags: expect.arrayContaining([
+            expect.objectContaining({
+              name: "Action",
+              value: "Remove-From-Queue"
+            }),
+            expect.objectContaining({
+              name: "User",
+              value: msg.From
             })
           ])
         })
@@ -285,7 +310,9 @@ describe("Redeeming and burning", () => {
           Tags: expect.arrayContaining([
             expect.objectContaining({
               name: "Error",
-              value: expect.any(String)
+              value: expect.stringContaining(
+                "Invalid redeem quantity"
+              )
             })
           ])
         }),
@@ -348,7 +375,9 @@ describe("Redeeming and burning", () => {
           Tags: expect.arrayContaining([
             expect.objectContaining({
               name: "Error",
-              value: expect.any(String)
+              value: expect.stringContaining(
+                "Not enough tokens to burn for this wallet"
+              )
             })
           ])
         }),
@@ -426,7 +455,9 @@ describe("Price and underlying asset value, reserves (empty)", () => {
           Tags: expect.arrayContaining([
             expect.objectContaining({
               name: "Error",
-              value: expect.any(String)
+              value: expect.stringContaining(
+                "Invalid token quantity"
+              )
             })
           ])
         })

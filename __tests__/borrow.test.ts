@@ -77,7 +77,28 @@ describe("Borrowing", () => {
           Tags: expect.arrayContaining([
             expect.objectContaining({
               name: "Error",
-              value: expect.any(String)
+              value: expect.stringContaining(
+                "The sender is already queued for an operation"
+              )
+            })
+          ])
+        })
+      ])
+    );
+
+    // do not include unqueue message
+    expect(res.Messages).toEqual(
+      expect.not.arrayContaining([
+        expect.objectContaining({
+          Target: env.Process.Owner,
+          Tags: expect.arrayContaining([
+            expect.objectContaining({
+              name: "Action",
+              value: "Remove-From-Queue"
+            }),
+            expect.objectContaining({
+              name: "User",
+              value: msg.From
             })
           ])
         })
@@ -127,7 +148,9 @@ describe("Borrowing", () => {
           Tags: expect.arrayContaining([
             expect.objectContaining({
               name: "Error",
-              value: expect.any(String)
+              value: expect.stringContaining(
+                "Invalid borrow quantity"
+              )
             })
           ])
         }),
@@ -190,7 +213,9 @@ describe("Borrowing", () => {
           Tags: expect.arrayContaining([
             expect.objectContaining({
               name: "Error",
-              value: expect.any(String)
+              value: expect.stringContaining(
+                "Not enough tokens available to be lent"
+              )
             })
           ])
         }),

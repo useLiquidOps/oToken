@@ -36,7 +36,7 @@ local function transfer(msg)
   })
 
   -- check if a price was returned
-  assert(transferValue[1] ~= nil, "No price data returned from the oracle for the transfer value")
+  assert(transferValue[1] ~= nil, "No price returned from the oracle for the transfer value")
 
   -- do not allow reserved collateral to be transferred
   assert(
