@@ -642,4 +642,6 @@ describe("Cooldown tests", () => {
       ])
     );
   });
+
+  it.todo("Returns empty cooldown list");
 });

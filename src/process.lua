@@ -97,6 +97,12 @@ local function setup_handlers()
     end,
     interest.syncInterests
   )
+  -- cooldown list sync
+  Handlers.add(
+    "controller-cooldown-sync",
+    Handlers.utils.continue({}),
+    cooldown.sync
+  )
 
   -- validate incoming transfers, refund 3rd party tokens
   Handlers.add(

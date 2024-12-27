@@ -13,6 +13,25 @@ function mod.setup()
   CooldownPeriod = CooldownPeriod or tonumber(ao.env.Process.Tags["Cooldown-Period"]) or 0
 end
 
+-- Filter out expired addresses from the cooldown list
+---@type HandlerFunction
+function mod.sync(msg)
+  -- filter addresses to remove
+  ---@type string[]
+  local expired = {}
+
+  for addr, cooldown in pairs(Cooldowns) do
+    if cooldown <= msg["Block-Height"] then
+      table.insert(expired, addr)
+    end
+  end
+
+  -- remove
+  for _, address in ipairs(expired) do
+    expired[address] = nil
+  end
+end
+
 -- Cooldown middleware/gate that rejects 
 -- interactions if the user is on cooldown
 ---@type HandlerFunction
