@@ -170,14 +170,7 @@ Handlers.add(
       "Invalid liquidation target"
     )
 
-    -- check liquidation queue
-    -- TODO: find a better way to do this
-    assert(
-      not utils.includes(target, LiquidationQueue),
-      "User is already queued for liquidation"
-    )
-
-    -- token to be liquidated 
+    -- token to be liquidated, currently loaned to the target
     -- (the token that is paying for the loan = transferred token)
     local liquidatedToken = msg.From
 
@@ -186,13 +179,14 @@ Handlers.add(
       "Cannot liquidate the incoming token as it is not listed"
     )
 
-    -- the token of the position that will be liquidated
-    -- (this will be sent to the liquidator as a reward)
-    local positionToken = msg.Tags["X-Position-Token"]
+    -- the token that the liquidator will earn for
+    -- paying off the loan
+    -- the user has to have a posisition in this token
+    local rewardToken = msg.Tags["X-Reward-Token"]
 
     assert(
-      Tokens[positionToken] ~= nil,
-      "Cannot liquidate for the position token as it is not listed"
+      Tokens[rewardToken] ~= nil,
+      "Cannot liquidate for the reward token as it is not listed"
     )
 
     -- check user position
@@ -202,11 +196,22 @@ Handlers.add(
     )))
 
     -- check if user position includes the desired token
-    local selectedPosition = utils.find(function (pos) return pos.From == Tokens[positionToken] end, positions)
+    local selectedPosition = utils.find(
+      function (pos) return pos.From == Tokens[rewardToken] end,
+      positions
+    )
 
     assert(
       selectedPosition ~= nil,
-      "User does not have a position in that token"
+      "User does not have a position in the reward token"
+    )
+
+    -- check liquidation queue
+    -- (here the queues should all be synced)
+    -- TODO: find a better way to do this
+    assert(
+      not utils.includes(target, LiquidationQueue),
+      "User is already queued for liquidation"
     )
 
     -- TODO: convert positions to usd
@@ -246,7 +251,7 @@ Handlers.add(
 
     -- liquidate the position (transfer out the reward)
     local positionLiquidationRes = ao.send({
-      Target = Tokens[positionToken],
+      Target = Tokens[rewardToken],
       Action = "Liquidate-Position",
       Quantity = "", -- TODO
       Liquidator = liquidator,
