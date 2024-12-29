@@ -104,6 +104,7 @@ function ao.init(msg, env)
 
   ao.outbox = {Output = {}, Messages = {}, Spawns = {}, Assignments = {}}
   ao.env = env
+  ao.msg = msg
 
   ao.normalize(msg)
 
@@ -200,13 +201,10 @@ function ao.send(msg)
   message.receive = function(from, timeout)
     if from == nil then from = message.Target end
 
-    local result, expired = Handlers.receive({
+    return Handlers.receive({
       From = from,
       ["X-Reference"] = referenceString
     }, timeout)
-    assert(not expired, "Response expired")
-
-    return result
   end
 
   return message
@@ -273,14 +271,11 @@ function ao.spawn(module, msg)
   end
 
   spawn.receive = function(timeout)
-    local result, expired = Handlers.receive({
+    return Handlers.receive({
       Action = "Spawned",
       From = ao.id,
       ["Reference"] = spawnRef
     }, timeout)
-    assert(not expired, "Response expired")
-
-    return result
   end
 
   return spawn

@@ -255,7 +255,7 @@ describe("Token standard functionalities", () => {
     expect(res.Messages).toEqual(
       expect.arrayContaining([
         expect.objectContaining({
-          //Target: testWallet,
+          Target: testWallet,
           Tags: expect.arrayContaining([
             expect.objectContaining({
               name: "Error",
@@ -331,7 +331,7 @@ describe("Token standard functionalities", () => {
     expect(res.Messages).toEqual(
       expect.arrayContaining([
         expect.objectContaining({
-          //Target: msg.From,
+          Target: msg.From,
           Tags: expect.arrayContaining([
             expect.objectContaining({
               name: "Error",
@@ -401,7 +401,7 @@ describe("Token standard functionalities", () => {
     expect(res.Messages).toEqual(
       expect.arrayContaining([
         expect.objectContaining({
-          // Target: msg.From,
+          Target: msg.From,
           Tags: expect.arrayContaining([
             expect.objectContaining({
               name: "Error",
@@ -471,7 +471,7 @@ describe("Token standard functionalities", () => {
     expect(res.Messages).toEqual(
       expect.arrayContaining([
         expect.objectContaining({
-          // Target: msg.From,
+          Target: msg.From,
           Tags: expect.arrayContaining([
             expect.objectContaining({
               name: "Error",
@@ -539,7 +539,7 @@ describe("Token standard functionalities", () => {
     expect(res.Messages).toEqual(
       expect.arrayContaining([
         expect.objectContaining({
-          // Target: msg.From,
+          Target: msg.From,
           Tags: expect.arrayContaining([
             expect.objectContaining({
               name: "Error",
@@ -635,8 +635,7 @@ describe("Token standard functionalities", () => {
     expect(oracleInputRes.Messages).toEqual(
       expect.arrayContaining([
         expect.objectContaining({
-          // TODO: figure out a way to reply the error to the correct target
-          // Target: msg.From,
+          Target: testWallet,
           Tags: expect.arrayContaining([
             expect.objectContaining({
               name: "Error",
@@ -738,8 +737,7 @@ describe("Token standard functionalities", () => {
     expect(oracleInputRes.Messages).toEqual(
       expect.arrayContaining([
         expect.objectContaining({
-          // TODO: figure out a way to reply the error to the correct target
-          // Target: msg.From,
+          Target: msg.From,
           Tags: expect.arrayContaining([
             expect.objectContaining({
               name: "Error",
@@ -1113,8 +1111,7 @@ describe("Token standard functionalities", () => {
     expect(usedCapacitiesOracleInputRes.Messages).toEqual(
       expect.arrayContaining([
         expect.objectContaining({
-          // TODO: figure out a way to reply the error to the correct target
-          // Target: msg.From,
+          Target: testWallet,
           Tags: expect.arrayContaining([
             expect.objectContaining({
               name: "Error",

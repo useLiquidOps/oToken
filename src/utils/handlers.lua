@@ -81,11 +81,48 @@ end
 -- @tparam {table | nil} timeout Timeout after which the handler will error
 function handlers.receive(pattern, timeout)
   local self = coroutine.running()
-  local function resume(msg, expired)
-    -- If the result of the resumed coroutine is an error then we should bubble it up to the process
-    local _, success, errmsg = coroutine.resume(self, msg, expired)
+  local currentErrorHandler = handlers.currentErrorHandler
+  local originalMsg = ao.msg
+  local originalEnv = ao.env
 
-    assert(success, errmsg)
+  local function resume(msg)
+    local newMsg, newEnv = ao.msg, ao.env
+    ao.msg, ao.env = originalMsg, originalEnv
+
+    -- continue original handler execution
+    local _, success, errmsg = coroutine.resume(self, msg)
+
+    ao.msg, ao.env = newMsg, newEnv
+
+    -- if the handler throws an error, we call the original error
+    -- handler for the handler or the default, if there is none
+    if not success then
+      currentErrorHandler(originalMsg, originalEnv, errmsg)
+    end
+  end
+
+  local function expire()
+    -- protected call the error handler, so if it errors,
+    -- it still doesn't affect the main execution
+    local success, err = pcall(
+      currentErrorHandler,
+      originalMsg,
+      originalEnv,
+      "Response expired"
+    )
+
+    -- call default error handler, if the current error
+    -- handler also errored
+    if not success then
+      handlers.defaultErrorHandler(
+        originalMsg,
+        originalEnv,
+        "Response expired, but expiry was not handled: " .. err
+      )
+    end
+
+    -- kill the coroutine
+    coroutine.close(self)
   end
 
   handlers.advanced({
@@ -94,12 +131,11 @@ function handlers.receive(pattern, timeout)
     pattern = pattern,
     maxRuns = 1,
     timeout = timeout,
-    handle = function (msg)
-      resume(msg, false)
-    end,
+    handle = resume,
     onRemove = function (reason)
-      if reason ~= "timeout" then return end
-      resume({}, true)
+      if reason == "timeout" then
+        expire()
+      end
     end
   })
   handlers.onceNonce = handlers.onceNonce + 1
@@ -262,6 +298,18 @@ function handlers.setActive(name, status)
 
   -- reverse provided status
   handlers.list[idx].inactive = not status
+end
+
+-- Default error handler for handlers. It replies to the
+-- original message with the error
+function handlers.defaultErrorHandler(msg, _, err)
+  local prettyError, rawError = utils.prettyError(err)
+
+  msg.reply({
+    Action = (msg.Action or "Unknown") .. "-Error",
+    Error = prettyError,
+    ["Raw-Error"] = rawError
+  })
 end
 
 --- Allows creating and adding a handler with advanced options using a simple configuration table
@@ -466,8 +514,13 @@ function handlers.evaluate(msg, env)
         if match < 0 then
           handled = true
         end
+
+        -- set current error handler for all handler runs
+        handlers.currentErrorHandler = o.errorHandler or handlers.defaultErrorHandler
+
         -- each handle function can accept, the msg, env
         local status, err = pcall(o.handle, msg, env)
+
         if not status then
           if not o.errorHandler then error(err)
           else
@@ -501,6 +554,9 @@ function handlers.evaluate(msg, env)
       end
     end
   end
+
+  -- reset current error handler
+  handlers.currentErrorHandler = handlers.defaultErrorHandler
 
   -- make sure the request was handled
   assert(handled, "The request could not be handled")

@@ -10,12 +10,41 @@ function mod.schedule(...)
   -- get the running handler's thread
   local thread = coroutine.running()
 
+  -- original handler environment
+  local currentErrorHandler = Handlers.currentErrorHandler
+  local originalMsg = ao.msg
+  local originalEnv = ao.env
+
   -- repsonse handler
   local responses = {}
   local messages = {...}
 
   -- if there are no messages to be sent, we don't do anything
   if #messages == 0 then return {} end
+
+  local function expire()
+    -- protected call the error handler, so if it errors,
+    -- it still doesn't affect the main execution
+    local success, err = pcall(
+      currentErrorHandler,
+      originalMsg,
+      originalEnv,
+      "Response expired"
+    )
+
+    -- call default error handler, if the current error
+    -- handler also errored
+    if not success then
+      Handlers.defaultErrorHandler(
+        originalMsg,
+        originalEnv,
+        "Response expired, but expiry was not handled: " .. err
+      )
+    end
+
+    -- kill the coroutine
+    coroutine.close(thread)
+  end
 
   -- send messages
   for _, msg in ipairs(messages) do
@@ -37,10 +66,17 @@ function mod.schedule(...)
 
         -- continue execution only when all responses are back
         if #responses == #messages then
-          -- if the result of the resumed coroutine is an error, then we should bubble it up to the process
-          local _, success, errmsg = coroutine.resume(thread, responses, false)
+          local newMsg, newEnv = ao.msg, ao.env
+          ao.msg, ao.env = originalMsg, originalEnv
 
-          assert(success, errmsg)
+          -- if the result of the resumed coroutine is an error, then we should bubble it up to the process
+          local _, success, errmsg = coroutine.resume(thread, responses)
+
+          ao.msg, ao.env = newMsg, newEnv
+
+          if not success then
+            currentErrorHandler(originalMsg, originalEnv, errmsg)
+          end
         end
       end,
       onRemove = function (reason)
@@ -48,24 +84,17 @@ function mod.schedule(...)
         -- or if the coroutine has already been resumed
         if reason ~= "timeout" or coroutine.status(thread) ~= "suspended" then return end
 
-        -- resume execution on timeout, because a timeout
-        -- invalidates all results
-        local _, success, errmsg = coroutine.resume(thread, {}, true)
-
-        assert(success, errmsg)
+        expire()
       end
     })
     Handlers.onceNonce = Handlers.onceNonce + 1
   end
 
   -- yield execution, till all responses are back
-  local result, expired = coroutine.yield({
+  local result = coroutine.yield({
     From = messages[#messages],
     ["X-Reference"] = tostring(ao.reference)
   })
-
-  -- check if expired
-  assert(not expired, "A scheduled response has expired")
 
   return result
 end
