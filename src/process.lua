@@ -288,13 +288,8 @@ function process.handle(msg, env)
   end
 
   if not status then
-    local prettyError, rawError = utils.prettyError(result)
-
-    msg.reply({
-      Action = msg.Action and msg.Action .. "-Error" or nil,
-      Error = prettyError,
-      ["Raw-Error"] = rawError
-    })
+    -- call default error handler
+    Handlers.defaultErrorHandler(msg, env, result)
 
     return ao.result()
   end
