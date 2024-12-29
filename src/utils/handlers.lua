@@ -82,17 +82,22 @@ end
 function handlers.receive(pattern, timeout)
   local self = coroutine.running()
   local currentErrorHandler = handlers.currentErrorHandler
-  local currentMsg = ao.msg
-  local currentEnv = ao.env
+  local originalMsg = ao.msg
+  local originalEnv = ao.env
 
   local function resume(msg)
+    local newMsg, newEnv = ao.msg, ao.env
+    ao.msg, ao.env = originalMsg, originalEnv
+
     -- continue original handler execution
     local _, success, errmsg = coroutine.resume(self, msg)
+
+    ao.msg, ao.env = newMsg, newEnv
 
     -- if the handler throws an error, we call the original error
     -- handler for the handler or the default, if there is none
     if not success then
-      currentErrorHandler(currentMsg, currentEnv, errmsg)
+      currentErrorHandler(originalMsg, originalEnv, errmsg)
     end
   end
 
@@ -101,8 +106,8 @@ function handlers.receive(pattern, timeout)
     -- it still doesn't affect the main execution
     local success, err = pcall(
       currentErrorHandler,
-      currentMsg,
-      currentEnv,
+      originalMsg,
+      originalEnv,
       "Response expired"
     )
 
@@ -110,11 +115,14 @@ function handlers.receive(pattern, timeout)
     -- handler also errored
     if not success then
       handlers.defaultErrorHandler(
-        currentMsg,
-        currentEnv,
+        originalMsg,
+        originalEnv,
         "Response expired, but expiry was not handled: " .. err
       )
     end
+
+    -- kill the coroutine
+    coroutine.close(self)
   end
 
   handlers.advanced({
