@@ -199,7 +199,9 @@ describe("Redeeming and burning", () => {
   it("Rejects redeeming if the user is already queued in the controller", async () => {
     const msg = createMessage({
       Action: "Redeem",
-      Quantity: "2"
+      Quantity: "2",
+      From: testWallet,
+      Owner: testWallet
     });
 
     const queueRes = await handle(msg);
@@ -215,7 +217,7 @@ describe("Redeeming and burning", () => {
             }),
             expect.objectContaining({
               name: "User",
-              value: msg.From
+              value: testWallet
             })
           ])
         })
@@ -235,7 +237,7 @@ describe("Redeeming and burning", () => {
     expect(res.Messages).toEqual(
       expect.arrayContaining([
         expect.objectContaining({
-          //Target: testWallet,
+          Target: testWallet,
           Tags: expect.arrayContaining([
             expect.objectContaining({
               name: "Error",
