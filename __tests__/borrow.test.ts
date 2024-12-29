@@ -205,7 +205,7 @@ describe("Borrowing", () => {
       "Queued-User": msg.From,
       "X-Reference": queueResTags["Reference"]
     }));
-
+console.log(JSON.stringify(res.Messages, null, 2))
     expect(res.Messages).toEqual(
       expect.arrayContaining([
         expect.objectContaining({
