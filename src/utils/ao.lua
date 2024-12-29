@@ -104,6 +104,7 @@ function ao.init(msg, env)
 
   ao.outbox = {Output = {}, Messages = {}, Spawns = {}, Assignments = {}}
   ao.env = env
+  ao.msg = msg
 
   ao.normalize(msg)
 

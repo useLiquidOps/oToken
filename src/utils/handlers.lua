@@ -81,11 +81,23 @@ end
 -- @tparam {table | nil} timeout Timeout after which the handler will error
 function handlers.receive(pattern, timeout)
   local self = coroutine.running()
+  local errorHandler = handlers.currentErrorHandler
+  local currentMsg = ao.msg
+  local currentEnv = ao.env
+
   local function resume(msg, expired)
     -- If the result of the resumed coroutine is an error then we should bubble it up to the process
     local _, success, errmsg = coroutine.resume(self, msg, expired)
 
-    assert(success, errmsg)
+    -- if the handler expired and it throws an error
+    -- the error should not stop the main process execution.
+    -- in this case, we utilize the saved error handler
+    -- or just send the error
+    if expired and not success then
+      errorHandler(currentMsg, currentEnv, errmsg)
+    else
+      assert(success, errmsg)
+    end
   end
 
   handlers.advanced({
@@ -262,6 +274,18 @@ function handlers.setActive(name, status)
 
   -- reverse provided status
   handlers.list[idx].inactive = not status
+end
+
+-- Default error handler for handlers. It replies to the
+-- original message with the error
+function handlers.defaultErrorHandler(msg, _, err)
+  local prettyError, rawError = utils.prettyError(err)
+
+  msg.reply({
+    Action = msg.Action and msg.Action .. "-Error" or nil,
+    Error = prettyError,
+    ["Raw-Error"] = rawError
+  })
 end
 
 --- Allows creating and adding a handler with advanced options using a simple configuration table
@@ -466,8 +490,13 @@ function handlers.evaluate(msg, env)
         if match < 0 then
           handled = true
         end
+
+        -- set current error handler for all handler runs
+        handlers.currentErrorHandler = o.errorHandler or handlers.defaultErrorHandler
+
         -- each handle function can accept, the msg, env
         local status, err = pcall(o.handle, msg, env)
+
         if not status then
           if not o.errorHandler then error(err)
           else
@@ -501,6 +530,9 @@ function handlers.evaluate(msg, env)
       end
     end
   end
+
+  -- reset current error handler
+  handlers.currentErrorHandler = handlers.defaultErrorHandler
 
   -- make sure the request was handled
   assert(handled, "The request could not be handled")
