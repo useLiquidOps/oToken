@@ -81,22 +81,39 @@ end
 -- @tparam {table | nil} timeout Timeout after which the handler will error
 function handlers.receive(pattern, timeout)
   local self = coroutine.running()
-  local errorHandler = handlers.currentErrorHandler
+  local currentErrorHandler = handlers.currentErrorHandler
   local currentMsg = ao.msg
   local currentEnv = ao.env
 
-  local function resume(msg, expired)
-    -- If the result of the resumed coroutine is an error then we should bubble it up to the process
-    local _, success, errmsg = coroutine.resume(self, msg, expired)
+  local function resume(msg)
+    -- continue original handler execution
+    local _, success, errmsg = coroutine.resume(self, msg)
 
-    -- if the handler expired and it throws an error
-    -- the error should not stop the main process execution.
-    -- in this case, we utilize the saved error handler
-    -- or just send the error
-    if expired and not success then
-      errorHandler(currentMsg, currentEnv, errmsg)
-    else
-      assert(success, errmsg)
+    -- if the handler throws an error, we call the original error
+    -- handler for the handler or the default, if there is none
+    if not success then
+      currentErrorHandler(currentMsg, currentEnv, errmsg)
+    end
+  end
+
+  local function expire()
+    -- protected call the error handler, so if it errors,
+    -- it still doesn't affect the main execution
+    local success, err = pcall(
+      currentErrorHandler,
+      currentMsg,
+      currentEnv,
+      "Response expired"
+    )
+
+    -- call default error handler, if the current error
+    -- handler also errored
+    if not success then
+      handlers.defaultErrorHandler(
+        currentMsg,
+        currentEnv,
+        "Response expired, but expiry was not handled: " .. err
+      )
     end
   end
 
@@ -106,12 +123,11 @@ function handlers.receive(pattern, timeout)
     pattern = pattern,
     maxRuns = 1,
     timeout = timeout,
-    handle = function (msg)
-      resume(msg, false)
-    end,
+    handle = resume,
     onRemove = function (reason)
-      if reason ~= "timeout" then return end
-      resume({}, true)
+      if reason == "timeout" then
+        expire()
+      end
     end
   })
   handlers.onceNonce = handlers.onceNonce + 1
@@ -282,7 +298,7 @@ function handlers.defaultErrorHandler(msg, _, err)
   local prettyError, rawError = utils.prettyError(err)
 
   msg.reply({
-    Action = msg.Action and msg.Action .. "-Error" or nil,
+    Action = (msg.Action or "Unknown") .. "-Error",
     Error = prettyError,
     ["Raw-Error"] = rawError
   })
