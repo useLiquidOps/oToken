@@ -38,7 +38,9 @@ describe("Borrowing", () => {
   it("Rejects borrow if the user is already in the queue in the controller", async () => {
     const msg = createMessage({
       Action: "Borrow",
-      Quantity: "1"
+      Quantity: "1",
+      From: testWallet,
+      Owner: testWallet
     });
     const queueRes = await handle(msg);
 
@@ -73,7 +75,7 @@ describe("Borrowing", () => {
     expect(res.Messages).toEqual(
       expect.arrayContaining([
         expect.objectContaining({
-          //Target: testWallet,
+          Target: testWallet,
           Tags: expect.arrayContaining([
             expect.objectContaining({
               name: "Error",
@@ -205,7 +207,7 @@ describe("Borrowing", () => {
       "Queued-User": msg.From,
       "X-Reference": queueResTags["Reference"]
     }));
-console.log(JSON.stringify(res.Messages, null, 2))
+
     expect(res.Messages).toEqual(
       expect.arrayContaining([
         expect.objectContaining({
