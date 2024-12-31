@@ -20,7 +20,7 @@ describe("Friend tests", () => {
     friend = generateArweaveAddress();
   });
 
-  test("Does not allow friend interaction from anyone other than the controller", async () => {
+  it("Does not allow friend interaction from anyone other than the controller", async () => {
     const invalidOwner = generateArweaveAddress();
 
     // expect error when trying to add a friend not from the controller
@@ -72,7 +72,7 @@ describe("Friend tests", () => {
     );
   });
 
-  test("Does not add a friend with an invalid address", async () => {
+  it("Does not add a friend with an invalid address", async () => {
     const friendAddRes = await handle(createMessage({
       Action: "Add-Friend",
       Friend: "invalid"
@@ -95,7 +95,7 @@ describe("Friend tests", () => {
     );
   });
 
-  test("Adds a new friend", async () => {
+  it("Adds a new friend", async () => {
     const friendAddRes = await handle(createMessage({
       Action: "Add-Friend",
       Friend: friend
@@ -120,7 +120,7 @@ describe("Friend tests", () => {
     );
   });
 
-  test("Lists friends correctly", async () => {
+  it("Lists friends correctly", async () => {
     const friendsListRes = await handle(createMessage({
       Action: "List-Friends"
     }));
@@ -143,7 +143,7 @@ describe("Friend tests", () => {
     );
   });
 
-  test("Errors on trying to remove an address from friends, that is not a friend", async () => {
+  it("Errors on trying to remove an address from friends, that is not a friend", async () => {
     const friendRemoveRes = await handle(createMessage({
       Action: "Remove-Friend",
       Friend: generateArweaveAddress()
@@ -166,7 +166,7 @@ describe("Friend tests", () => {
     );
   });
 
-  test("Removes friend", async () => {
+  it("Removes friend", async () => {
     const friendRemoveRes = await handle(createMessage({
       Action: "Remove-Friend",
       Friend: friend
@@ -191,7 +191,7 @@ describe("Friend tests", () => {
     );
   });
 
-  test("Lists empty friends list correctly", async () => {
+  it("Lists empty friends list correctly", async () => {
     const friendsListRes = await handle(createMessage({
       Action: "List-Friends"
     }));
@@ -224,7 +224,7 @@ describe("Config tests", () => {
     newOracle = generateArweaveAddress();
   });
 
-  test("Does not allow config interaction from anyone other than the controller", async () => {
+  it("Does not allow config interaction from anyone other than the controller", async () => {
     const invalidOwner = generateArweaveAddress();
 
     // expect error when trying to set the oracle not from the controller
@@ -300,7 +300,7 @@ describe("Config tests", () => {
     );
   });
 
-  test("Does not update oracle with an invalid address", async () => {
+  it("Does not update oracle with an invalid address", async () => {
     const res = await handle(createMessage({
       Action: "Set-Oracle",
       Oracle: "invalid"
@@ -323,7 +323,7 @@ describe("Config tests", () => {
     );
   });
 
-  test("Updates the oracle", async () => {
+  it("Updates the oracle", async () => {
     const res = await handle(createMessage({
       Action: "Set-Oracle",
       Oracle: newOracle
@@ -365,7 +365,7 @@ describe("Config tests", () => {
     );
   });
 
-  test("Does not update collateral factor with an invalid value", async () => {
+  it("Does not update collateral factor with an invalid value", async () => {
     const res = await handle(createMessage({
       Action: "Set-Collateral-Factor",
       "Collateral-Factor": "invalid"
@@ -388,7 +388,7 @@ describe("Config tests", () => {
     );
   });
 
-  test("Updates the collateral factor", async () => {
+  it("Updates the collateral factor", async () => {
     const newFactor = "3.5";
     const res = await handle(createMessage({
       Action: "Set-Collateral-Factor",
@@ -431,7 +431,7 @@ describe("Config tests", () => {
     );
   });
 
-  test("Does not update liquidation threshold with an invalid value", async () => {
+  it("Does not update liquidation threshold with an invalid value", async () => {
     const res = await handle(createMessage({
       Action: "Set-Liquidation-Threshold",
       "Liquidation-Threshold": "invalid"
@@ -454,7 +454,7 @@ describe("Config tests", () => {
     );
   });
 
-  test("Updates the liquidation threshold ratio", async () => {
+  it("Updates the liquidation threshold ratio", async () => {
     const newFactor = "3.5";
     const res = await handle(createMessage({
       Action: "Set-Liquidation-Threshold",
@@ -497,7 +497,7 @@ describe("Config tests", () => {
     );
   });
 
-  test("Does not update the value limit with an invalid value", async () => {
+  it("Does not update the value limit with an invalid value", async () => {
     const invalidQtyRes = await handle(createMessage({
       Action: "Set-Value-Limit",
       "Value-Limit": "invalid"
@@ -537,7 +537,7 @@ describe("Config tests", () => {
     );
   });
 
-  test("Updates the value limit", async () => {
+  it("Updates the value limit", async () => {
     const newValueLimit = "457385";
     const res = await handle(createMessage({
       Action: "Set-Value-Limit",
@@ -607,7 +607,7 @@ describe("Cooldown tests", () => {
 
   afterEach(() => block += cooldown + 1);
 
-  test.skip("Rejects interaction while cooldown is not over", async () => {
+  it.skip("Rejects interaction while cooldown is not over", async () => {
     // send initial mint, expect it to succeed
     const initialBlock = block;
     const initialMint = await handle(createMessage({
@@ -677,7 +677,7 @@ describe("Cooldown tests", () => {
     );
   });
 
-  test.skip("Allows interaction when cooldown is over", async () => {
+  it.skip("Allows interaction when cooldown is over", async () => {
     // send initial mint, expect it to succeed
     const initialMint = await handle(createMessage({
       Action: "Credit-Notice",

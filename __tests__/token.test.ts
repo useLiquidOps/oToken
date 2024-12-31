@@ -929,7 +929,7 @@ describe("Token standard functionalities", () => {
     );
   });
 
-  test("Prevents transferring when the transfer would require higher collateralization (loan is on friend process)", async () => {
+  it("Prevents transferring when the transfer would require higher collateralization (loan is on friend process)", async () => {
     // setup env
     const friend = generateArweaveAddress();
     const friendTicker = "TST";
