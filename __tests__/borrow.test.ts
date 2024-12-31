@@ -312,7 +312,9 @@ describe("Borrowing", () => {
           Tags: expect.arrayContaining([
             expect.objectContaining({
               name: "Error",
-              value: expect.any(String)
+              value: expect.stringContaining(
+                "Borrow quantity is above the allowed limit"
+              )
             })
           ])
         }),

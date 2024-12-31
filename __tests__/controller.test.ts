@@ -510,7 +510,9 @@ describe("Config tests", () => {
           Tags: expect.arrayContaining([
             expect.objectContaining({
               name: "Error",
-              value: expect.any(String)
+              value: expect.stringContaining(
+                "value cannot be represented by a bint"
+              )
             })
           ])
         })
@@ -529,7 +531,9 @@ describe("Config tests", () => {
           Tags: expect.arrayContaining([
             expect.objectContaining({
               name: "Error",
-              value: expect.any(String)
+              value: expect.stringContaining(
+                "Value limit must be higher than zero"
+              )
             })
           ])
         })

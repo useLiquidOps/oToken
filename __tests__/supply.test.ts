@@ -168,7 +168,9 @@ describe("Minting and providing", () => {
             }),
             expect.objectContaining({
               name: "Error",
-              value: expect.any(String)
+              value: expect.stringContaining(
+                "Mint quantity is above the allowed limit"
+              )
             }),
             expect.objectContaining({
               name: "Refund-Quantity",
@@ -523,7 +525,9 @@ describe("Redeeming and burning", () => {
           Tags: expect.arrayContaining([
             expect.objectContaining({
               name: "Error",
-              value: expect.any(String)
+              value: expect.stringContaining(
+                "Redeem return quantity is above the allowed limit"
+              )
             })
           ])
         }),
