@@ -84,6 +84,12 @@ describe("Token standard functionalities", () => {
               value: expect.toBeFloatStringEncoded()
             }),
             expect.objectContaining({
+              name: "Value-Limit",
+              value: env.Process.Tags.find(
+                ({ name }) => name === "Value-Limit"
+              )?.value
+            }),
+            expect.objectContaining({
               name: "Oracle",
               value: expect.toBeArweaveAddress()
             }),

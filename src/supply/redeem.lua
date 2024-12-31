@@ -44,6 +44,12 @@ local function redeem(msg)
     )
   end
 
+  -- validate value limit
+  assert(
+    bint.ule(rewardQty, bint(ValueLimit)),
+    "Redeem return quantity is above the allowed limit"
+  )
+
   -- make sure there is enough tokens available to redeem for
   assert(
     bint.ult(rewardQty, availableTokens),

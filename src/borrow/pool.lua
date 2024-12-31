@@ -37,6 +37,10 @@ function mod.setup(msg)
   ---@type string[]
   Friends = Friends or json.decode(ao.env.Process.Tags.Friends or "[]")
 
+  -- limit the value of an interaction
+  -- (in units of the collateral)
+  ValueLimit = ValueLimit or ao.env.Process.Tags["Value-Limit"]
+
   -- global current timestamp and block for the oracle
   Timestamp = msg.Timestamp
   Block = msg["Block-Height"]

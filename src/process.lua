@@ -127,6 +127,11 @@ local function setup_handlers()
     { From = ao.env.Process.Owner, Action = "Set-Liquidation-Threshold" },
     config.setLiquidationThreshold
   )
+  Handlers.add(
+    "controller-config-value-limit",
+    { From = ao.env.Process.Owner, Action = "Set-Value-Limit" },
+    config.setValueLimit
+  )
 
   Handlers.advanced({
     name = "liquidate-borrow",
