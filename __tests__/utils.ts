@@ -21,7 +21,8 @@ export const env: Environment = {
       { name: "Init-Rate", value: "1.5" },
       { name: "Value-Limit", value: "1000000000000000" },
       { name: "Oracle", value: "0000000000000000000000000000000000000ORACLE" },
-      { name: "Oracle-Delay-Tolerance", value: "3600000" }
+      { name: "Oracle-Delay-Tolerance", value: "3600000" },
+      { name: "Cooldown-Period", value: "0" }
     ]
   }
 };
