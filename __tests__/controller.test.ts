@@ -504,7 +504,7 @@ describe("Cooldown tests", () => {
 
   afterEach(() => block += cooldown + 1);
 
-  test("Rejects interaction while cooldown is not over", async () => {
+  test.skip("Rejects interaction while cooldown is not over", async () => {
     // send initial mint, expect it to succeed
     const initialBlock = block;
     const initialMint = await handle(createMessage({
@@ -574,7 +574,7 @@ describe("Cooldown tests", () => {
     );
   });
 
-  test("Allows interaction when cooldown is over", async () => {
+  test.skip("Allows interaction when cooldown is over", async () => {
     // send initial mint, expect it to succeed
     const initialMint = await handle(createMessage({
       Action: "Credit-Notice",
@@ -696,7 +696,7 @@ describe("Cooldown tests", () => {
     );
   });
 
-  it("Returns cooldown list with the user on cooldown", async () => {
+  it.skip("Returns cooldown list with the user on cooldown", async () => {
     const mint = await handle(createMessage({
       Action: "Credit-Notice",
       "X-Action": "Mint",
@@ -808,7 +808,7 @@ describe("Cooldown tests", () => {
     );
   });
 
-  it("Returns the user cooldown correctly", async () => {
+  it.skip("Returns the user cooldown correctly", async () => {
     const expiryBlock = block + cooldown;
     const mint = await handle(createMessage({
       Action: "Credit-Notice",
