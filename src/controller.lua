@@ -31,6 +31,15 @@ CollateralQueue = {}
 -- queue for liquidations
 LiquidationQueue = {}
 
+-- current timestamp
+Timestamp = 0
+
+Handlers.add(
+  "sync-timestamp",
+  function () return "continue" end,
+  function (msg) Timestamp = msg.Timestamp end
+)
+
 Handlers.add(
   "list",
   { From = ao.id, Action = "List" },
