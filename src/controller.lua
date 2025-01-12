@@ -471,33 +471,33 @@ end
 -- Get the price/value of a quantity of the provided assets. The function
 -- will only provide up to date values, outdated and nil values will be
 -- filtered out
----@param timestamp number Current message timestamp
+-- This function does not use a cache, like the oToken process does.
 ---@param ... PriceParam
 ---@return ResultItem[]
-function oracle.getPrice(timestamp, ...)
+function oracle.getPrice(...)
   local args = {...}
   local zero = bint.zero()
 
-  -- prices that require to be synced
+  -- token prices that require to be synced
   ---@type string[]
-  local pricesToSync = utils.map(
+  local tokenSymbols = utils.map(
     ---@param v PriceParam
     function (v) return v.ticker end,
-    utils.filter(
-      ---@param v PriceParam
-      function (v) return not PriceCache[v.ticker] and not bint.eq(v.quantity, zero) end,
-      args
-    )
+    args
   )
+
+  -- raw result data from the oracle
+  ---@type table<string, { price: number, timestamp: number }>
+  local rawRes = {}
 
   -- if the cache is disabled or there is no price
   -- data cached, fetch the price
-  if #pricesToSync > 0 then
+  if #tokenSymbols > 0 then
     ---@type string|nil
     local rawData = ao.send({
       Target =  Oracle,
       Action = "v2.Request-Latest-Data",
-      Tickers = json.encode(pricesToSync)
+      Tickers = json.encode(tokenSymbols)
     }).receive().Data
 
     -- check if there was any data returned
@@ -508,8 +508,8 @@ function oracle.getPrice(timestamp, ...)
 
     for ticker, p in pairs(data) do
       -- only add data if the timestamp is up to date
-      if p.t + MaxOracleDelay >= timestamp then
-        PriceCache[ticker] = {
+      if p.t + MaxOracleDelay >= Timestamp then
+        rawRes[ticker] = {
           price = p.v,
           timestamp = p.t
         }
@@ -524,11 +524,8 @@ function oracle.getPrice(timestamp, ...)
   for _, v in ipairs(args) do
     if not v.quantity then v.quantity = one end
     if not bint.eq(v.quantity, zero) then
-      -- get cached value
-      local cached = PriceCache[v.ticker]
-
-      -- make sure the cached value exists
-      assert(cached ~= nil, "No price returned from the oracle for " .. v.ticker)
+      -- make sure the oracle returned the price
+      assert(rawRes[v.ticker] ~= nil, "No price returned from the oracle for " .. v.ticker)
 
       -- the value of the quantity
       -- (USD price value is denominated for precision,
@@ -537,7 +534,7 @@ function oracle.getPrice(timestamp, ...)
       -- because the price data is for the non-denominated
       -- unit)
       local price = bint.udiv(
-        v.quantity * oracle.getUSDDenominated(cached.price),
+        v.quantity * oracle.getUSDDenominated(rawRes[v.ticker].price),
         -- optimize performance by repeating "0" instead of a power operation
         bint("1" .. string.rep("0", v.denomination))
       )
