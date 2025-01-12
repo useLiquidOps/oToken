@@ -205,17 +205,6 @@ Handlers.add(
       utils.values(Tokens)
     )))
 
-    -- check if user position includes the desired token
-    local selectedPosition = utils.find(
-      function (pos) return pos.From == Tokens[rewardToken] end,
-      positions
-    )
-
-    assert(
-      selectedPosition ~= nil,
-      "User does not have a position in the reward token"
-    )
-
     -- check liquidation queue
     -- (here the queues should all be synced)
     assert(
@@ -237,6 +226,27 @@ Handlers.add(
     for _, pos in ipairs(positions) do
       local symbol = pos.Tags["Collateral-Ticker"]
       local denomination = tonumber(pos.Tags["Collateral-Denomination"])
+
+      -- if this is the reward token, make sure that the
+      -- user's position is enough to pay the liquidator
+
+
+
+
+      -- TODO
+
+
+
+
+      if pos.From == rewardToken then
+        assert(
+          bint.ule(, bint(pos.Tags["Total-Collateral"])),
+          "The user does not have enough tokens in their position for this liquidation"
+        )
+      end
+
+
+      -- TODO
 
       -- convert quantities
       local capacity = bint(pos.Tags.Capacity)
@@ -282,9 +292,8 @@ Handlers.add(
     -- TODO: check if the user has enough tokens as collateral
     -- in the desired token
 
-    -- TODO: should we check collateral queue as well, or should that be a priority
 
-    -- TODO: queue the liquidation at this point, because
+    -- queue the liquidation at this point, because
     -- the user position has been checked, so the liquidation is valid
     -- we don't want anyone to be able to liquidate from this point
     table.insert(LiquidationQueue, target)
@@ -292,6 +301,8 @@ Handlers.add(
     -- TODO: timeout here? (what if this doesn't return in time, the liquidation remains in a pending state)
 
     -- liquidate the loan
+    -- TODO: ??? invalid target ??
+    -- why do we transfer with the token that was paid for the collateral
     local loanLiquidationRes = ao.send({
       Target = msg.From,
       Action = "Transfer",

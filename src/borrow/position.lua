@@ -7,12 +7,15 @@ local json = require "json"
 local mod = {}
 
 -- Get the local borrow capacity, based on the collateral in this pool
+-- and the current collateralization
 ---@param address string Address to get the borrow capacity for
----@return Bint
+---@return Bint, Bint
 function mod.getLocalBorrowCapacity(address)
+  local zero = bint.zero()
+
   -- optimize 0 results
   if not Balances[address] or Balances[address] == "0" then
-    return bint.zero()
+    return zero, zero
   end
 
   -- user oToken balance
@@ -43,7 +46,7 @@ function mod.getLocalBorrowCapacity(address)
   return bint.udiv(
     balanceValue * bint(ratioMul),
     collateralFactorWhole
-  )
+  ), balanceValue
 end
 
 -- Get the amount of tokens borrowed + owned as interest
@@ -155,7 +158,7 @@ function mod.position(msg)
   local account = msg.Tags.Recipient or msg.From
 
   -- get the capacity
-  local capacity = mod.getLocalBorrowCapacity(account)
+  local capacity, totalCollateral = mod.getLocalBorrowCapacity(account)
 
   -- get the used capacity
   local usedCapacity = mod.getLocalUsedCapacity(account)
@@ -164,6 +167,7 @@ function mod.position(msg)
     Action = "Collateralization-Response",
     Capacity = tostring(capacity),
     ["Used-Capacity"] = tostring(usedCapacity),
+    ["Total-Collateral"] = tostring(totalCollateral),
     ["Collateral-Ticker"] = CollateralTicker,
     ["Collateral-Denomination"] = tostring(CollateralDenomination)
   })
@@ -191,9 +195,12 @@ function mod.allPositions(msg)
   -- go through all users who have collateral deposited
   -- and add their position
   for address, _ in pairs(Balances) do
+    local capacity, totalCollateral = mod.getLocalBorrowCapacity(address)
+
     positions[address] = {
-      Capacity = tostring(mod.getLocalBorrowCapacity(address)),
+      Capacity = tostring(capacity),
       ["Used-Capacity"] = tostring(mod.getLocalUsedCapacity(address)),
+      ["Total-Collateral"] = tostring(totalCollateral)
     }
   end
 
@@ -209,9 +216,12 @@ function mod.allPositions(msg)
     -- do not handle positions that have
     -- already been added above
     if not positions[address] then
+      local capacity, totalCollateral = mod.getLocalBorrowCapacity(address)
+
       positions[address] = {
-        Capacity = tostring(mod.getLocalBorrowCapacity(address)),
-        ["Used-Capacity"] = tostring(mod.getLocalUsedCapacity(address))
+        Capacity = tostring(capacity),
+        ["Used-Capacity"] = tostring(mod.getLocalUsedCapacity(address)),
+        ["Total-Collateral"] = tostring(totalCollateral)
       }
     end
   end
