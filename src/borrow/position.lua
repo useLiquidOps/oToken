@@ -92,7 +92,7 @@ function mod.getGlobalCollateralization(address)
     })
     table.insert(usedCapacities, {
       ticker = msg.Tags["Collateral-Ticker"],
-      quantity = msg.Tags["Used-Capacity"],
+      quantity = bint(msg.Tags["Used-Capacity"]),
       denomination = tonumber(msg.Tags["Collateral-Denomination"])
     })
   end

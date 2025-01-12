@@ -199,6 +199,7 @@ Handlers.add(
     )
 
     -- check user position
+    ---@type Message[]
     local positions = scheduler.schedule(table.unpack(utils.map(
       function (id) return { Target = id, Action = "Position", Recipient = target } end,
       utils.values(Tokens)
@@ -217,13 +218,66 @@ Handlers.add(
 
     -- check liquidation queue
     -- (here the queues should all be synced)
-    -- TODO: find a better way to do this
     assert(
       not utils.includes(target, LiquidationQueue),
       "User is already queued for liquidation"
     )
 
-    -- TODO: convert positions to usd
+    -- get tokens that need a price fetch
+    local zero = bint.zero()
+
+    ---@type PriceParam[], PriceParam[]
+    local capacities, usedCapacities = {}, {}
+
+    -- symbols to sync
+    ---@type string[]
+    local symbols = {}
+
+    -- populate capacities, symbols
+    for _, pos in ipairs(positions) do
+      local symbol = pos.Tags["Collateral-Ticker"]
+      local denomination = tonumber(pos.Tags["Collateral-Denomination"])
+
+      -- convert quantities
+      local capacity = bint(pos.Tags.Capacity)
+      local usedCapacity = bint(pos.Tags["Used-Capacity"])
+
+      -- only sync if there is a position
+      if bint.ult(zero, capacity) or bint.ult(zero, usedCapacity) then
+        table.insert(symbols, symbol)
+        table.insert(capacities, {
+          ticker = symbol,
+          quantity = capacity,
+          denomination = denomination
+        })
+        table.insert(usedCapacities, {
+          ticker = symbol,
+          quantity = usedCapacity,
+          denomination = denomination
+        })
+      end
+    end
+
+    -- fetch prices
+    local prices = oracle.getPrices(symbols)
+
+    -- ensure health factor is >1
+    -- (health factor = capacity / usedCapacity)
+    local totalCapacity = utils.reduce(
+      function (acc, curr) return acc + curr.value end,
+      zero,
+      oracle.getValues(prices, capacities)
+    )
+    local totalUsedCapacity = utils.reduce(
+      function (acc, curr) return acc + curr.value end,
+      zero,
+      oracle.getValues(prices, usedCapacities)
+    )
+
+    assert(
+      bint.ult(totalCapacity, totalUsedCapacity),
+      "Target not eligible for liquidation"
+    )
 
     -- TODO: check if the user has enough tokens as collateral
     -- in the desired token
@@ -468,64 +522,58 @@ function scheduler.schedule(...)
   return coroutine.yield({ From = messages[#messages], ["X-Reference"] = tostring(ao.reference) })
 end
 
--- Get the price/value of a quantity of the provided assets. The function
--- will only provide up to date values, outdated and nil values will be
--- filtered out
--- This function does not use a cache, like the oToken process does.
----@param ... PriceParam
----@return ResultItem[]
-function oracle.getPrice(...)
-  local args = {...}
-  local zero = bint.zero()
+-- Get price data for an array of token symbols
+---@param symbols string[] Token symbols
+function oracle.getPrices(symbols)
+  ---@type RawPrices
+  local res = {}
 
-  -- token prices that require to be synced
-  ---@type string[]
-  local tokenSymbols = utils.map(
-    ---@param v PriceParam
-    function (v) return v.ticker end,
-    args
-  )
+  -- no tokens to sync
+  if #symbols == 0 then return res end
 
-  -- raw result data from the oracle
-  ---@type table<string, { price: number, timestamp: number }>
-  local rawRes = {}
+  ---@type string|nil
+  local rawData = ao.send({
+    Target =  Oracle,
+    Action = "v2.Request-Latest-Data",
+    Tickers = json.encode(symbols)
+  }).receive().Data
 
-  -- if the cache is disabled or there is no price
-  -- data cached, fetch the price
-  if #tokenSymbols > 0 then
-    ---@type string|nil
-    local rawData = ao.send({
-      Target =  Oracle,
-      Action = "v2.Request-Latest-Data",
-      Tickers = json.encode(tokenSymbols)
-    }).receive().Data
+  -- no price data returned
+  if not rawData or rawData == "" then return res end
 
-    -- check if there was any data returned
-    assert(rawData ~= nil and rawData ~= "", "No data returned from the oracle")
+  ---@type OracleData
+  local data = json.decode(rawData)
 
-    ---@type OracleData
-    local data = json.decode(rawData)
-
-    for ticker, p in pairs(data) do
-      -- only add data if the timestamp is up to date
-      if p.t + MaxOracleDelay >= Timestamp then
-        rawRes[ticker] = {
-          price = p.v,
-          timestamp = p.t
-        }
-      end
+  for ticker, p in pairs(data) do
+    -- only add data if the timestamp is up to date
+    if p.t + MaxOracleDelay >= Timestamp then
+      res[ticker] = {
+        price = p.v,
+        timestamp = p.t
+      }
     end
   end
 
-  ---@type ResultItem[]
+  return res
+end
+
+-- Get the value of a quantity of the provided assets. The function
+-- will only provide up to date values, outdated and nil values will be
+-- filtered out
+---@param rawPrices RawPrices Raw results from the oracle
+---@param quantities PriceParam[] Token quantities
+function oracle.getValues(rawPrices, quantities)
+  ---@type { ticker: string, value: Bint }[]
   local results = {}
 
   local one = bint.one()
-  for _, v in ipairs(args) do
+  local zero = bint.zero()
+
+  for _, v in ipairs(quantities) do
     if not v.quantity then v.quantity = one end
     if not bint.eq(v.quantity, zero) then
       -- make sure the oracle returned the price
-      assert(rawRes[v.ticker] ~= nil, "No price returned from the oracle for " .. v.ticker)
+      assert(rawPrices[v.ticker] ~= nil, "No price returned from the oracle for " .. v.ticker)
 
       -- the value of the quantity
       -- (USD price value is denominated for precision,
@@ -533,8 +581,8 @@ function oracle.getPrice(...)
       -- to the underlying asset's denomination,
       -- because the price data is for the non-denominated
       -- unit)
-      local price = bint.udiv(
-        v.quantity * oracle.getUSDDenominated(rawRes[v.ticker].price),
+      local value = bint.udiv(
+        v.quantity * oracle.getUSDDenominated(rawPrices[v.ticker].price),
         -- optimize performance by repeating "0" instead of a power operation
         bint("1" .. string.rep("0", v.denomination))
       )
@@ -542,12 +590,12 @@ function oracle.getPrice(...)
       -- add data
       table.insert(results, {
         ticker = v.ticker,
-        price = price
+        value = value
       })
     else
       table.insert(results, {
         ticker = v.ticker,
-        price = zero
+        value = zero
       })
     end
   end

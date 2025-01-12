@@ -9,6 +9,7 @@ local oracleUtils = {}
 ---@alias PriceParam { ticker: string, quantity: Bint?, denomination: number }
 ---@alias ResultItem { ticker: string, price: Bint }
 ---@alias CachedPrice { price: number, timestamp: number }
+---@alias RawPrices table<string, { price: number, timestamp: number }>
 
 ---@type HandlerFunction
 function mod.setup()
@@ -21,7 +22,7 @@ function mod.setup()
 
   -- cached price
   -- this should only be used within the same request
-  ---@type table<string, { price: number, timestamp: number }>
+  ---@type RawPrices
   PriceCache = PriceCache or {}
 end
 
