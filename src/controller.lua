@@ -308,18 +308,21 @@ Handlers.add(
     -- we don't want anyone to be able to liquidate from this point
     table.insert(LiquidationQueue, target)
 
+    -- TODO: liquidation queue might need to be moved up
+
     -- TODO: timeout here? (what if this doesn't return in time, the liquidation remains in a pending state)
+    -- TODO: this timeout can be done with a Handler that removed this coroutine
 
     -- liquidate the loan
     local loanLiquidationRes = ao.send({
-      Target = Tokens[rewardToken],
+      Target = liquidatedToken,
       Action = "Transfer",
       Quantity = msg.Tags.Quantity,
-      Recipient = Tokens[msg.From],
+      Recipient = Tokens[liquidatedToken],
       ["X-Action"] = "Liquidate-Borrow",
       ["X-Liquidator"] = liquidator,
       ["X-Target"] = target
-    }).receive(Tokens[msg.From])
+    }).receive(Tokens[liquidatedToken])
 
     -- TODO: check if the liquidation result includes
     -- any refunded tokens. if so, add a handler that
@@ -343,14 +346,25 @@ Handlers.add(
     local positionLiquidationRes = ao.send({
       Target = Tokens[rewardToken],
       Action = "Liquidate-Position",
-      Quantity = "", -- TODO
+      Quantity = tostring(expectedRewardQty),
       Liquidator = liquidator,
       ["Liquidation-Target"] = target
     }).receive()
 
-    -- TODO: if failed reset liquidation
+    -- remove from liquidation queue
+    LiquidationQueue = utils.filter(
+      function (v) return v ~= target end,
+      LiquidationQueue
+    )
 
-    -- TODO: remove from liquidation queue
+    -- check position liquidation result
+    if positionLiquidationRes.Tags.Error then
+      -- TODO: if failed reset liquidation (send back the loan liquidation)
+      -- (maybe build a system that supports a confirmation from the controller)
+      return msg.reply({
+        Error = "Failed to liquidate position (" .. positionLiquidationRes.Tags.Error .. ")"
+      })
+    end
 
     -- send confirmation to the liquidator
     ao.send({
@@ -358,7 +372,7 @@ Handlers.add(
       Action = "Liquidate-Confirmation",
       ["Liquidation-Target"] = target,
       ["From-Quantity"] = msg.Tags.Quantity,
-      ["To-Quantity"] = "" -- TODO
+      ["To-Quantity"] = tostring(expectedRewardQty)
     })
   end
 )
