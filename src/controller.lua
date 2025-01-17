@@ -34,6 +34,8 @@ LiquidationQueue = {}
 -- current timestamp
 Timestamp = 0
 
+---@alias TokenData { ticker: string, denomination: number }
+
 Handlers.add(
   "sync-timestamp",
   function () return "continue" end,
@@ -222,10 +224,25 @@ Handlers.add(
     ---@type string[]
     local symbols = {}
 
-    -- populate capacities, symbols
+    -- incoming and outgoing token data
+    ---@type TokenData, TokenData
+    local inTokenData, outTokenData = {}, {}
+
+    -- the total collateral in the user's position
+    -- for the reward token
+    local availableRewardQty = zero
+
+    -- populate capacities, symbols, incoming/outgoing token data and collateral qty
     for _, pos in ipairs(positions) do
       local symbol = pos.Tags["Collateral-Ticker"]
-      local denomination = tonumber(pos.Tags["Collateral-Denomination"])
+      local denomination = tonumber(pos.Tags["Collateral-Denomination"]) or 0
+
+      if pos.From == liquidatedToken then
+        inTokenData = { ticker = symbol, denomination = denomination }
+      elseif pos.From == rewardToken then
+        outTokenData = { ticker = symbol, denomination = denomination }
+        availableRewardQty = bint(pos.Tags["Total-Collateral"])
+      end
 
       -- convert quantities
       local capacity = bint(pos.Tags.Capacity)
@@ -271,15 +288,18 @@ Handlers.add(
     -- get token quantities
     local inQty = bint(msg.Tags.Quantity)
     local expectedRewardQty = oracle.getValueInToken(
-      -- TODO
-      { ticker = "", quantity = inQty, denomination = "" },
-      { ticker = "", denomination = "" },
+      {
+        ticker = inTokenData.ticker,
+        quantity = inQty,
+        denomination = inTokenData.denomination
+      },
+      outTokenData,
       prices
     )
 
     -- make sure that the user's position is enough to pay the liquidator
     assert(
-      bint.ule(, bint(pos.Tags["Total-Collateral"])),
+      bint.ule(expectedRewardQty, availableRewardQty),
       "The user does not have enough tokens in their position for this liquidation"
     )
 
@@ -615,7 +635,7 @@ end
 -- Get the value of one token quantity in another
 -- token quantity
 ---@param from { ticker: string, quantity: Bint, denomination: number } From token ticker, quantity and denomination
----@param to { ticker: string, denomination: number } Target token ticker and denomination
+---@param to TokenData Target token ticker and denomination
 ---@param rawPrices RawPrices Pre-fetched prices
 ---@return Bint
 function oracle.getValueInToken(from, to, rawPrices)
