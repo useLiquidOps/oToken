@@ -227,27 +227,6 @@ Handlers.add(
       local symbol = pos.Tags["Collateral-Ticker"]
       local denomination = tonumber(pos.Tags["Collateral-Denomination"])
 
-      -- if this is the reward token, make sure that the
-      -- user's position is enough to pay the liquidator
-
-
-
-
-      -- TODO
-
-
-
-
-      if pos.From == rewardToken then
-        assert(
-          bint.ule(, bint(pos.Tags["Total-Collateral"])),
-          "The user does not have enough tokens in their position for this liquidation"
-        )
-      end
-
-
-      -- TODO
-
       -- convert quantities
       local capacity = bint(pos.Tags.Capacity)
       local usedCapacity = bint(pos.Tags["Used-Capacity"])
@@ -289,9 +268,20 @@ Handlers.add(
       "Target not eligible for liquidation"
     )
 
-    -- TODO: check if the user has enough tokens as collateral
-    -- in the desired token
+    -- get token quantities
+    local inQty = bint(msg.Tags.Quantity)
+    local expectedRewardQty = oracle.getValueInToken(
+      -- TODO
+      { ticker = "", quantity = inQty, denomination = "" },
+      { ticker = "", denomination = "" },
+      prices
+    )
 
+    -- make sure that the user's position is enough to pay the liquidator
+    assert(
+      bint.ule(, bint(pos.Tags["Total-Collateral"])),
+      "The user does not have enough tokens in their position for this liquidation"
+    )
 
     -- queue the liquidation at this point, because
     -- the user position has been checked, so the liquidation is valid
@@ -301,14 +291,20 @@ Handlers.add(
     -- TODO: timeout here? (what if this doesn't return in time, the liquidation remains in a pending state)
 
     -- liquidate the loan
-    -- TODO: ??? invalid target ??
-    -- why do we transfer with the token that was paid for the collateral
     local loanLiquidationRes = ao.send({
-      Target = msg.From,
+      Target = Tokens[rewardToken],
       Action = "Transfer",
       Quantity = msg.Tags.Quantity,
-      Recipient = Tokens[msg.From]
+      Recipient = Tokens[msg.From],
+      ["X-Action"] = "Liquidate-Borrow",
+      ["X-Liquidator"] = liquidator,
+      ["X-Target"] = target
     }).receive(Tokens[msg.From])
+
+    -- TODO: check if the liquidation result includes
+    -- any refunded tokens. if so, add a handler that
+    -- forwards the tokens that were refunded to the
+    -- liquidator (on credit notice)
 
     -- check loan liquidation result
     if loanLiquidationRes.Tags.Error then
@@ -333,6 +329,8 @@ Handlers.add(
     }).receive()
 
     -- TODO: if failed reset liquidation
+
+    -- TODO: remove from liquidation queue
 
     -- send confirmation to the liquidator
     ao.send({
@@ -614,6 +612,31 @@ function oracle.getValues(rawPrices, quantities)
   return results
 end
 
+-- Get the value of one token quantity in another
+-- token quantity
+---@param from { ticker: string, quantity: Bint, denomination: number } From token ticker, quantity and denomination
+---@param to { ticker: string, denomination: number } Target token ticker and denomination
+---@param rawPrices RawPrices Pre-fetched prices
+---@return Bint
+function oracle.getValueInToken(from, to, rawPrices)
+  -- prices
+  local fromPrice = oracle.getUSDDenominated(rawPrices[from.ticker].price)
+  local toPrice = oracle.getUSDDenominated(rawPrices[to.ticker].price)
+
+  -- get value of the "from" token quantity in USD with extra precision
+  local usdValue = bint.udiv(
+    from.quantity * fromPrice,
+    bint("1" .. string.rep("0", from.denomination))
+  )
+
+  -- convert usd value to the token quantity
+  -- accouting for the denomination
+  return bint.udiv(
+    usdValue * bint("1" .. string.rep("0", to.denomination)),
+    toPrice
+  )
+end
+
 -- Get the precision used for USD biginteger values
 function oracle.getUSDDenomination() return 12 end
 
@@ -632,6 +655,7 @@ end
 
 -- Get a USD value in a 12 denominated form
 ---@param val number USD value as a floating point number
+---@return Bint
 function oracle.getUSDDenominated(val)
   local denominator = oracle.getUSDDenomination()
 
