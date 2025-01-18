@@ -46,7 +46,8 @@ function mod.liquidateBorrow(msg)
 
   -- check result, error if the position liquidation failed
   assert(
-    ,
+    not msg.Tags.Error and msg.Tags.Action == "Liquidate-Position-Confirmation",
+    "Failed to liquidate position: " .. (msg.Tags.Error or "unknown error")
   )
 
   -- repay the loan
@@ -110,6 +111,12 @@ end
 -- (reverse redeem)
 ---@type HandlerFunction
 function mod.liquidatePosition(msg)
+  -- check if the message is coming from a friend process
+  assert(
+    utils.includes(msg.From, Friends),
+    "Only a friend process is authorized to call this function"
+  )
+
   assert(
     assertions.isTokenQuantity(msg.Tags.Quantity),
     "Invalid quantity"
@@ -175,24 +182,6 @@ function mod.liquidatePosition(msg)
     Action = "Transfer",
     Quantity = tostring(quantity),
     Recipient = liquidator
-  })
-
-  -- notify liquidator
-  ao.send({
-    Target = liquidator,
-    Action = "Liquidate-Position-Confirmation",
-    ["Earned-Token"] = CollateralID,
-    ["Earned-Quantity"] = tostring(quantity),
-    ["Liquidation-Target"] = target
-  })
-
-  -- notify the liquidated user
-  ao.send({
-    Target = target,
-    Action = "Liquidate-Notice",
-    ["Liquidate-Action"] = "Position",
-    ["Liquidated-Position-Quantity"] = tostring(qtyValueInoToken),
-    Liquidator = liquidator
   })
 
   -- reply to the controller
