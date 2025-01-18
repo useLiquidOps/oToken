@@ -173,145 +173,167 @@ Handlers.add(
   "liquidate",
   { Action = "Credit-Notice", ["X-Action"] = "Liquidate" },
   function (msg)
-    -- liquidation target
-    local target = msg.Tags["X-Target"]
+    local success, targetOrError, liquidator, liquidatedToken, rewardToken, expectedRewardQty = pcall(function ()
+      -- liquidation target
+      local target = msg.Tags["X-Target"]
 
-    -- liquidator address
-    local liquidator = msg.Tags.Sender
+      -- liquidator address
+      local liquidator = msg.Tags.Sender
 
-    assert(
-      assertions.isAddress(target),
-      "Invalid liquidation target"
-    )
+      assert(
+        assertions.isAddress(target),
+        "Invalid liquidation target"
+      )
 
-    -- token to be liquidated, currently lent to the target
-    -- (the token that is paying for the loan = transferred token)
-    local liquidatedToken = msg.From
+      -- token to be liquidated, currently lent to the target
+      -- (the token that is paying for the loan = transferred token)
+      local liquidatedToken = msg.From
 
-    assert(
-      Tokens[liquidatedToken] ~= nil,
-      "Cannot liquidate the incoming token as it is not listed"
-    )
+      assert(
+        Tokens[liquidatedToken] ~= nil,
+        "Cannot liquidate the incoming token as it is not listed"
+      )
 
-    -- the token that the liquidator will earn for
-    -- paying off the loan
-    -- the user has to have a posisition in this token
-    local rewardToken = msg.Tags["X-Reward-Token"]
+      -- the token that the liquidator will earn for
+      -- paying off the loan
+      -- the user has to have a posisition in this token
+      local rewardToken = msg.Tags["X-Reward-Token"]
 
-    assert(
-      Tokens[rewardToken] ~= nil,
-      "Cannot liquidate for the reward token as it is not listed"
-    )
+      assert(
+        Tokens[rewardToken] ~= nil,
+        "Cannot liquidate for the reward token as it is not listed"
+      )
 
-    -- check user position
-    ---@type Message[]
-    local positions = scheduler.schedule(table.unpack(utils.map(
-      function (id) return { Target = id, Action = "Position", Recipient = target } end,
-      utils.values(Tokens)
-    )))
+      -- check user position
+      ---@type Message[]
+      local positions = scheduler.schedule(table.unpack(utils.map(
+        function (id) return { Target = id, Action = "Position", Recipient = target } end,
+        utils.values(Tokens)
+      )))
 
-    -- check liquidation queue
-    assert(
-      not utils.includes(target, LiquidationQueue),
-      "User is already queued for liquidation"
-    )
+      -- check liquidation queue
+      assert(
+        not utils.includes(target, LiquidationQueue),
+        "User is already queued for liquidation"
+      )
 
-    -- get tokens that need a price fetch
-    local zero = bint.zero()
+      -- get tokens that need a price fetch
+      local zero = bint.zero()
 
-    ---@type PriceParam[], PriceParam[]
-    local capacities, usedCapacities = {}, {}
+      ---@type PriceParam[], PriceParam[]
+      local capacities, usedCapacities = {}, {}
 
-    -- symbols to sync
-    ---@type string[]
-    local symbols = {}
+      -- symbols to sync
+      ---@type string[]
+      local symbols = {}
 
-    -- incoming and outgoing token data
-    ---@type TokenData, TokenData
-    local inTokenData, outTokenData = {}, {}
+      -- incoming and outgoing token data
+      ---@type TokenData, TokenData
+      local inTokenData, outTokenData = {}, {}
 
-    -- the total collateral in the user's position
-    -- for the reward token
-    local availableRewardQty = zero
+      -- the total collateral in the user's position
+      -- for the reward token
+      local availableRewardQty = zero
 
-    -- populate capacities, symbols, incoming/outgoing token data and collateral qty
-    for _, pos in ipairs(positions) do
-      local symbol = pos.Tags["Collateral-Ticker"]
-      local denomination = tonumber(pos.Tags["Collateral-Denomination"]) or 0
+      -- populate capacities, symbols, incoming/outgoing token data and collateral qty
+      for _, pos in ipairs(positions) do
+        local symbol = pos.Tags["Collateral-Ticker"]
+        local denomination = tonumber(pos.Tags["Collateral-Denomination"]) or 0
 
-      if pos.From == liquidatedToken then
-        inTokenData = { ticker = symbol, denomination = denomination }
-      elseif pos.From == rewardToken then
-        outTokenData = { ticker = symbol, denomination = denomination }
-        availableRewardQty = bint(pos.Tags["Total-Collateral"])
+        if pos.From == liquidatedToken then
+          inTokenData = { ticker = symbol, denomination = denomination }
+        elseif pos.From == rewardToken then
+          outTokenData = { ticker = symbol, denomination = denomination }
+          availableRewardQty = bint(pos.Tags["Total-Collateral"])
+        end
+
+        -- convert quantities
+        local capacity = bint(pos.Tags.Capacity)
+        local usedCapacity = bint(pos.Tags["Used-Capacity"])
+
+        -- only sync if there is a position
+        if bint.ult(zero, capacity) or bint.ult(zero, usedCapacity) then
+          table.insert(symbols, symbol)
+          table.insert(capacities, {
+            ticker = symbol,
+            quantity = capacity,
+            denomination = denomination
+          })
+          table.insert(usedCapacities, {
+            ticker = symbol,
+            quantity = usedCapacity,
+            denomination = denomination
+          })
+        end
       end
 
-      -- convert quantities
-      local capacity = bint(pos.Tags.Capacity)
-      local usedCapacity = bint(pos.Tags["Used-Capacity"])
+      -- fetch prices
+      local prices = oracle.getPrices(symbols)
 
-      -- only sync if there is a position
-      if bint.ult(zero, capacity) or bint.ult(zero, usedCapacity) then
-        table.insert(symbols, symbol)
-        table.insert(capacities, {
-          ticker = symbol,
-          quantity = capacity,
-          denomination = denomination
-        })
-        table.insert(usedCapacities, {
-          ticker = symbol,
-          quantity = usedCapacity,
-          denomination = denomination
-        })
-      end
+      -- ensure health factor is >1
+      -- (health factor = capacity / usedCapacity)
+      local totalCapacity = utils.reduce(
+        function (acc, curr) return acc + curr.value end,
+        zero,
+        oracle.getValues(prices, capacities)
+      )
+      local totalUsedCapacity = utils.reduce(
+        function (acc, curr) return acc + curr.value end,
+        zero,
+        oracle.getValues(prices, usedCapacities)
+      )
+
+      assert(
+        bint.ult(totalCapacity, totalUsedCapacity),
+        "Target not eligible for liquidation"
+      )
+
+      -- get token quantities
+      local inQty = bint(msg.Tags.Quantity)
+      local expectedRewardQty = oracle.getValueInToken(
+        {
+          ticker = inTokenData.ticker,
+          quantity = inQty,
+          denomination = inTokenData.denomination
+        },
+        outTokenData,
+        prices
+      )
+
+      -- make sure that the user's position is enough to pay the liquidator
+      assert(
+        bint.ule(expectedRewardQty, availableRewardQty),
+        "The user does not have enough tokens in their position for this liquidation"
+      )
+
+      -- check liquidation queue again
+      -- in case a liquidation has been queued
+      -- while fetching positions
+      assert(
+        not utils.includes(target, LiquidationQueue),
+        "User is already queued for liquidation"
+      )
+
+      return target, liquidator, liquidatedToken, rewardToken, expectedRewardQty
+    end)
+
+    if not success then
+      ao.send({
+        Target = liquidator,
+        Action = "Liquidate-Error",
+        Error = string.gsub(targetOrError, "%[[%w_.\" ]*%]:%d*: ", "")
+      })
+
+      return ao.send({
+        Target = liquidatedToken,
+        Action = "Transfer",
+        Quantity = msg.Tags.Quantity,
+        Recipient = liquidator
+      })
     end
 
-    -- fetch prices
-    local prices = oracle.getPrices(symbols)
-
-    -- ensure health factor is >1
-    -- (health factor = capacity / usedCapacity)
-    local totalCapacity = utils.reduce(
-      function (acc, curr) return acc + curr.value end,
-      zero,
-      oracle.getValues(prices, capacities)
-    )
-    local totalUsedCapacity = utils.reduce(
-      function (acc, curr) return acc + curr.value end,
-      zero,
-      oracle.getValues(prices, usedCapacities)
-    )
-
-    assert(
-      bint.ult(totalCapacity, totalUsedCapacity),
-      "Target not eligible for liquidation"
-    )
-
-    -- get token quantities
-    local inQty = bint(msg.Tags.Quantity)
-    local expectedRewardQty = oracle.getValueInToken(
-      {
-        ticker = inTokenData.ticker,
-        quantity = inQty,
-        denomination = inTokenData.denomination
-      },
-      outTokenData,
-      prices
-    )
-
-    -- make sure that the user's position is enough to pay the liquidator
-    assert(
-      bint.ule(expectedRewardQty, availableRewardQty),
-      "The user does not have enough tokens in their position for this liquidation"
-    )
-
-    -- check liquidation queue again
-    -- in case a liquidation has been queued
-    -- while fetching positions
-    assert(
-      not utils.includes(target, LiquidationQueue),
-      "User is already queued for liquidation"
-    )
+    -- no error was thrown
+    local target = targetOrError
 
     -- queue the liquidation at this point, because
     -- the user position has been checked, so the liquidation is valid
@@ -354,10 +376,13 @@ Handlers.add(
     )
 
     -- check loan liquidation result
-    assert(
-      not loanLiquidationRes.Tags.Error and loanLiquidationRes.Tags.Action == "Liquidate-Borrow-Confirmation",
-      loanLiquidationRes.Tags.Error
-    )
+    if loanLiquidationRes.Tags.Error or loanLiquidationRes.Tags.Action ~= "Liquidate-Borrow-Confirmation" then
+      return ao.send({
+        Target = liquidator,
+        Action = "Liquidate-Error",
+        Error = loanLiquidationRes.Tags.Error
+      })
+    end
 
     -- send confirmation to the liquidator
     ao.send({
