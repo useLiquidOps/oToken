@@ -354,17 +354,24 @@ Handlers.add(
     )
 
     -- check loan liquidation result
-    if loanLiquidationRes.Tags.Error then
-      return msg.reply({
-        Error = "Failed to liquidate loan (" .. loanLiquidationRes.Tags.Error .. ")"
-      })
-    end
+    assert(
+      not loanLiquidationRes.Tags.Error and loanLiquidationRes.Tags.Action == "Liquidate-Borrow-Confirmation",
+      loanLiquidationRes.Tags.Error
+    )
 
     -- send confirmation to the liquidator
     ao.send({
       Target = liquidator,
       Action = "Liquidate-Confirmation",
       ["Liquidation-Target"] = target,
+      ["From-Quantity"] = msg.Tags.Quantity,
+      ["To-Quantity"] = tostring(expectedRewardQty)
+    })
+
+    -- send notice to the target
+    ao.send({
+      Target = target,
+      Action = "Liquidate-Notice",
       ["From-Quantity"] = msg.Tags.Quantity,
       ["To-Quantity"] = tostring(expectedRewardQty)
     })
