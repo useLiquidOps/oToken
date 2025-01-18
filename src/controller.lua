@@ -318,13 +318,17 @@ Handlers.add(
     -- we don't want anyone to be able to liquidate from this point
     table.insert(LiquidationQueue, target)
 
-    -- TODO: liquidation queue might need to be moved up
-
     -- TODO: timeout here? (what if this doesn't return in time, the liquidation remains in a pending state)
     -- TODO: this timeout can be done with a Handler that removed this coroutine
 
+    -- liquidation reference to identify the result
+    -- (we cannot use .receive() here, since both the target
+    -- and the default response reference will change, because
+    -- of the chained messages)
+    local liquidationReference = msg.Id .. "-" .. liquidator
+
     -- liquidate the loan
-    local loanLiquidationRes = ao.send({
+    ao.send({
       Target = liquidatedToken,
       Action = "Transfer",
       Quantity = msg.Tags.Quantity,
@@ -333,48 +337,26 @@ Handlers.add(
       ["X-Liquidator"] = liquidator,
       ["X-Liquidation-Target"] = target,
       ["X-Reward-Market"] = Tokens[rewardToken],
-      ["X-Reward-Quantity"] = tostring(expectedRewardQty)
-    }).receive(Tokens[liquidatedToken])
+      ["X-Reward-Quantity"] = tostring(expectedRewardQty),
+      ["X-Liquidation-Reference"] = liquidationReference
+    })
 
-    -- TODO: check if the liquidation result includes
-    -- any refunded tokens. if so, add a handler that
-    -- forwards the tokens that were refunded to the
-    -- liquidator (on credit notice)
+    -- wait for result
+    local loanLiquidationRes = Handlers.receive({
+      From = Tokens[liquidatedToken],
+      ["Liquidation-Reference"] = liquidationReference
+    })
 
-    -- check loan liquidation result
-    if loanLiquidationRes.Tags.Error then
-      -- remove from queue
-      LiquidationQueue = utils.filter(
-        function (v) return v ~= target end,
-        LiquidationQueue
-      )
-
-      return msg.reply({
-        Error = "Failed to liquidate loan (" .. loanLiquidationRes.Tags.Error .. ")"
-      })
-    end
-
-    -- liquidate the position (transfer out the reward)
-    local positionLiquidationRes = ao.send({
-      Target = Tokens[rewardToken],
-      Action = "Liquidate-Position",
-      Quantity = tostring(expectedRewardQty),
-      Liquidator = liquidator,
-      ["Liquidation-Target"] = target
-    }).receive()
-
-    -- remove from liquidation queue
+    -- remove from queue
     LiquidationQueue = utils.filter(
       function (v) return v ~= target end,
       LiquidationQueue
     )
 
-    -- check position liquidation result
-    if positionLiquidationRes.Tags.Error then
-      -- TODO: if failed reset liquidation (send back the loan liquidation)
-      -- (maybe build a system that supports a confirmation from the controller)
+    -- check loan liquidation result
+    if loanLiquidationRes.Tags.Error then
       return msg.reply({
-        Error = "Failed to liquidate position (" .. positionLiquidationRes.Tags.Error .. ")"
+        Error = "Failed to liquidate loan (" .. loanLiquidationRes.Tags.Error .. ")"
       })
     end
 
