@@ -21,20 +21,45 @@ function mod.liquidateBorrow(msg)
   local liquidator = msg.Tags["X-Liquidator"]
 
   -- liquidation tartget
-  local target = msg.Tags["X-Target"]
+  local target = msg.Tags["X-Liquidation-Target"]
+
+  -- check if a loan can be repaid for the target
+  assert(
+    repay.canRepay(target, msg.Timestamp),
+    "Cannot liquidate a loan for this user"
+  )
+
+  -- only the exact amount is allowed to be repaid
+  assert(
+    repay.canRepayExact(target, quantity),
+    "Cannot repay with this exact quantity"
+  )
+
+  -- call the collateral process to transfer out the reward
+  ao.send({
+    Target = msg.Tags["X-Reward-Market"],
+    Action = "Liquidate-Position",
+    Quantity = msg.Tags["X-Reward-Quantity"],
+    Liquidator = liquidator,
+    ["Liquidation-Target"] = target
+  }).receive()
+
+  -- check result, error if the position liquidation failed
+  assert(
+    ,
+  )
 
   -- repay the loan
   -- execute repay
   local refundQty, actualRepaidQty = repay.repayToPool(
     target,
-    quantity,
-    msg.Timestamp
+    quantity
   )
 
   -- refund if needed
-  local needsRefund = not bint.eq(refundQty, bint.zero())
-
-  if needsRefund then
+  -- (this should never happen, because we only allow
+  -- the exact quantity to be repaid)
+  if not bint.eq(refundQty, bint.zero()) then
     ao.send({
       Target = msg.From,
       Action = "Transfer",
@@ -42,26 +67,6 @@ function mod.liquidateBorrow(msg)
       Recipient = liquidator
     })
   end
-
-  -- notify the liquidator
-  ao.send({
-    Target = liquidator,
-    Action = "Liquidate-Borrow-Confirmation",
-    ["Liquidated-Token"] = CollateralID,
-    ["Liquidated-Quantity"] = tostring(actualRepaidQty),
-    ["Refund-Quantity"] = tostring(refundQty),
-    ["Liquidation-Target"] = target
-  })
-
-  -- notify the liquidated user
-  ao.send({
-    Target = target,
-    Action = "Liquidation-Notice",
-    ["Liquidate-Action"] = "Borrow",
-    ["Liquidated-Token"] = CollateralID,
-    ["Liquidated-Quantity"] = tostring(actualRepaidQty),
-    Liquidator = liquidator
-  })
 
   -- reply to the controller
   ao.send({
@@ -83,34 +88,22 @@ function mod.refund(msg, _, err)
   local prettyError, rawError = utils.prettyError(err)
   local liquidator = msg.Tags["X-Liquidator"]
 
+  -- refund
   ao.send({
     Target = msg.From,
     Action = "Transfer",
     Quantity = msg.Tags.Quantity,
-    Recipient = msg.Tags.Sender
+    Recipient = liquidator
   })
+
+  -- reply to the controller with an error
   ao.send({
     Target = msg.Tags.Sender,
     Action = "Liquidate-Borrow-Error",
     Error = prettyError,
     ["Raw-Error"] = rawError,
-    ["Refund-Quantity"] = msg.Tags.Quantity,
-    Liquidator = msg.Tags["X-Liquidator"],
-    ["Liquidation-Target"] = msg.Tags["X-Target"],
     ["X-Reference"] = msg.Tags.Reference
   })
-
-  if liquidator then
-    ao.send({
-      Target = liquidator,
-      Action = "Liquidate-Borrow-Confirmation",
-      ["Liquidated-Token"] = CollateralID,
-      Error = prettyError,
-      ["Raw-Error"] = rawError,
-      ["Refund-Quantity"] = msg.Tags.Quantity,
-      ["Liquidation-Target"] = msg.Tags["X-Target"]
-    })
-  end
 end
 
 -- Transfers out the position to the liquidator

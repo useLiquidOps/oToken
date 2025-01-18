@@ -34,6 +34,9 @@ LiquidationQueue = {}
 -- current timestamp
 Timestamp = 0
 
+-- cached auctions
+Auctions = Auctions or {}
+
 ---@alias TokenData { ticker: string, denomination: number }
 
 Handlers.add(
@@ -181,7 +184,7 @@ Handlers.add(
       "Invalid liquidation target"
     )
 
-    -- token to be liquidated, currently loaned to the target
+    -- token to be liquidated, currently lent to the target
     -- (the token that is paying for the loan = transferred token)
     local liquidatedToken = msg.From
 
@@ -208,7 +211,6 @@ Handlers.add(
     )))
 
     -- check liquidation queue
-    -- (here the queues should all be synced)
     assert(
       not utils.includes(target, LiquidationQueue),
       "User is already queued for liquidation"
@@ -303,6 +305,14 @@ Handlers.add(
       "The user does not have enough tokens in their position for this liquidation"
     )
 
+    -- check liquidation queue again
+    -- in case a liquidation has been queued
+    -- while fetching positions
+    assert(
+      not utils.includes(target, LiquidationQueue),
+      "User is already queued for liquidation"
+    )
+
     -- queue the liquidation at this point, because
     -- the user position has been checked, so the liquidation is valid
     -- we don't want anyone to be able to liquidate from this point
@@ -321,7 +331,9 @@ Handlers.add(
       Recipient = Tokens[liquidatedToken],
       ["X-Action"] = "Liquidate-Borrow",
       ["X-Liquidator"] = liquidator,
-      ["X-Target"] = target
+      ["X-Liquidation-Target"] = target,
+      ["X-Reward-Market"] = Tokens[rewardToken],
+      ["X-Reward-Quantity"] = tostring(expectedRewardQty)
     }).receive(Tokens[liquidatedToken])
 
     -- TODO: check if the liquidation result includes
