@@ -34,7 +34,8 @@ LiquidationQueue = {}
 -- current timestamp
 Timestamp = 0
 
--- cached auctions
+-- cached auctions (position wallet address, timestamp when discovered)
+---@type table<string, number>
 Auctions = Auctions or {}
 
 ---@alias TokenData { ticker: string, denomination: number }
@@ -173,7 +174,7 @@ Handlers.add(
   "liquidate",
   { Action = "Credit-Notice", ["X-Action"] = "Liquidate" },
   function (msg)
-    local success, targetOrError, liquidator, liquidatedToken, rewardToken, expectedRewardQty = pcall(function ()
+    local success, targetOrError, liquidator, liquidatedToken, rewardToken, expectedRewardQty, removeWhenDone = pcall(function ()
       -- liquidation target
       local target = msg.Tags["X-Target"]
 
@@ -235,6 +236,9 @@ Handlers.add(
       -- for the reward token
       local availableRewardQty = zero
 
+      -- check if the user has any open positions (active loans)
+      local hasOpenPosition = false
+
       -- populate capacities, symbols, incoming/outgoing token data and collateral qty
       for _, pos in ipairs(positions) do
         local symbol = pos.Tags["Collateral-Ticker"]
@@ -265,13 +269,28 @@ Handlers.add(
             denomination = denomination
           })
         end
+
+        -- update user position indicator
+        if bint.ult(zero, usedCapacity) then
+          hasOpenPosition = true
+        end
+      end
+
+      -- check if the user has any open positions
+      if not hasOpenPosition then
+        -- remove from auctions if present
+        Auctions[target] = nil
+
+        -- error and trigger refund
+        error("User does not have an active loan")
       end
 
       -- fetch prices
       local prices = oracle.getPrices(symbols)
 
-      -- ensure health factor is >1
+      -- ensure health factor is <1 (eligible for liquidation)
       -- (health factor = capacity / usedCapacity)
+      -- the values below are in USD
       local totalCapacity = utils.reduce(
         function (acc, curr) return acc + curr.value end,
         zero,
@@ -314,16 +333,43 @@ Handlers.add(
         "User is already queued for liquidation"
       )
 
-      return target, liquidator, liquidatedToken, rewardToken, expectedRewardQty
+      -- whether or not to remove the auction after
+      -- this liquidation is complete
+      -- (the auction needs to be removed if there
+      -- will be no loans left when the liquidation is complete)
+      local removeWhenDone = utils.find(
+        ---@param c PriceParam
+        function (c)
+          if not c.quantity then return false end
+
+          -- the auction should not be removed, if the
+          -- liquidation does not pay for the entire
+          -- loan
+          if c.ticker == inTokenData.ticker then
+            return bint.ult(inQty, c.quantity)
+          end
+
+          -- the auction should not be removed if the
+          -- target has an active loan in another asset
+          -- besides the one that is liquidated currently
+          return bint.ult(zero, c.quantity)
+        end,
+        usedCapacities
+      ) ~= nil
+
+      return target, liquidator, liquidatedToken, rewardToken, expectedRewardQty, removeWhenDone
     end)
 
+    -- check if liquidation is possible
     if not success then
+      -- signal error
       ao.send({
         Target = liquidator,
         Action = "Liquidate-Error",
         Error = string.gsub(targetOrError, "%[[%w_.\" ]*%]:%d*: ", "")
       })
 
+      -- refund
       return ao.send({
         Target = liquidatedToken,
         Action = "Transfer",
@@ -334,6 +380,13 @@ Handlers.add(
 
     -- no error was thrown
     local target = targetOrError
+
+    -- since a liquidation is possible for the target
+    -- we add it to the list of discovered auctions
+    -- (if not already present)
+    if not Auctions[target] then
+      Auctions[target] = msg.Timestamp
+    end
 
     -- queue the liquidation at this point, because
     -- the user position has been checked, so the liquidation is valid
@@ -376,12 +429,20 @@ Handlers.add(
     )
 
     -- check loan liquidation result
+    -- (at this point, we do not need to refund the user
+    -- because the oToken process handles that)
     if loanLiquidationRes.Tags.Error or loanLiquidationRes.Tags.Action ~= "Liquidate-Borrow-Confirmation" then
       return ao.send({
         Target = liquidator,
         Action = "Liquidate-Error",
         Error = loanLiquidationRes.Tags.Error
       })
+    end
+
+    -- if the auction is done (no more loans to liquidate)
+    -- we need to remove it from the discovered auctions
+    if removeWhenDone then
+      Auctions[target] = nil
     end
 
     -- send confirmation to the liquidator
