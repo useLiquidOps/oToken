@@ -21,13 +21,16 @@ describe("Loan liquidation", () => {
   const loanQty = 100n;
   const rewardQty = 1000n;
 
-  beforeAll(async () => {
-    handle = await setupProcess(env);
+  beforeAll(() => {
     controller = env.Process.Owner;
     tags = normalizeTags(env.Process.Tags);
     liquidator = generateArweaveAddress();
     target = generateArweaveAddress();
     rewardMarket = generateArweaveAddress();
+  });
+
+  beforeEach(async () => {
+    handle = await setupProcess(env);
 
     // make a borrow
     await handle(createMessage({
@@ -320,8 +323,192 @@ describe("Loan liquidation", () => {
     );
   });
 
-  it("Liquidates the loan", async () => {
+  it("Partially liquidates the loan", async () => {
+    const halfQty = loanQty / 2n;
+    const liquidateReq = await handle(createMessage({
+      Owner: tags["Collateral-Id"],
+      From: tags["Collateral-Id"],
+      "From-Process": tags["Collateral-Id"],
+      Action: "Credit-Notice",
+      Sender: controller,
+      Quantity: halfQty.toString(),
+      "X-Action": "Liquidate-Borrow",
+      "X-Liquidator": liquidator,
+      "X-Liquidation-Target": target,
+      "X-Reward-Market": rewardMarket,
+      "X-Reward-Quantity": rewardQty.toString(),
+      "X-Liquidation-Reference": ref
+    }));
 
+    expect(liquidateReq.Messages).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          Target: rewardMarket,
+          Tags: expect.arrayContaining([
+            expect.objectContaining({
+              name: "Action",
+              value: "Liquidate-Position"
+            }),
+            expect.objectContaining({
+              name: "Quantity",
+              value: rewardQty.toString()
+            }),
+            expect.objectContaining({
+              name: "Liquidator",
+              value: liquidator
+            }),
+            expect.objectContaining({
+              name: "Liquidation-Target",
+              value: target
+            })
+          ])
+        })
+      ])
+    );
+
+    const res = await handle(createMessage({
+      Owner: rewardMarket,
+      From: rewardMarket,
+      "From-Process": rewardMarket,
+      Action: "Liquidate-Position-Confirmation",
+      "Liquidated-Position-Quantity": "1000", // this value does not matter here
+      "X-Reference": normalizeTags(
+        getMessageByAction("Liquidate-Position", liquidateReq.Messages)?.Tags || []
+      )["Reference"]
+    }));
+
+    expect(res.Messages).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          Target: controller,
+          Tags: expect.arrayContaining([
+            expect.objectContaining({
+              name: "Action",
+              value: "Liquidate-Borrow-Confirmation"
+            }),
+            expect.objectContaining({
+              name: "Liquidated-Quantity",
+              value: halfQty.toString()
+            }),
+            expect.objectContaining({
+              name: "Liquidator",
+              value: liquidator
+            }),
+            expect.objectContaining({
+              name: "Liquidation-Target",
+              value: target
+            }),
+            expect.objectContaining({
+              name: "Liquidation-Reference",
+              value: ref
+            })
+          ])
+        })
+      ])
+    );
+
+    // make sure that the other half of the loan is still there (active)
+    const positionRes = await handle(createMessage({
+      Action: "Position",
+      Recipient: target
+    }));
+
+    expect(positionRes.Messages).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          Tags: expect.arrayContaining([
+            expect.objectContaining({
+              name: "Used-Capacity",
+              value: halfQty.toString()
+            })
+          ])
+        })
+      ])
+    );
+  });
+
+  it("Liquidates the full loan", async () => {
+    const liquidateReq = await handle(createMessage({
+      Owner: tags["Collateral-Id"],
+      From: tags["Collateral-Id"],
+      "From-Process": tags["Collateral-Id"],
+      Action: "Credit-Notice",
+      Sender: controller,
+      Quantity: loanQty.toString(),
+      "X-Action": "Liquidate-Borrow",
+      "X-Liquidator": liquidator,
+      "X-Liquidation-Target": target,
+      "X-Reward-Market": rewardMarket,
+      "X-Reward-Quantity": rewardQty.toString(),
+      "X-Liquidation-Reference": ref
+    }));
+
+    expect(liquidateReq.Messages).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          Target: rewardMarket,
+          Tags: expect.arrayContaining([
+            expect.objectContaining({
+              name: "Action",
+              value: "Liquidate-Position"
+            }),
+            expect.objectContaining({
+              name: "Quantity",
+              value: rewardQty.toString()
+            }),
+            expect.objectContaining({
+              name: "Liquidator",
+              value: liquidator
+            }),
+            expect.objectContaining({
+              name: "Liquidation-Target",
+              value: target
+            })
+          ])
+        })
+      ])
+    );
+
+    const res = await handle(createMessage({
+      Owner: rewardMarket,
+      From: rewardMarket,
+      "From-Process": rewardMarket,
+      Action: "Liquidate-Position-Confirmation",
+      "Liquidated-Position-Quantity": "1000", // this value does not matter here
+      "X-Reference": normalizeTags(
+        getMessageByAction("Liquidate-Position", liquidateReq.Messages)?.Tags || []
+      )["Reference"]
+    }));
+
+    expect(res.Messages).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          Target: controller,
+          Tags: expect.arrayContaining([
+            expect.objectContaining({
+              name: "Action",
+              value: "Liquidate-Borrow-Confirmation"
+            }),
+            expect.objectContaining({
+              name: "Liquidated-Quantity",
+              value: loanQty.toString()
+            }),
+            expect.objectContaining({
+              name: "Liquidator",
+              value: liquidator
+            }),
+            expect.objectContaining({
+              name: "Liquidation-Target",
+              value: target
+            }),
+            expect.objectContaining({
+              name: "Liquidation-Reference",
+              value: ref
+            })
+          ])
+        })
+      ])
+    );
   });
 });
 
