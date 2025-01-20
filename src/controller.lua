@@ -627,6 +627,16 @@ Handlers.add(
   end
 )
 
+Handlers.add(
+  "get-auctions",
+  { Action = "Get-Auctions" },
+  function (msg)
+    msg.reply({
+      Data = next(Auctions) ~= nil and json.encode(Auctions) or "{}"
+    })
+  end
+)
+
 -- Verify if the provided value is an address
 ---@param addr any Address to verify
 ---@return boolean
