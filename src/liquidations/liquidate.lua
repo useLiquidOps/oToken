@@ -141,7 +141,10 @@ function mod.liquidatePosition(msg)
   -- amount of oTokens owned
   local balance = bint(Balances[target] or 0)
 
-  assert(bint.eq(balance, bint.zero()), "Not enough tokens owned by the user to liquidate")
+  assert(
+    bint.ult(bint.zero(), balance),
+    "The liquidation target does not have collateral in this token"
+  )
 
   -- helpers
   local totalSupply = bint(TotalSupply)
@@ -155,19 +158,16 @@ function mod.liquidatePosition(msg)
   )
 
   -- get supplied quantity value
-  -- total supply is 100
-  -- total pooled is 5
-  -- 5 incoming = 100 oToken
   -- (total supply / total pooled) * incoming
   local qtyValueInoToken = bint.udiv(
-    totalSupply * totalPooled,
-    quantity
+    totalSupply * quantity,
+    totalPooled
   )
 
   -- validate with oToken balance
   assert(
     bint.ule(qtyValueInoToken, balance),
-    "The user owns less oTokens than the supplied quantity's worth"
+    "The liquidation target owns less oTokens than the supplied quantity's worth"
   )
 
   -- liquidate position by updating the reserves, etc.
