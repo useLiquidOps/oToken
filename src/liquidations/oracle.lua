@@ -62,7 +62,7 @@ function mod.getPrice(...)
   if #pricesToSync > 0 then
     ---@type string|nil
     local rawData = ao.send({
-      Target =  Oracle,
+      Target = Oracle,
       Action = "v2.Request-Latest-Data",
       Tickers = json.encode(pricesToSync)
     }).receive(nil, Block + 1).Data

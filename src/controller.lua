@@ -21,8 +21,6 @@ ProtocolLogo = ""
 ---@type table<string, string>
 Tokens = {}
 
--- TODO: should queues have timeouts?
-
 -- queue for operations in oTokens that involve
 -- the collateral/collateralization
 ---@type string[]
@@ -44,6 +42,72 @@ Handlers.add(
   "sync-timestamp",
   function () return "continue" end,
   function (msg) Timestamp = msg.Timestamp end
+)
+
+Handlers.add(
+  "sync-auctions",
+  { Action = "Cron" },
+  function ()
+    -- get all user positions
+    ---@type Message[]
+    local rawPositions = scheduler.schedule(table.unpack(utils.map(
+      function (id) return { Target = id, Action = "Positions" } end,
+      utils.values(Tokens)
+    )))
+
+    -- fetch prices
+    local rawPrices = oracle.getPrices(utils.map(
+      ---@param p Message
+      function (p) return p.Tags["Collateral-Ticker"] end,
+      rawPositions
+    ))
+
+    -- protocol positions in USD
+    ---@type table<string, { capacity: Bint, usedCapacity: Bint }>
+    local allPositions = {}
+    local zero = bint.zero()
+
+    -- add positions
+    for _, market in ipairs(rawPositions) do
+      ---@type table<string, { Capacity: string, ["Used-Capacity"]: string, ["Total-Collateral"]: string }>
+      local marketPositions = json.decode(market.Data)
+      local ticker = market.Tags["Collateral-Ticker"]
+      local denomination = tonumber(market.Tags["Collateral-Denomination"]) or 0
+
+      -- add each position in the market by their usd value
+      for address, position in pairs(marketPositions) do
+        local posCapacity = bint(position.Capacity)
+        local posUsedCapacity = bint(position["Used-Capacity"])
+
+        local hasCollateral = bint.ult(zero, posCapacity)
+        local hasLoan = bint.ult(zero, posUsedCapacity)
+
+        if hasCollateral or hasLoan then
+          allPositions[address] = allPositions[address] or { capacity = zero, usedCapacity = zero }
+
+          -- add capacity
+          if hasCollateral then
+            allPositions[address].capacity = allPositions[address].capacity + oracle.getValue(
+              rawPrices,
+              posCapacity,
+              ticker,
+              denomination
+            )
+          end
+
+          -- add used capacity
+          if hasLoan then
+            allPositions[address].usedCapacity = allPositions[address].usedCapacity + oracle.getValue(
+              rawPrices,
+              posUsedCapacity,
+              ticker,
+              denomination
+            )
+          end
+        end
+      end
+    end
+  end
 )
 
 Handlers.add(
@@ -687,7 +751,22 @@ function oracle.getPrices(symbols)
   return res
 end
 
--- Get the value of a quantity of the provided assets. The function
+-- Get the value of a single quantity
+---@param rawPrices RawPrices Raw price data
+---@param quantity Bint Token quantity
+---@param ticker string Token ticker
+---@param denomination number Token denomination
+function oracle.getValue(rawPrices, quantity, ticker, denomination)
+  local res = oracle.getValues(rawPrices, {
+    { ticker = ticker, denomination = denomination, quantity = quantity }
+  })
+
+  assert(res[1] ~= nil, "No price calculated")
+
+  return res[1].value
+end
+
+-- Get the value of quantities of the provided assets. The function
 -- will only provide up to date values, outdated and nil values will be
 -- filtered out
 ---@param rawPrices RawPrices Raw results from the oracle
