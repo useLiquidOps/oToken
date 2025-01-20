@@ -261,7 +261,7 @@ Handlers.add(
       local liquidator = msg.Tags.Sender
 
       assert(
-        assertions.isAddress(target),
+        assertions.isAddress(target) and target ~= liquidator,
         "Invalid liquidation target"
       )
 

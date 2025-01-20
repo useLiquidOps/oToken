@@ -36,7 +36,7 @@ function mod.liquidateBorrow(msg)
   )
 
   -- call the collateral process to transfer out the reward
-  ao.send({
+  local liquidatePos = ao.send({
     Target = msg.Tags["X-Reward-Market"],
     Action = "Liquidate-Position",
     Quantity = msg.Tags["X-Reward-Quantity"],
@@ -46,8 +46,8 @@ function mod.liquidateBorrow(msg)
 
   -- check result, error if the position liquidation failed
   assert(
-    not msg.Tags.Error and msg.Tags.Action == "Liquidate-Position-Confirmation",
-    "Failed to liquidate position: " .. (msg.Tags.Error or "unknown error")
+    not liquidatePos.Tags.Error and liquidatePos.Tags.Action == "Liquidate-Position-Confirmation",
+    "Failed to liquidate position: " .. (liquidatePos.Tags.Error or "unknown error")
   )
 
   -- repay the loan
@@ -74,9 +74,8 @@ function mod.liquidateBorrow(msg)
     Target = msg.Tags.Sender,
     Action = "Liquidate-Borrow-Confirmation",
     ["Liquidated-Quantity"] = tostring(actualRepaidQty),
-    ["Refund-Quantity"] = msg.Tags.Quantity,
-    Liquidator = msg.Tags["X-Liquidator"],
-    ["Liquidation-Target"] = msg.Tags["X-Target"],
+    Liquidator = liquidator,
+    ["Liquidation-Target"] = target,
     ["Liquidation-Reference"] = msg.Tags["X-Liquidation-Reference"]
   })
 end
