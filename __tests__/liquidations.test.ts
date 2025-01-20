@@ -19,6 +19,7 @@ describe("Loan liquidation", () => {
   let target: string;
   let rewardMarket: string;
   const loanQty = 100n;
+  const rewardQty = 1000n;
 
   beforeAll(async () => {
     handle = await setupProcess(env);
@@ -78,6 +79,7 @@ describe("Loan liquidation", () => {
       "X-Liquidator": liquidator,
       "X-Liquidation-Target": target,
       "X-Reward-Market": rewardMarket,
+      "X-Reward-Quantity": rewardQty.toString(),
       "X-Liquidation-Reference": ref
     }));
 
@@ -107,17 +109,19 @@ describe("Loan liquidation", () => {
   });
 
   it("Rejects liquidation for a user that does not have an active loan", async () => {
+    const qty = "10";
     const res = await handle(createMessage({
       Owner: tags["Collateral-Id"],
       From: tags["Collateral-Id"],
       "From-Process": tags["Collateral-Id"],
       Action: "Credit-Notice",
       Sender: controller,
-      Quantity: "10",
+      Quantity: qty,
       "X-Action": "Liquidate-Borrow",
       "X-Liquidator": liquidator,
       "X-Liquidation-Target": generateArweaveAddress(),
       "X-Reward-Market": rewardMarket,
+      "X-Reward-Quantity": rewardQty.toString(),
       "X-Liquidation-Reference": ref
     }));
 
@@ -141,17 +145,179 @@ describe("Loan liquidation", () => {
               )
             })
           ])
+        }),
+        expect.objectContaining({
+          Target: tags["Collateral-Id"],
+          Tags: expect.arrayContaining([
+            expect.objectContaining({
+              name: "Action",
+              value: "Transfer"
+            }),
+            expect.objectContaining({
+              name: "Quantity",
+              value: qty
+            }),
+            expect.objectContaining({
+              name: "Recipient",
+              value: liquidator
+            })
+          ])
         })
       ])
     );
   });
 
   it("Rejects liquidation with a higher quantity than the loan", async () => {
+    const higherQty = loanQty + 1n;
+    const res = await handle(createMessage({
+      Owner: tags["Collateral-Id"],
+      From: tags["Collateral-Id"],
+      "From-Process": tags["Collateral-Id"],
+      Action: "Credit-Notice",
+      Sender: controller,
+      Quantity: higherQty.toString(),
+      "X-Action": "Liquidate-Borrow",
+      "X-Liquidator": liquidator,
+      "X-Liquidation-Target": target,
+      "X-Reward-Market": rewardMarket,
+      "X-Reward-Quantity": rewardQty.toString(),
+      "X-Liquidation-Reference": ref
+    }));
 
+    expect(res.Messages).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          Target: controller,
+          Tags: expect.arrayContaining([
+            expect.objectContaining({
+              name: "Action",
+              value: "Liquidate-Borrow-Error"
+            }),
+            expect.objectContaining({
+              name: "Liquidation-Reference",
+              value: ref
+            }),
+            expect.objectContaining({
+              name: "Error",
+              value: expect.stringContaining(
+                "The user has less tokens loaned than repaid"
+              )
+            })
+          ])
+        }),
+        expect.objectContaining({
+          Target: tags["Collateral-Id"],
+          Tags: expect.arrayContaining([
+            expect.objectContaining({
+              name: "Action",
+              value: "Transfer"
+            }),
+            expect.objectContaining({
+              name: "Quantity",
+              value: higherQty.toString()
+            }),
+            expect.objectContaining({
+              name: "Recipient",
+              value: liquidator
+            })
+          ])
+        })
+      ])
+    );
   });
 
   it("Rejects liquidation if the position liquidation fails", async () => {
+    const liquidateReq = await handle(createMessage({
+      Owner: tags["Collateral-Id"],
+      From: tags["Collateral-Id"],
+      "From-Process": tags["Collateral-Id"],
+      Action: "Credit-Notice",
+      Sender: controller,
+      Quantity: loanQty.toString(),
+      "X-Action": "Liquidate-Borrow",
+      "X-Liquidator": liquidator,
+      "X-Liquidation-Target": target,
+      "X-Reward-Market": rewardMarket,
+      "X-Reward-Quantity": rewardQty.toString(),
+      "X-Liquidation-Reference": ref
+    }));
 
+    expect(liquidateReq.Messages).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          Target: rewardMarket,
+          Tags: expect.arrayContaining([
+            expect.objectContaining({
+              name: "Action",
+              value: "Liquidate-Position"
+            }),
+            expect.objectContaining({
+              name: "Quantity",
+              value: rewardQty.toString()
+            }),
+            expect.objectContaining({
+              name: "Liquidator",
+              value: liquidator
+            }),
+            expect.objectContaining({
+              name: "Liquidation-Target",
+              value: target
+            })
+          ])
+        })
+      ])
+    );
+
+    const errorMsg = "Some error"
+    const res = await handle(createMessage({
+      Owner: rewardMarket,
+      From: rewardMarket,
+      "From-Process": rewardMarket,
+      Action: "Liquidate-Position-Error",
+      Error: errorMsg,
+      "X-Reference": normalizeTags(
+        getMessageByAction("Liquidate-Position", liquidateReq.Messages)?.Tags || []
+      )["Reference"]
+    }));
+
+    expect(res.Messages).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          Target: controller,
+          Tags: expect.arrayContaining([
+            expect.objectContaining({
+              name: "Action",
+              value: "Liquidate-Borrow-Error"
+            }),
+            expect.objectContaining({
+              name: "Liquidation-Reference",
+              value: ref
+            }),
+            expect.objectContaining({
+              name: "Error",
+              value: expect.stringContaining(errorMsg)
+            })
+          ])
+        }),
+        expect.objectContaining({
+          Target: tags["Collateral-Id"],
+          Tags: expect.arrayContaining([
+            expect.objectContaining({
+              name: "Action",
+              value: "Transfer"
+            }),
+            expect.objectContaining({
+              name: "Quantity",
+              value: loanQty.toString()
+            }),
+            expect.objectContaining({
+              name: "Recipient",
+              value: liquidator
+            })
+          ])
+        })
+      ])
+    );
   });
 
   it("Liquidates the loan", async () => {

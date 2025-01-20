@@ -32,7 +32,7 @@ function mod.liquidateBorrow(msg)
   -- only the exact amount is allowed to be repaid
   assert(
     repay.canRepayExact(target, quantity),
-    "Cannot repay with this exact quantity"
+    "The user has less tokens loaned than repaid"
   )
 
   -- call the collateral process to transfer out the reward
