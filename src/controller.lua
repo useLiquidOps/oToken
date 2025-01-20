@@ -47,7 +47,7 @@ Handlers.add(
 Handlers.add(
   "sync-auctions",
   { Action = "Cron" },
-  function ()
+  function (msg)
     -- get all user positions
     ---@type Message[]
     local rawPositions = scheduler.schedule(table.unpack(utils.map(
@@ -105,6 +105,21 @@ Handlers.add(
             )
           end
         end
+      end
+    end
+
+    -- now find the positions that can be auctioned
+    -- and update existing auctions
+    for address, position in pairs(allPositions) do
+      -- check if the position can be liquidated
+      if bint.ult(position.capacity, position.usedCapacity) then
+        -- if the liquidation has just been discovered, add it to the auctions
+        if Auctions[address] == nil then
+          Auctions[address] = msg.Timestamp
+        end
+      elseif Auctions[address] ~= nil then
+        -- remove auction, it is no longer necessary
+        Auctions[address] = nil
       end
     end
   end
