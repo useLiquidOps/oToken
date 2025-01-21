@@ -259,32 +259,31 @@ Handlers.add(
   "liquidate",
   { Action = "Credit-Notice", ["X-Action"] = "Liquidate" },
   function (msg)
-    local success, targetOrError, liquidator, liquidatedToken, rewardToken, expectedRewardQty, removeWhenDone = pcall(function ()
-      -- liquidation target
-      local target = msg.Tags["X-Target"]
+    -- liquidation target
+    local target = msg.Tags["X-Target"]
 
-      -- liquidator address
-      local liquidator = msg.Tags.Sender
+    -- liquidator address
+    local liquidator = msg.Tags.Sender
 
+    -- token to be liquidated, currently lent to the target
+    -- (the token that is paying for the loan = transferred token)
+    local liquidatedToken = msg.From
+
+    -- the token that the liquidator will earn for
+    -- paying off the loan
+    -- the user has to have a posisition in this token
+    local rewardToken = msg.Tags["X-Reward-Token"]
+
+    -- prepare liquidation, check required environment
+    local success, errorMsg, expectedRewardQty, removeWhenDone = pcall(function ()
       assert(
         assertions.isAddress(target) and target ~= liquidator,
         "Invalid liquidation target"
       )
-
-      -- token to be liquidated, currently lent to the target
-      -- (the token that is paying for the loan = transferred token)
-      local liquidatedToken = msg.From
-
       assert(
         Tokens[liquidatedToken] ~= nil,
         "Cannot liquidate the incoming token as it is not listed"
       )
-
-      -- the token that the liquidator will earn for
-      -- paying off the loan
-      -- the user has to have a posisition in this token
-      local rewardToken = msg.Tags["X-Reward-Token"]
-
       assert(
         Tokens[rewardToken] ~= nil,
         "Cannot liquidate for the reward token as it is not listed"
@@ -487,7 +486,7 @@ Handlers.add(
         usedCapacities
       ) ~= nil
 
-      return target, liquidator, liquidatedToken, rewardToken, expectedRewardQty, removeWhenDone
+      return "", expectedRewardQty, removeWhenDone
     end)
 
     -- check if liquidation is possible
@@ -496,20 +495,17 @@ Handlers.add(
       ao.send({
         Target = liquidator,
         Action = "Liquidate-Error",
-        Error = string.gsub(targetOrError, "%[[%w_.\" ]*%]:%d*: ", "")
+        Error = string.gsub(errorMsg, "%[[%w_.\" ]*%]:%d*: ", "")
       })
 
       -- refund
       return ao.send({
-        Target = liquidatedToken,
+        Target = msg.From,
         Action = "Transfer",
         Quantity = msg.Tags.Quantity,
         Recipient = liquidator
       })
     end
-
-    -- no error was thrown
-    local target = targetOrError
 
     -- since a liquidation is possible for the target
     -- we add it to the list of discovered auctions
