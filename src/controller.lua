@@ -431,18 +431,22 @@ Handlers.add(
       local discount = (DiscountInterval - timePassed) * MaxDiscount // DiscountInterval
 
       -- update the expected reward quantity using the discount
-      local expectedRewardQty = oracle.getValueInToken(
-        {
-          ticker = inTokenData.ticker,
-          quantity = bint.udiv(
-            inQty * bint(100 - discount),
-            bint(100)
-          ),
-          denomination = inTokenData.denomination
-        },
-        outTokenData,
-        prices
-      )
+      local expectedRewardQty = marketValueInQty
+
+      if discount > 0 then
+        expectedRewardQty = oracle.getValueInToken(
+          {
+            ticker = inTokenData.ticker,
+            quantity = bint.udiv(
+              inQty * bint(100 - discount),
+              bint(100)
+            ),
+            denomination = inTokenData.denomination
+          },
+          outTokenData,
+          prices
+        )
+      end
 
       -- if the discount is higher than the position in the
       -- reward token, we need to update it with the maximum
