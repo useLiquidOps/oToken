@@ -8,39 +8,39 @@ local oracle = {}
 local tokens = {}
 
 -- oToken module ID
-Module = ""
+Module = Module or ""
 
 -- oracle id and tolerance
-Oracle = ""
-MaxOracleDelay = 1200000
+Oracle = Oracle or ""
+MaxOracleDelay = MaxOracleDelay or 1200000
 
 -- liquidops logo tx id
-ProtocolLogo = ""
+ProtocolLogo = ProtocolLogo or ""
 
 -- token - oToken map
 ---@type table<string, string>
-Tokens = {}
+Tokens = Tokens or {}
 
 -- queue for operations in oTokens that involve
 -- the collateral/collateralization
 ---@type string[]
-CollateralQueue = {}
+CollateralQueue = CollateralQueue or {}
 
 -- queue for liquidations
-LiquidationQueue = {}
+LiquidationQueue = LiquidationQueue or {}
 
 -- current timestamp
-Timestamp = 0
+Timestamp = Timestamp or 0
 
 -- cached auctions (position wallet address, timestamp when discovered)
 ---@type table<string, number>
 Auctions = Auctions or {}
 
 -- maximum discount that can be applied to a loan in percentages
-MaxDiscount = 10
+MaxDiscount = MaxDiscount or 10
 
 -- the period till the auction reaches the minimum discount (market price)
-DiscountInterval = 1000 * 60 * 60 -- 1 hour
+DiscountInterval = DiscountInterval or 1000 * 60 * 60 -- 1 hour
 
 ---@alias TokenData { ticker: string, denomination: number }
 
