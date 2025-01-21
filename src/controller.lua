@@ -36,6 +36,12 @@ Timestamp = 0
 ---@type table<string, number>
 Auctions = Auctions or {}
 
+-- maximum discount that can be applied to a loan in percentages
+MaxDiscount = 10
+
+-- the period till the auction reaches the minimum discount (market price)
+DiscountInterval = 1000 * 60 * 60 -- 1 hour
+
 ---@alias TokenData { ticker: string, denomination: number }
 
 Handlers.add(
@@ -388,7 +394,9 @@ Handlers.add(
 
       -- get token quantities
       local inQty = bint(msg.Tags.Quantity)
-      local expectedRewardQty = oracle.getValueInToken(
+
+      -- market value of the liquidation
+      local marketValueInQty = oracle.getValueInToken(
         {
           ticker = inTokenData.ticker,
           quantity = inQty,
@@ -399,10 +407,49 @@ Handlers.add(
       )
 
       -- make sure that the user's position is enough to pay the liquidator
+      -- (at least the market value of the tokens)
       assert(
-        bint.ule(expectedRewardQty, availableRewardQty),
+        bint.ule(marketValueInQty, availableRewardQty),
         "The user does not have enough tokens in their position for this liquidation"
       )
+
+      -- apply dutch auction model
+      -- time passed in milliseconds since the discovery of this auction
+      local timePassed = msg.Timestamp - (Auctions[target] or msg.Timestamp)
+
+      -- if the time passed is higher than the discount,
+      -- we reached the minimum discount price, so we
+      -- set the time passed to the corresponding interval
+      if timePassed > DiscountInterval then
+        timePassed = DiscountInterval
+      end
+
+      -- currnet discount:
+      -- a linear function of the time passed,
+      -- the discount becomes 0 when the discount
+      -- interval is over
+      local discount = (DiscountInterval - timePassed) * MaxDiscount // DiscountInterval
+
+      -- update the expected reward quantity using the discount
+      local expectedRewardQty = oracle.getValueInToken(
+        {
+          ticker = inTokenData.ticker,
+          quantity = bint.udiv(
+            inQty * bint(100 - discount),
+            bint(100)
+          ),
+          denomination = inTokenData.denomination
+        },
+        outTokenData,
+        prices
+      )
+
+      -- if the discount is higher than the position in the
+      -- reward token, we need to update it with the maximum
+      -- possible amount
+      if bint.ult(availableRewardQty, expectedRewardQty) then
+        expectedRewardQty = availableRewardQty
+      end
 
       -- check liquidation queue again
       -- in case a liquidation has been queued
