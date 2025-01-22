@@ -14,14 +14,19 @@ function repay.handler(msg)
   -- quantity of tokens supplied
   local quantity = bint(msg.Tags.Quantity)
 
-  -- repay on behalf of someone else
+  -- allow repaying on behalf of someone else
   local target = msg.Tags["X-On-Behalf"] or msg.Tags.Sender
+
+  -- check if a loan can be repaid for the target
+  assert(
+    repay.canRepay(target, msg.Timestamp),
+    "Cannot repay a loan for this user"
+  )
 
   -- execute repay
   local refundQty, actualRepaidQty = repay.repayToPool(
     target,
-    quantity,
-    msg.Timestamp
+    quantity
   )
 
   -- refund the sender, if necessary
@@ -75,35 +80,53 @@ function repay.error(msg, _, err)
   })
 end
 
--- This function executes a repay. This is used both
--- in the actual repay handler, as well as the borrow
--- liquidation
--- It returns the amount of tokens that need to be
--- refunded and the amount of tokens repaid
+-- Check if a repay can be executed with the given params.
+-- This should be called before repay.repayToPool()
 ---@param target string Target to repay the loan for
----@param quantity Bint Amount of tokens to be repaid
 ---@param timestamp number Message timestamp
-function repay.repayToPool(target, quantity, timestamp)
-  assert(
-    assertions.isAddress(target),
-    "Invalid repay target address"
-  )
+function repay.canRepay(target, timestamp)
+  if not assertions.isAddress(target) then return false end
 
   -- fixup interest
   if not Interests[target] then
     Interests[target] = { value = "0", updated = timestamp }
   end
 
+  local zero = bint.zero()
+
+  return bint.ult(zero, bint(Loans[target] or "0")) or bint.ult(zero, bint(Interests[target].value))
+end
+
+-- Check if the exact provided quantity can be repaid
+-- This should only be called after repay.canRepay()
+---@param target string Target to repay the loan for
+---@param quantity Bint Amount of tokens to be repaid
+function repay.canRepayExact(target, quantity)
+  -- borrow & interest balances for the target
+  local borrowBalance = bint(Loans[target] or "0")
+  local interestBalance = bint(Interests[target].value)
+
+  return bint.ule(
+    quantity,
+    borrowBalance + interestBalance
+  )
+end
+
+-- This function executes a repay. This is used both
+-- in the actual repay handler, as well as the borrow
+-- liquidation
+-- It returns the amount of tokens that need to be
+-- refunded and the amount of tokens repaid
+-- Make sure to call repay.canRepay() with the same
+-- params before calling this function
+---@param target string Target to repay the loan for
+---@param quantity Bint Amount of tokens to be repaid
+function repay.repayToPool(target, quantity)
   -- borrow & interest balances for the target
   local borrowBalance = bint(Loans[target] or "0")
   local interestBalance = bint(Interests[target].value)
 
   local zero = bint.zero()
-
-  assert(
-    bint.ult(zero, borrowBalance) or bint.ult(zero, interestBalance),
-    "No outstanding loans or interest to repay for " .. target
-  )
 
   -- refund quantity, in case the user overpaid
   local refundQty = zero

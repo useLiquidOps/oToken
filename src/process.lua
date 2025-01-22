@@ -176,7 +176,7 @@ local function setup_handlers()
   })
   Handlers.add(
     "liquidate-position",
-    { From = ao.env.Process.Owner, Action = "Liquidate-Position" },
+    Handlers.utils.hasMatchingTag("Action", "Liquidate-Position"),
     liquidate.liquidatePosition
   )
 

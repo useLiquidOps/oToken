@@ -21,20 +21,46 @@ function mod.liquidateBorrow(msg)
   local liquidator = msg.Tags["X-Liquidator"]
 
   -- liquidation tartget
-  local target = msg.Tags["X-Target"]
+  local target = msg.Tags["X-Liquidation-Target"]
+
+  -- check if a loan can be repaid for the target
+  assert(
+    repay.canRepay(target, msg.Timestamp),
+    "Cannot liquidate a loan for this user"
+  )
+
+  -- only the exact amount is allowed to be repaid
+  assert(
+    repay.canRepayExact(target, quantity),
+    "The user has less tokens loaned than repaid"
+  )
+
+  -- call the collateral process to transfer out the reward
+  local liquidatePos = ao.send({
+    Target = msg.Tags["X-Reward-Market"],
+    Action = "Liquidate-Position",
+    Quantity = msg.Tags["X-Reward-Quantity"],
+    Liquidator = liquidator,
+    ["Liquidation-Target"] = target
+  }).receive()
+
+  -- check result, error if the position liquidation failed
+  assert(
+    not liquidatePos.Tags.Error and liquidatePos.Tags.Action == "Liquidate-Position-Confirmation",
+    "Failed to liquidate position: " .. (liquidatePos.Tags.Error or "unknown error")
+  )
 
   -- repay the loan
   -- execute repay
   local refundQty, actualRepaidQty = repay.repayToPool(
     target,
-    quantity,
-    msg.Timestamp
+    quantity
   )
 
   -- refund if needed
-  local needsRefund = not bint.eq(refundQty, bint.zero())
-
-  if needsRefund then
+  -- (this should never happen, because we only allow
+  -- the exact quantity to be repaid)
+  if not bint.eq(refundQty, bint.zero()) then
     ao.send({
       Target = msg.From,
       Action = "Transfer",
@@ -43,35 +69,14 @@ function mod.liquidateBorrow(msg)
     })
   end
 
-  -- notify the liquidator
-  ao.send({
-    Target = liquidator,
-    Action = "Liquidate-Borrow-Confirmation",
-    ["Liquidated-Token"] = CollateralID,
-    ["Liquidated-Quantity"] = tostring(actualRepaidQty),
-    ["Refund-Quantity"] = tostring(refundQty),
-    ["Liquidation-Target"] = target
-  })
-
-  -- notify the liquidated user
-  ao.send({
-    Target = target,
-    Action = "Liquidation-Notice",
-    ["Liquidate-Action"] = "Borrow",
-    ["Liquidated-Token"] = CollateralID,
-    ["Liquidated-Quantity"] = tostring(actualRepaidQty),
-    Liquidator = liquidator
-  })
-
   -- reply to the controller
   ao.send({
     Target = msg.Tags.Sender,
     Action = "Liquidate-Borrow-Confirmation",
     ["Liquidated-Quantity"] = tostring(actualRepaidQty),
-    ["Refund-Quantity"] = msg.Tags.Quantity,
-    Liquidator = msg.Tags["X-Liquidator"],
-    ["Liquidation-Target"] = msg.Tags["X-Target"],
-    ["X-Reference"] = msg.Tags.Reference
+    Liquidator = liquidator,
+    ["Liquidation-Target"] = target,
+    ["Liquidation-Reference"] = msg.Tags["X-Liquidation-Reference"]
   })
 end
 
@@ -83,40 +88,34 @@ function mod.refund(msg, _, err)
   local prettyError, rawError = utils.prettyError(err)
   local liquidator = msg.Tags["X-Liquidator"]
 
+  -- refund
   ao.send({
     Target = msg.From,
     Action = "Transfer",
     Quantity = msg.Tags.Quantity,
-    Recipient = msg.Tags.Sender
+    Recipient = liquidator
   })
+
+  -- reply to the controller with an error
   ao.send({
     Target = msg.Tags.Sender,
     Action = "Liquidate-Borrow-Error",
     Error = prettyError,
     ["Raw-Error"] = rawError,
-    ["Refund-Quantity"] = msg.Tags.Quantity,
-    Liquidator = msg.Tags["X-Liquidator"],
-    ["Liquidation-Target"] = msg.Tags["X-Target"],
-    ["X-Reference"] = msg.Tags.Reference
+    ["Liquidation-Reference"] = msg.Tags["X-Liquidation-Reference"]
   })
-
-  if liquidator then
-    ao.send({
-      Target = liquidator,
-      Action = "Liquidate-Borrow-Confirmation",
-      ["Liquidated-Token"] = CollateralID,
-      Error = prettyError,
-      ["Raw-Error"] = rawError,
-      ["Refund-Quantity"] = msg.Tags.Quantity,
-      ["Liquidation-Target"] = msg.Tags["X-Target"]
-    })
-  end
 end
 
 -- Transfers out the position to the liquidator
 -- (reverse redeem)
 ---@type HandlerFunction
 function mod.liquidatePosition(msg)
+  -- check if the message is coming from a friend process
+  assert(
+    utils.includes(msg.From, Friends),
+    "Only a friend process is authorized to call this function"
+  )
+
   assert(
     assertions.isTokenQuantity(msg.Tags.Quantity),
     "Invalid quantity"
@@ -142,7 +141,10 @@ function mod.liquidatePosition(msg)
   -- amount of oTokens owned
   local balance = bint(Balances[target] or 0)
 
-  assert(bint.eq(balance, bint.zero()), "Not enough tokens owned by the user to liquidate")
+  assert(
+    bint.ult(bint.zero(), balance),
+    "The liquidation target does not have collateral in this token"
+  )
 
   -- helpers
   local totalSupply = bint(TotalSupply)
@@ -156,19 +158,16 @@ function mod.liquidatePosition(msg)
   )
 
   -- get supplied quantity value
-  -- total supply is 100
-  -- total pooled is 5
-  -- 5 incoming = 100 oToken
   -- (total supply / total pooled) * incoming
   local qtyValueInoToken = bint.udiv(
-    totalSupply * totalPooled,
-    quantity
+    totalSupply * quantity,
+    totalPooled
   )
 
   -- validate with oToken balance
   assert(
     bint.ule(qtyValueInoToken, balance),
-    "The user owns less oTokens than the supplied quantity's worth"
+    "The liquidation target owns less oTokens than the supplied quantity's worth"
   )
 
   -- liquidate position by updating the reserves, etc.
@@ -182,24 +181,6 @@ function mod.liquidatePosition(msg)
     Action = "Transfer",
     Quantity = tostring(quantity),
     Recipient = liquidator
-  })
-
-  -- notify liquidator
-  ao.send({
-    Target = liquidator,
-    Action = "Liquidate-Position-Confirmation",
-    ["Earned-Token"] = CollateralID,
-    ["Earned-Quantity"] = tostring(quantity),
-    ["Liquidation-Target"] = target
-  })
-
-  -- notify the liquidated user
-  ao.send({
-    Target = target,
-    Action = "Liquidate-Notice",
-    ["Liquidate-Action"] = "Position",
-    ["Liquidated-Position-Quantity"] = tostring(qtyValueInoToken),
-    Liquidator = liquidator
   })
 
   -- reply to the controller
