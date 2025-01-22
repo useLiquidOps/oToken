@@ -8,10 +8,10 @@ local oracle = {}
 local tokens = {}
 
 -- oToken module ID
-Module = Module or ""
+Module = Module or "C6CQfrL29jZ-LYXV2lKn09d3pBIM6adDFwWqh2ICikM"
 
 -- oracle id and tolerance
-Oracle = Oracle or ""
+Oracle = Oracle or "4fVi8P-xSRWxZ0EE0EpltDe8WJJvcD9QyFXMqfk-1UQ"
 MaxOracleDelay = MaxOracleDelay or 1200000
 
 -- liquidops logo tx id
@@ -133,7 +133,7 @@ Handlers.add(
 
 Handlers.add(
   "list",
-  { From = ao.id, Action = "List" },
+  { From = ao.env.Process.Id, Action = "List" },
   function (msg)
     -- token to be listed
     local token = msg.Tags.Token
@@ -211,7 +211,7 @@ Handlers.add(
 
 Handlers.add(
   "unlist",
-  { From = ao.id, Action = "Unlist" },
+  { From = ao.env.Process.Id, Action = "Unlist" },
   function (msg)
     -- token to be removed
     local token = msg.Tags.Token
