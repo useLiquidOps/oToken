@@ -167,7 +167,8 @@ Handlers.add(
     assert(supported, "Token not supported by the protocol")
 
     -- spawn logo
-    local logo = tokens.spawnProtocolLogo(info.Tags.Logo)
+    --local logo = tokens.spawnProtocolLogo(info.Tags.Logo)
+    local logo = info.Tags.Logo
 
     -- the oToken configuration
     local config = {
@@ -181,8 +182,9 @@ Handlers.add(
       ["Init-Rate"] = msg.Tags["Init-Rate"],
       Oracle = Oracle,
       ["Oracle-Delay-Tolerance"] = tostring(MaxOracleDelay),
-      Friends = json.encode(utils.values(Tokens)),
-      Logo = logo
+      Friends = next(Tokens) ~= nil and json.encode(utils.values(Tokens)) or "{}",
+      Logo = logo,
+      Authority = ao.authorities[1]
     }
 
     -- spawn new oToken process
