@@ -142,6 +142,10 @@ Handlers.add(
       assertions.isAddress(token),
       "Invalid token address"
     )
+    assert(
+      Tokens[token] == nil,
+      "Token already listed"
+    )
 
     -- check configuration
     assert(
@@ -184,7 +188,7 @@ Handlers.add(
       ["Cooldown-Period"] = msg.Tags["Cooldown-Period"],
       Oracle = Oracle,
       ["Oracle-Delay-Tolerance"] = tostring(MaxOracleDelay),
-      Friends = next(Tokens) ~= nil and json.encode(utils.values(Tokens)) or "[]",
+      Friends = json.encode(utils.values(Tokens)),
       Logo = logo,
       Authority = ao.authorities[1]
     }
