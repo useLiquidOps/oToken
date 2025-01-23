@@ -182,7 +182,7 @@ Handlers.add(
       ["Init-Rate"] = msg.Tags["Init-Rate"],
       Oracle = Oracle,
       ["Oracle-Delay-Tolerance"] = tostring(MaxOracleDelay),
-      Friends = next(Tokens) ~= nil and json.encode(utils.values(Tokens)) or "{}",
+      Friends = next(Tokens) ~= nil and json.encode(utils.values(Tokens)) or "[]",
       Logo = logo,
       Authority = ao.authorities[1]
     }
