@@ -189,23 +189,26 @@ Handlers.add(
 
     -- spawn new oToken process
     local spawnResult = ao.spawn(Module, config).receive()
+    local spawnedID = spawnResult.Tags.Process
 
     -- notify all other tokens
     for _, oToken in pairs(Tokens) do
-      ao.send({
-        Target = oToken,
-        Action = "Add-Friend",
-        Friend = spawnResult.Tags.Process
-      })
+      if oToken ~= spawnedID then
+        ao.send({
+          Target = oToken,
+          Action = "Add-Friend",
+          Friend = spawnedID
+        })
+      end
     end
 
     -- add token to tokens list
-    Tokens[token] = spawnResult.Tags.Process
+    Tokens[token] = spawnedID
 
     msg.reply({
       Action = "Token-Listed",
       Token = token,
-      ["Spawned-Id"] = spawnResult.Tags.Process,
+      ["Spawned-Id"] = spawnedID,
       Data = json.encode(config)
     })
   end

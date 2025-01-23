@@ -95,6 +95,29 @@ describe("Friend tests", () => {
     );
   });
 
+  it("Does not add itself as a friend", async () => {
+    const friendAddRes = await handle(createMessage({
+      Action: "Add-Friend",
+      Friend: env.Process.Id
+    }));
+
+    expect(friendAddRes.Messages).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          Target: controller,
+          Tags: expect.arrayContaining([
+            expect.objectContaining({
+              name: "Error",
+              value: expect.stringContaining(
+                "Cannot add itself as a friend"
+              )
+            })
+          ])
+        })
+      ])
+    );
+  });
+
   it("Adds a new friend", async () => {
     const friendAddRes = await handle(createMessage({
       Action: "Add-Friend",
@@ -113,6 +136,29 @@ describe("Friend tests", () => {
             expect.objectContaining({
               name: "Friend",
               value: friend
+            })
+          ])
+        })
+      ])
+    );
+  });
+
+  it("Does not add a friend that is already added", async () => {
+    const friendAddRes = await handle(createMessage({
+      Action: "Add-Friend",
+      Friend: friend
+    }));
+
+    expect(friendAddRes.Messages).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          Target: controller,
+          Tags: expect.arrayContaining([
+            expect.objectContaining({
+              name: "Error",
+              value: expect.stringContaining(
+                "Friend already added"
+              )
             })
           ])
         })

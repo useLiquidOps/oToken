@@ -13,6 +13,14 @@ function friend.add(msg)
     assertions.isAddress(newFriend),
     "Invalid friend address " .. newFriend
   )
+  assert(
+    not utils.includes(newFriend, Friends),
+    "Friend already added"
+  )
+  assert(
+    newFriend ~= ao.id,
+    "Cannot add itself as a friend"
+  )
 
   -- add friend
   table.insert(Friends, newFriend)
