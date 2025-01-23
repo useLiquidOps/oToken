@@ -114,6 +114,8 @@ function ao.init(msg, env)
   ao.env.Process.TagArray = ao.env.Process.Tags
   ao.env.Process.Tags = ao.normalize_tags(ao.env.Process)
 
+  ao.env.Process.Owner = ao.env.Process.Tags["From-Process"] or ao.env.Process.Owner
+
   ao.clearOutbox()
 
   if type(msg.Timestamp) == "string" then msg.Timestamp = tonumber(msg.Timestamp) end
