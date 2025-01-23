@@ -164,6 +164,14 @@ Handlers.add(
       tonumber(msg.Tags["Init-Rate"]) ~= nil,
       "Invalid init rate"
     )
+    assert(
+      tonumber(msg.Tags["Value-Limit"]) ~= nil,
+      "Invalid value limit"
+    )
+    assert(
+      tonumber(msg.Tags["Cooldown-Period"]) ~= nil,
+      "Invalid cooldown period"
+    )
 
     -- check if token is supported
     local supported, info = tokens.isSupported(token)
