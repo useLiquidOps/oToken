@@ -391,7 +391,7 @@ function bint.new(x)
     elseif ty == 'string' then
       x = bint_fromstring(x)
     end
-    assert(x, 'value cannot be represented by a bint')
+    assert(x, tostring(x) .. 'value cannot be represented by a bint')
     return x
   end
   -- return a clone
