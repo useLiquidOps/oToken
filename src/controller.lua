@@ -180,6 +180,8 @@ Handlers.add(
       ["Liquidation-Threshold"] = msg.Tags["Liquidation-Threshold"],
       ["Base-Rate"] = msg.Tags["Base-Rate"],
       ["Init-Rate"] = msg.Tags["Init-Rate"],
+      ["Value-Limit"] = msg.Tags["Value-Limit"],
+      ["Cooldown-Period"] = msg.Tags["Cooldown-Period"],
       Oracle = Oracle,
       ["Oracle-Delay-Tolerance"] = tostring(MaxOracleDelay),
       Friends = next(Tokens) ~= nil and json.encode(utils.values(Tokens)) or "[]",
