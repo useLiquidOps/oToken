@@ -544,9 +544,10 @@ describe("Config tests", () => {
   });
 
   it("Does not update the value limit with an invalid value", async () => {
+    const invalidVal = "invalid";
     const invalidQtyRes = await handle(createMessage({
       Action: "Set-Value-Limit",
-      "Value-Limit": "invalid"
+      "Value-Limit": invalidVal
     }));
 
     expect(invalidQtyRes.Messages).toEqual(
@@ -557,7 +558,7 @@ describe("Config tests", () => {
             expect.objectContaining({
               name: "Error",
               value: expect.stringContaining(
-                "value cannot be represented by a bint"
+                invalidVal + " cannot be represented by a bint"
               )
             })
           ])

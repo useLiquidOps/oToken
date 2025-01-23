@@ -386,12 +386,13 @@ end
 function bint.new(x)
   if getmetatable(x) ~= bint then
     local ty = type(x)
+    local oldx = x
     if ty == 'number' then
       x = bint_frominteger(x)
     elseif ty == 'string' then
       x = bint_fromstring(x)
     end
-    assert(x, tostring(x) .. 'value cannot be represented by a bint')
+    assert(x, tostring(oldx) .. ' cannot be represented by a bint')
     return x
   end
   -- return a clone
