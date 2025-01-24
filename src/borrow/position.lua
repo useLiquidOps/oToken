@@ -58,7 +58,7 @@ function mod.getLocalUsedCapacity(address)
     return bint.zero()
   end
 
-  return bint(Loans[address] or 0) + bint(Interests[address].value or 0)
+  return bint(Loans[address] or 0) + bint((Interests[address] and Interests[address].value) or 0)
 end
 
 -- Get the global collateralization state (across all friend oTokens) in denominated USD
