@@ -75,7 +75,7 @@ function mod.getPrice(...)
 
     for ticker, p in pairs(data) do
       -- only add data if the timestamp is up to date
-      if p.t + MaxOracleDelay >= Timestamp then
+      if p.t <= Timestamp + MaxOracleDelay and p.t >= Timestamp - MaxOracleDelay then
         PriceCache[ticker] = {
           price = p.v,
           timestamp = p.t
