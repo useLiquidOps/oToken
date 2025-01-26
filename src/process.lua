@@ -162,6 +162,11 @@ local function setup_handlers()
     { From = ao.env.Process.Owner, Action = "Set-Value-Limit" },
     config.setValueLimit
   )
+  Handlers.add(
+    "controller-config-delay-tolerance",
+    { From = ao.env.Process.Owner, Action = "Set-Oracle-Delay-Tolerance" },
+    config.setOracleDelayTolerance
+  )
 
   Handlers.advanced({
     name = "liquidate-borrow",

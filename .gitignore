@@ -1,3 +1,4 @@
 process.wasm
 node_modules
 upload.js
+wallet.json
