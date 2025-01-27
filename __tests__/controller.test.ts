@@ -630,6 +630,114 @@ describe("Config tests", () => {
       ])
     );
   });
+
+  it("Does not update the oracle delay tolerance with an invalid value", async () => {
+    const invalidValueRes = await handle(createMessage({
+      Action: "Set-Oracle-Delay-Tolerance",
+      "Oracle-Delay-Tolerance": "invalid"
+    }));
+
+    expect(invalidValueRes.Messages).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          Target: controller,
+          Tags: expect.arrayContaining([
+            expect.objectContaining({
+              name: "Error",
+              value: expect.stringContaining(
+                "Invalid or no delay tolerance provided"
+              )
+            })
+          ])
+        })
+      ])
+    );
+
+    const nonZeroRes = await handle(createMessage({
+      Action: "Set-Oracle-Delay-Tolerance",
+      "Oracle-Delay-Tolerance": "-1"
+    }));
+
+    expect(nonZeroRes.Messages).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          Target: controller,
+          Tags: expect.arrayContaining([
+            expect.objectContaining({
+              name: "Error",
+              value: expect.stringContaining(
+                "Delay tolerance has to be >= 0"
+              )
+            })
+          ])
+        })
+      ])
+    );
+
+    const nonIntegerTest = await handle(createMessage({
+      Action: "Set-Oracle-Delay-Tolerance",
+      "Oracle-Delay-Tolerance": "1.2"
+    }));
+
+    expect(nonIntegerTest.Messages).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          Target: controller,
+          Tags: expect.arrayContaining([
+            expect.objectContaining({
+              name: "Error",
+              value: expect.stringContaining(
+                "Delay tolerance has to be a whole number"
+              )
+            })
+          ])
+        })
+      ])
+    );
+  });
+
+  it("Updates the oracle delay tolerance", async () => {
+    const newDelayTolerance = "435875"
+    const res = await handle(createMessage({
+      Action: "Set-Oracle-Delay-Tolerance",
+      "Oracle-Delay-Tolerance": newDelayTolerance
+    }));
+
+    expect(res.Messages).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          Target: controller,
+          Tags: expect.arrayContaining([
+            expect.objectContaining({
+              name: "Action",
+              value: "Oracle-Delay-Tolerance-Set"
+            }),
+            expect.objectContaining({
+              name: "Oracle-Delay-Tolerance",
+              value: newDelayTolerance
+            })
+          ])
+        })
+      ])
+    );
+
+    // expect updated info
+    const infoRes = await handle(createMessage({ Action: "Info" }));
+
+    expect(infoRes.Messages).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          Target: controller,
+          Tags: expect.arrayContaining([
+            expect.objectContaining({
+              name: "Oracle-Delay-Tolerance",
+              value: newDelayTolerance
+            })
+          ])
+        })
+      ])
+    );
+  });
 });
 
 describe("Cooldown tests", () => {

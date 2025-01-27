@@ -3,7 +3,7 @@
   "scripts": {
     "build": "cd src && ao build",
     "test": "node --experimental-wasm-memory64 node_modules/.bin/jest",
-    "deploy": "ao publish -w '~/wallet.json' src/process.wasm -t Memory-Limit -v 1-gb -t Compute-Limit -v 9000000000000 -t Module-Format -v wasm64-unknown-emscripten-draft_2024_02_15"
+    "deploy": "ao publish -w 'wallet.json' src/process.wasm -t Memory-Limit -v 1-gb -t Compute-Limit -v 9000000000000 -t Module-Format -v wasm64-unknown-emscripten-draft_2024_02_15"
   },
   "devDependencies": {
     "@ardrive/turbo-sdk": "^1.21.0",

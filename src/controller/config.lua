@@ -87,4 +87,31 @@ function config.setValueLimit(msg)
   })
 end
 
+function config.setOracleDelayTolerance(msg)
+  local newTolerance = tonumber(msg.Tags["Oracle-Delay-Tolerance"])
+
+  -- validate new tolerance
+  assert(
+    newTolerance ~= nil,
+    "Invalid or no delay tolerance provided"
+  )
+  assert(
+    newTolerance >= 0,
+    "Delay tolerance has to be >= 0"
+  )
+  assert(
+    newTolerance // 1 == newTolerance,
+    "Delay tolerance has to be a whole number"
+  )
+
+  -- update
+  MaxOracleDelay = newTolerance
+
+  -- notify the sender
+  msg.reply({
+    Action = "Oracle-Delay-Tolerance-Set",
+    ["Oracle-Delay-Tolerance"] = msg.Tags["Oracle-Delay-Tolerance"]
+  })
+end
+
 return config
