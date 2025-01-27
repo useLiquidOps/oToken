@@ -112,6 +112,12 @@ local function setup_handlers()
     end,
     mint.invalidTokenRefund
   )
+  -- skip handling debit notices (do not throw unhandled error)
+  Handlers.add(
+    "no-debit-notice",
+    { Action = "Debit-Notice" },
+    function () end
+  )
 
   -- apply cooldown limit for user interactions
   Handlers.advanced({

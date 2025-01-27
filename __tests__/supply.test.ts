@@ -72,6 +72,20 @@ describe("Minting and providing", () => {
     );
   });
 
+  it("Does not throw unhandled error for debit notices", async () => {
+    const res = await handle(createMessage({
+      Action: "Debit-Notice",
+      Owner: tags["Collateral-Id"],
+      From: tags["Collateral-Id"],
+      "From-Process": tags["Collateral-Id"],
+      Quantity: "15",
+      Recipient: generateArweaveAddress()
+    }));
+
+    expect(res.Messages).toEqual([]);
+    expect(res.Messages).toHaveLength(0);
+  });
+
   it("Does not handle invalid token quantities", async () => {
     const invalidQty = "-10000000";
     const res = await handle(createMessage({
