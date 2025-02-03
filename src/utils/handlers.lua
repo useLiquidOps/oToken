@@ -122,7 +122,9 @@ function handlers.receive(pattern, timeout)
     end
 
     -- kill the coroutine
-    coroutine.close(self)
+    if self ~= nil then
+      coroutine.close(self)
+    end
   end
 
   handlers.advanced({

@@ -43,7 +43,9 @@ function mod.schedule(...)
     end
 
     -- kill the coroutine
-    coroutine.close(thread)
+    if thread ~= nil then
+      coroutine.close(thread)
+    end
   end
 
   -- send messages
