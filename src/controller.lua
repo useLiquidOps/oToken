@@ -184,6 +184,7 @@ Handlers.add(
 
     -- the oToken configuration
     local config = {
+      Name = "LiquidOps " .. tostring(info.Tags.Name or info.Tags.Ticker or ""),
       ["Collateral-Id"] = token,
       ["Collateral-Ticker"] = info.Tags.Ticker,
       ["Collateral-Name"] = info.Tags.Name,
