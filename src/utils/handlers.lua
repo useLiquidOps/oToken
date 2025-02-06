@@ -86,6 +86,12 @@ function handlers.receive(pattern, timeout)
   local originalEnv = ao.env
 
   local function resume(msg)
+    -- this should not happen
+    if not self then
+      currentErrorHandler(originalMsg, originalEnv, "The response expired previously")
+      return
+    end
+
     local newMsg, newEnv = ao.msg, ao.env
     ao.msg, ao.env = originalMsg, originalEnv
 
@@ -121,10 +127,7 @@ function handlers.receive(pattern, timeout)
       )
     end
 
-    -- kill the coroutine
-    if self ~= nil then
-      coroutine.close(self)
-    end
+    self = nil
   end
 
   handlers.advanced({
