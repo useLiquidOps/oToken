@@ -42,10 +42,7 @@ function mod.schedule(...)
       )
     end
 
-    -- kill the coroutine
-    if thread ~= nil then
-      coroutine.close(thread)
-    end
+    thread = nil
   end
 
   -- send messages
@@ -68,6 +65,12 @@ function mod.schedule(...)
 
         -- continue execution only when all responses are back
         if #responses == #messages then
+          -- this should not happen
+          if not thread then
+            currentErrorHandler(originalMsg, originalEnv, "The response(s) expired previously")
+            return
+          end
+
           local newMsg, newEnv = ao.msg, ao.env
           ao.msg, ao.env = originalMsg, originalEnv
 
@@ -84,7 +87,7 @@ function mod.schedule(...)
       onRemove = function (reason)
         -- do not continue if the handler wasn't removed because of a timeout
         -- or if the coroutine has already been resumed
-        if reason ~= "timeout" or coroutine.status(thread) ~= "suspended" then return end
+        if reason ~= "timeout" or (thread ~= nil and coroutine.status(thread) ~= "suspended") then return end
 
         expire()
       end
