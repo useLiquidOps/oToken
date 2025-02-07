@@ -52,6 +52,10 @@ function config.setLiquidationThreshold(msg)
     threshold ~= nil and type(threshold) == "number",
     "Invalid threshold provided"
   )
+  assert(
+    threshold >= 0 and threshold <= 100,
+    "Liquidation threshold has to be a percentage between 0 and 100"
+  )
 
   -- update
   LiquidationThreshold = threshold
