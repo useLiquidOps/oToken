@@ -300,7 +300,7 @@ describe("Config tests", () => {
     // expect error when trying to set the collateral factor not from the controller
     const collateralRatioRes = await handle(createMessage({
       Action: "Set-Collateral-Factor",
-      ["Collateral-Factor"]: "1.25",
+      ["Collateral-Factor"]: "80",
       Owner: invalidOwner,
       From: invalidOwner
     }));
@@ -321,10 +321,10 @@ describe("Config tests", () => {
       ])
     );
 
-    // expect error when trying to set the collateral factor not from the controller
+    // expect error when trying to set the liquidation factor not from the controller
     const liquidationThresholdSet = await handle(createMessage({
       Action: "Set-Liquidation-Threshold",
-      ["Liquidation-Threshold"]: "1.05",
+      ["Liquidation-Threshold"]: "60",
       Owner: invalidOwner,
       From: invalidOwner
     }));
@@ -435,7 +435,7 @@ describe("Config tests", () => {
   });
 
   it("Updates the collateral factor", async () => {
-    const newFactor = "3.5";
+    const newFactor = "28";
     const res = await handle(createMessage({
       Action: "Set-Collateral-Factor",
       "Collateral-Factor": newFactor
@@ -500,8 +500,8 @@ describe("Config tests", () => {
     );
   });
 
-  it("Updates the liquidation threshold ratio", async () => {
-    const newFactor = "3.5";
+  it("Updates the liquidation threshold", async () => {
+    const newFactor = "75";
     const res = await handle(createMessage({
       Action: "Set-Liquidation-Threshold",
       "Liquidation-Threshold": newFactor
