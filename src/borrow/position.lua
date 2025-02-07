@@ -35,17 +35,10 @@ function mod.getLocalBorrowCapacity(address)
     bint(TotalSupply)
   )
 
-  -- multiply the collateral factor by 1000
-  -- we do this, so that we can calculate with more precise
-  -- ratios below, while using bigintegers
-  -- later the final result needs to be multiplied by
-  -- 1000 as well, to get the actual result
-  local collateralFactorWhole, ratioMul = utils.floatBintRepresentation(CollateralFactor)
-
   -- capacity in units of the underlying asset
   return bint.udiv(
-    balanceValue * bint(ratioMul),
-    collateralFactorWhole
+    balanceValue * bint(CollateralFactor),
+    bint(100)
   ), balanceValue
 end
 

@@ -28,14 +28,11 @@ local function borrow(msg)
     "Borrow quantity is above the allowed limit"
   )
 
-  -- multiply the collateral factor by 1000
-  -- we do this, so that we can calculate with more precise
-  -- ratios below, while using bigintegers
-  -- later the final result needs to be multiplied by
-  -- 1000 as well, to get the actual result
-  local collateralFactorWhole, ratioMul = utils.floatBintRepresentation(CollateralFactor)
+  -- calculate the max borrow amount (borrow capacity)
   local lent = bint(Lent)
 
+  -- TODO: implement the reserve factor here
+  --[[
   -- check if the collateral-factor is not reached
   -- total tokens: av + le
   -- max allowed: (av + le) / cf
@@ -46,6 +43,7 @@ local function borrow(msg)
     )),
     "This quantity would damage the required collateral factor"
   )
+  ]]--
 
   -- the wallet that will borrow the tokens
   local account = msg.From
