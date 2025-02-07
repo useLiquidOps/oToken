@@ -32,6 +32,10 @@ function config.setCollateralFactor(msg)
     factor ~= nil and type(factor) == "number",
     "Invalid ratio provided"
   )
+  assert(
+    factor // 1 == factor and factor >= 0 and factor <= 100,
+    "Collateral factor has to be a whole percentage between 0 and 100"
+  )
 
   -- update
   CollateralFactor = factor
@@ -51,6 +55,10 @@ function config.setLiquidationThreshold(msg)
   assert(
     threshold ~= nil and type(threshold) == "number",
     "Invalid threshold provided"
+  )
+  assert(
+    threshold // 1 == threshold and threshold >= 0 and threshold <= 100,
+    "Liquidation threshold has to be a whole percentage between 0 and 100"
   )
 
   -- update

@@ -300,7 +300,7 @@ describe("Config tests", () => {
     // expect error when trying to set the collateral factor not from the controller
     const collateralRatioRes = await handle(createMessage({
       Action: "Set-Collateral-Factor",
-      ["Collateral-Factor"]: "1.25",
+      ["Collateral-Factor"]: "80",
       Owner: invalidOwner,
       From: invalidOwner
     }));
@@ -321,10 +321,10 @@ describe("Config tests", () => {
       ])
     );
 
-    // expect error when trying to set the collateral factor not from the controller
+    // expect error when trying to set the liquidation factor not from the controller
     const liquidationThresholdSet = await handle(createMessage({
       Action: "Set-Liquidation-Threshold",
-      ["Liquidation-Threshold"]: "1.05",
+      ["Liquidation-Threshold"]: "60",
       Owner: invalidOwner,
       From: invalidOwner
     }));
@@ -412,12 +412,10 @@ describe("Config tests", () => {
   });
 
   it("Does not update collateral factor with an invalid value", async () => {
-    const res = await handle(createMessage({
+    expect((await handle(createMessage({
       Action: "Set-Collateral-Factor",
       "Collateral-Factor": "invalid"
-    }));
-
-    expect(res.Messages).toEqual(
+    }))).Messages).toEqual(
       expect.arrayContaining([
         expect.objectContaining({
           Target: controller,
@@ -432,10 +430,65 @@ describe("Config tests", () => {
         })
       ])
     );
+
+    expect((await handle(createMessage({
+      Action: "Set-Collateral-Factor",
+      "Collateral-Factor": "1.2"
+    }))).Messages).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          Target: controller,
+          Tags: expect.arrayContaining([
+            expect.objectContaining({
+              name: "Error",
+              value: expect.stringContaining(
+                "Collateral factor has to be a whole percentage between 0 and 100"
+              )
+            })
+          ])
+        })
+      ])
+    );
+    expect((await handle(createMessage({
+      Action: "Set-Collateral-Factor",
+      "Collateral-Factor": "-1"
+    }))).Messages).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          Target: controller,
+          Tags: expect.arrayContaining([
+            expect.objectContaining({
+              name: "Error",
+              value: expect.stringContaining(
+                "Collateral factor has to be a whole percentage between 0 and 100"
+              )
+            })
+          ])
+        })
+      ])
+    );
+    expect((await handle(createMessage({
+      Action: "Set-Collateral-Factor",
+      "Collateral-Factor": "101"
+    }))).Messages).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          Target: controller,
+          Tags: expect.arrayContaining([
+            expect.objectContaining({
+              name: "Error",
+              value: expect.stringContaining(
+                "Collateral factor has to be a whole percentage between 0 and 100"
+              )
+            })
+          ])
+        })
+      ])
+    );
   });
 
   it("Updates the collateral factor", async () => {
-    const newFactor = "3.5";
+    const newFactor = "28";
     const res = await handle(createMessage({
       Action: "Set-Collateral-Factor",
       "Collateral-Factor": newFactor
@@ -478,12 +531,10 @@ describe("Config tests", () => {
   });
 
   it("Does not update liquidation threshold with an invalid value", async () => {
-    const res = await handle(createMessage({
+    expect((await handle(createMessage({
       Action: "Set-Liquidation-Threshold",
       "Liquidation-Threshold": "invalid"
-    }));
-
-    expect(res.Messages).toEqual(
+    }))).Messages).toEqual(
       expect.arrayContaining([
         expect.objectContaining({
           Target: controller,
@@ -498,10 +549,65 @@ describe("Config tests", () => {
         })
       ])
     );
+
+    expect((await handle(createMessage({
+      Action: "Set-Liquidation-Threshold",
+      "Liquidation-Threshold": "34.9"
+    }))).Messages).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          Target: controller,
+          Tags: expect.arrayContaining([
+            expect.objectContaining({
+              name: "Error",
+              value: expect.stringContaining(
+                "Liquidation threshold has to be a whole percentage between 0 and 100"
+              )
+            })
+          ])
+        })
+      ])
+    );
+    expect((await handle(createMessage({
+      Action: "Set-Liquidation-Threshold",
+      "Liquidation-Threshold": "-9"
+    }))).Messages).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          Target: controller,
+          Tags: expect.arrayContaining([
+            expect.objectContaining({
+              name: "Error",
+              value: expect.stringContaining(
+                "Liquidation threshold has to be a whole percentage between 0 and 100"
+              )
+            })
+          ])
+        })
+      ])
+    );
+    expect((await handle(createMessage({
+      Action: "Set-Liquidation-Threshold",
+      "Liquidation-Threshold": "124"
+    }))).Messages).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          Target: controller,
+          Tags: expect.arrayContaining([
+            expect.objectContaining({
+              name: "Error",
+              value: expect.stringContaining(
+                "Liquidation threshold has to be a whole percentage between 0 and 100"
+              )
+            })
+          ])
+        })
+      ])
+    );
   });
 
-  it("Updates the liquidation threshold ratio", async () => {
-    const newFactor = "3.5";
+  it("Updates the liquidation threshold", async () => {
+    const newFactor = "75";
     const res = await handle(createMessage({
       Action: "Set-Liquidation-Threshold",
       "Liquidation-Threshold": newFactor
