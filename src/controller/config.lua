@@ -33,8 +33,8 @@ function config.setCollateralFactor(msg)
     "Invalid ratio provided"
   )
   assert(
-    factor >= 0 and factor <= 100,
-    "Collateral factor has to be a percentage between 0 and 100"
+    factor // 1 == factor and factor >= 0 and factor <= 100,
+    "Collateral factor has to be a whole percentage between 0 and 100"
   )
 
   -- update
@@ -57,8 +57,8 @@ function config.setLiquidationThreshold(msg)
     "Invalid threshold provided"
   )
   assert(
-    threshold >= 0 and threshold <= 100,
-    "Liquidation threshold has to be a percentage between 0 and 100"
+    threshold // 1 == threshold and threshold >= 0 and threshold <= 100,
+    "Liquidation threshold has to be a whole percentage between 0 and 100"
   )
 
   -- update

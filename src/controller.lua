@@ -156,16 +156,16 @@ Handlers.add(
       "Invalid collateral factor"
     )
     assert(
-      collateralFactor >= 0 and collateralFactor <= 100,
-      "Collateral factor has to be a percentage between 0 and 100"
+      collateralFactor // 1 == collateralFactor and collateralFactor >= 0 and collateralFactor <= 100,
+      "Collateral factor has to be a whole percentage between 0 and 100"
     )
     assert(
       liquidationThreshold ~= nil and type(liquidationThreshold) == "number",
       "Invalid liquidation threshold"
     )
     assert(
-      liquidationThreshold >= 0 and liquidationThreshold <= 100,
-      "Liquidation threshold has to be a percentage between 0 and 100"
+      liquidationThreshold // 1 == liquidationThreshold and liquidationThreshold >= 0 and liquidationThreshold <= 100,
+      "Liquidation threshold has to be a whole percentage between 0 and 100"
     )
     assert(
       tonumber(msg.Tags["Base-Rate"]) ~= nil,
