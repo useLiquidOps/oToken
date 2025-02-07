@@ -149,10 +149,15 @@ Handlers.add(
 
     -- check configuration
     local liquidationThreshold = tonumber(msg.Tags["Liquidation-Threshold"])
+    local collateralFactor = tonumber(msg.Tags["Collateral-Factor"])
 
     assert(
-      tonumber(msg.Tags["Collateral-Factor"]) ~= nil,
+      collateralFactor ~= nil and type(collateralFactor) == "number",
       "Invalid collateral factor"
+    )
+    assert(
+      collateralFactor >= 0 and collateralFactor <= 100,
+      "Collateral factor has to be a percentage between 0 and 100"
     )
     assert(
       liquidationThreshold ~= nil and type(liquidationThreshold) == "number",

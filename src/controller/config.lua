@@ -32,6 +32,10 @@ function config.setCollateralFactor(msg)
     factor ~= nil and type(factor) == "number",
     "Invalid ratio provided"
   )
+  assert(
+    factor >= 0 and factor <= 100,
+    "Collateral factor has to be a percentage between 0 and 100"
+  )
 
   -- update
   CollateralFactor = factor
