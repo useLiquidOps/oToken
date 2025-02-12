@@ -87,7 +87,7 @@ function mod.schedule(...)
       onRemove = function (reason)
         -- do not continue if the handler wasn't removed because of a timeout
         -- or if the coroutine has already been resumed
-        if reason ~= "timeout" or (thread ~= nil and coroutine.status(thread) ~= "suspended") then return end
+        if reason ~= "timeout" or thread == nil or coroutine.status(thread) ~= "suspended" then return end
 
         expire()
       end
