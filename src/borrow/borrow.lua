@@ -31,20 +31,6 @@ local function borrow(msg)
   -- calculate the max borrow amount (borrow capacity)
   local lent = bint(Lent)
 
-  -- TODO: implement the reserve factor here
-  --[[
-  -- check if the collateral-factor is not reached
-  -- total tokens: av + le
-  -- max allowed: (av + le) / cf
-  assert(
-    bint.ule(quantity, bint.udiv(
-      (available + lent) * ratioMul,
-      collateralFactorWhole
-    )),
-    "This quantity would damage the required collateral factor"
-  )
-  ]]--
-
   -- the wallet that will borrow the tokens
   local account = msg.From
 

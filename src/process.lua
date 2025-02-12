@@ -164,6 +164,10 @@ local function setup_handlers()
     config.setLiquidationThreshold
   )
   Handlers.add(
+    "controller-config-reserve-factor",
+    { From = ao.env.Process.Owner, Action = "Set-Reserve-Factor" }
+  )
+  Handlers.add(
     "controller-config-value-limit",
     { From = ao.env.Process.Owner, Action = "Set-Value-Limit" },
     config.setValueLimit

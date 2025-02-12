@@ -48,6 +48,30 @@ function config.setCollateralFactor(msg)
 end
 
 ---@type HandlerFunction
+function config.setReserveFactor(msg)
+  -- validate reserve factor
+  local factor = tonumber(msg.Tags["Reserve-Factor"])
+
+  assert(
+    factor ~= nil and type(factor) == "number",
+    "Invalid ratio provided"
+  )
+  assert(
+    factor // 1 == factor and factor >= 0 and factor <= 100,
+    "Reserve factor has to be a whole percentage between 0 and 100"
+  )
+
+  -- update
+  ReserveFactor = factor
+
+  -- notify the caller
+  msg.reply({
+    Action = "Reserve-Factor-Set",
+    ["Reserve-Factor"] = tostring(factor)
+  })
+end
+
+---@type HandlerFunction
 function config.setLiquidationThreshold(msg)
   -- validate threshold
   local threshold = tonumber(msg.Tags["Liquidation-Threshold"])

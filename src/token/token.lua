@@ -29,6 +29,7 @@ function mod.info(msg)
     ["Collateral-Factor"] = tostring(CollateralFactor),
     ["Collateral-Denomination"] = tostring(CollateralDenomination),
     ["Liquidation-Threshold"] = tostring(LiquidationThreshold),
+    ["Reserve-Factor"] = tostring(ReserveFactor),
     ["Value-Limit"] = ValueLimit,
     Oracle = Oracle,
     ["Oracle-Delay-Tolerance"] = tostring(MaxOracleDelay)
