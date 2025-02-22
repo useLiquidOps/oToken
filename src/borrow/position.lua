@@ -1,17 +1,19 @@
+local scheduler = require ".utils.scheduler"
 local bint = require ".utils.bint"(1024)
+local utils = require ".utils.utils"
 
-local mod = {}
+local mod = { handlers = {} }
 
----@alias LocalPosition { collateralization: Bint, capacity: Bint, borrowBalance: Bint, liquidationLimit: Bint }
+---@alias Position { collateralization: Bint, capacity: Bint, borrowBalance: Bint, liquidationLimit: Bint }
 
--- Get local position for a user
+-- Get local position for a user (in units of the collateral)
 ---@param address string User address
----@return LocalPosition
+---@return Position
 function mod.position(address)
   local zero = bint.zero()
 
   -- result template
-  ---@type LocalPosition
+  ---@type Position
   local res = {
     collateralization = zero,
     capacity = zero,
@@ -59,6 +61,39 @@ function mod.position(address)
   end
 
   return res
+end
+
+-- Get the global position for a user (in USD, using oracle prices)
+---@param address string User address
+---@return Position
+function mod.globalPosition(address)
+  -- get local positions from friend processes
+  local positions = scheduler.schedule(table.unpack(utils.map(
+    function (id) return { Target = id, Action = "Position", Recipient = address } end,
+    Friends
+  )))
+
+  -- load prices for friend process collaterals + the local collateral
+
+
+  -- calculate global position in USD
+  for 
+end
+
+-- Local position action handler
+---@type HandlerFunction
+function mod.handlers.localPosition(msg)
+  local account = msg.Tags.Recipient or msg.From
+  local position = mod.position(account)
+
+  msg.reply({
+    ["Collateral-Ticker"] = CollateralTicker,
+    ["Collateral-Denomination"] = tostring(CollateralDenomination),
+    Collateralization = tostring(position.collateralization),
+    Capacity = tostring(position.capacity),
+    ["Borrow-Balance"] = tostring(position.borrowBalance),
+    ["Liquidation-Limit"] = tostring(position.liquidationLimit)
+  })
 end
 
 return mod
