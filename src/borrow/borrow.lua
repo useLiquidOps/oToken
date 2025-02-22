@@ -1,5 +1,5 @@
 local assertions = require ".utils.assertions"
-local oracle = require ".liquidations.oracle"
+local Oracle = require ".liquidations.oracle"
 local position = require ".borrow.position"
 local bint = require ".utils.bint"(1024)
 
@@ -50,22 +50,18 @@ local function borrow(msg)
   -- get position data
   local capacity, usedCapacity = position.getGlobalCollateralization(account)
 
+  -- init oracle for the collateral token
+  local oracle = Oracle:new{ [CollateralTicker] = CollateralDenomination }
+
   -- get borrow value in USD
   -- we request this after the collateralization, because
   -- in this case the oracle might not have to sync the price
-  local borrowValue = oracle.getPrice({
-    ticker = CollateralTicker,
-    quantity = quantity,
-    denomination = CollateralDenomination
-  })
-
-  -- make sure the oracle returned a price
-  assert(borrowValue[1] ~= nil, "No price returned from the oracle for the borrow quantity")
+  local borrowValue = oracle:getValue(quantity, CollateralTicker)
 
   -- make sure the user is allowed to borrow
   assert(bint.ult(usedCapacity, capacity), "Borrow balance is too high")
   assert(
-    bint.ule(borrowValue[1].price, capacity - usedCapacity),
+    bint.ule(borrowValue, capacity - usedCapacity),
     "Not enough collateral for this borrow"
   )
 

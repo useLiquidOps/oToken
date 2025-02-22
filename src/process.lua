@@ -62,12 +62,6 @@ local function setup_handlers()
     pool.syncTimestamp
   )
 
-  -- oracle timeout sync (must be the second handler)
-  Handlers.add(
-    "oracle-timeout-sync",
-    Handlers.utils.continue({}),
-    oracle.timeoutSync
-  )
   -- interest payment sync (must be the third handler)
   Handlers.add(
     "borrow-loan-interest-sync-dynamic",

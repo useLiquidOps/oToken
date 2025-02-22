@@ -21,6 +21,7 @@ local Oracle = {
 -- Creates a new Oracle instance and pre-fetches 
 -- the price for the given symbols
 ---@param data table<string, number> Symbol - denomination pairs
+---@return Oracle
 function Oracle:new(data)
   local instance = {}
   setmetatable(instance, self)
@@ -37,6 +38,7 @@ function Oracle:new(data)
 end
 
 -- Initializes the oracle configuration from the spawn message
+---@type HandlerFunction
 function Oracle.setup()
   -- oracle process id
   OracleID = OracleID or ao.env.Process.Tags.Oracle

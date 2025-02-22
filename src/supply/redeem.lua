@@ -1,5 +1,5 @@
 local assertions = require ".utils.assertions"
-local oracle = require ".liquidations.oracle"
+local Oracle = require ".liquidations.oracle"
 local position = require ".borrow.position"
 local bint = require ".utils.bint"(1024)
 
@@ -59,21 +59,17 @@ local function redeem(msg)
   -- get position data
   local capacity, usedCapacity = position.getGlobalCollateralization(sender)
 
+  -- init oracle for the collateral
+  local oracle = Oracle:new{ [CollateralTicker] = CollateralDenomination }
+
   -- get the value of the tokens to be burned in
   -- terms of the underlying asset and then get the price
   -- of that quantity
-  local burnValue = oracle.getPrice({
-    ticker = CollateralTicker,
-    quantity = quantity,
-    denomination = CollateralDenomination
-  })
-
-  -- check if a price was returned
-  assert(burnValue[1] ~= nil, "No price data returned from the oracle for the redeem value")
+  local burnValue = oracle:getValue(quantity, CollateralTicker)
 
   -- do not allow reserved collateral to be burned
   assert(
-    bint.ule(burnValue[1].price, capacity - usedCapacity),
+    bint.ule(burnValue, capacity - usedCapacity),
     "Redeem value is too high and requires higher collateralization"
   )
 

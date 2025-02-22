@@ -1,4 +1,4 @@
-local oracle = require ".liquidations.oracle"
+local Oracle = require ".liquidations.oracle"
 local scheduler = require ".utils.scheduler"
 local bint = require ".utils.bint"(1024)
 local utils = require ".utils.utils"

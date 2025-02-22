@@ -1,5 +1,5 @@
 local assertions = require ".utils.assertions"
-local oracle = require ".liquidations.oracle"
+local Oracle = require ".liquidations.oracle"
 local position = require ".borrow.position"
 local bint = require ".utils.bint"(1024)
 
@@ -26,21 +26,17 @@ local function transfer(msg)
   -- get position data
   local capacity, usedCapacity = position.getGlobalCollateralization(sender)
 
+  -- init oracle for the collateral
+  local oracle = Oracle:new{ [CollateralTicker] = CollateralDenomination }
+
   -- get the value of the tokens to be transferred in
   -- terms of the underlying asset and then get the price
   -- of that quantity
-  local transferValue = oracle.getPrice({
-    ticker = CollateralTicker,
-    quantity = quantity,
-    denomination = CollateralDenomination
-  })
-
-  -- check if a price was returned
-  assert(transferValue[1] ~= nil, "No price returned from the oracle for the transfer value")
+  local transferValue = oracle:getValue(quantity, CollateralTicker)
 
   -- do not allow reserved collateral to be transferred
   assert(
-    bint.ule(transferValue[1].price, capacity - usedCapacity),
+    bint.ule(transferValue, capacity - usedCapacity),
     "Transfer value is too high and requires higher collateralization"
   )
 
