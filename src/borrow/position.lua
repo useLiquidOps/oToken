@@ -1,3 +1,4 @@
+local oracle = require ".liquidations.oracle"
 local scheduler = require ".utils.scheduler"
 local bint = require ".utils.bint"(1024)
 local utils = require ".utils.utils"
@@ -67,17 +68,61 @@ end
 ---@param address string User address
 ---@return Position
 function mod.globalPosition(address)
+  local zero = bint.zero()
+
   -- get local positions from friend processes
   local positions = scheduler.schedule(table.unpack(utils.map(
     function (id) return { Target = id, Action = "Position", Recipient = address } end,
     Friends
   )))
 
-  -- load prices for friend process collaterals + the local collateral
+  -- tickers to fetch prices for
+  local tickers = utils.map(
+    ---@param pos Message
+    function (pos) return pos.Tags["Collateral-Ticker"] end,
+    positions
+  )
+  table.insert(tickers, CollateralTicker)
 
+  -- load prices for friend process collaterals + the local collateral
+  local rawPrices = oracle.getPrices(tickers)
+
+  -- load local position
+  local localPosition = mod.position(address)
+
+  -- result template
+  ---@type Position
+  local res = {
+    collateralization = oracle.getValue(
+      rawPrices,
+      localPosition.collateralization,
+      CollateralTicker,
+      CollateralDenomination
+    ),
+    capacity = oracle.getValue(
+      rawPrices,
+      localPosition.capacity,
+      CollateralTicker,
+      CollateralDenomination
+    ),
+    borrowBalance = oracle.getValue(
+      rawPrices,
+      localPosition.borrowBalance,
+      CollateralTicker,
+      CollateralDenomination
+    ),
+    liquidationLimit = oracle.getValue(
+      rawPrices,
+      localPosition.liquidationLimit,
+      CollateralTicker,
+      CollateralDenomination
+    ),
+  }
 
   -- calculate global position in USD
-  for 
+  for _, position in ipairs(positions) do
+    res.collateralization = res.collateralization + ora
+  end
 end
 
 -- Local position action handler
