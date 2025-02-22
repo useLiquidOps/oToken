@@ -223,16 +223,6 @@ local function setup_handlers()
     errorHandler = repay.error
   })
   Handlers.add(
-    "borrow-position-balance",
-    Handlers.utils.hasMatchingTag("Action", "Borrow-Balance"),
-    position.balance
-  )
-  Handlers.add(
-    "borrow-position-capacity",
-    Handlers.utils.hasMatchingTag("Action", "Borrow-Capacity"),
-    position.capacity
-  )
-  Handlers.add(
     "borrow-position-collateralization",
     Handlers.utils.hasMatchingTag("Action", "Position"),
     position.position
