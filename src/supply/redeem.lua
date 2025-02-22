@@ -56,8 +56,6 @@ local function redeem(msg)
     "Not enough available tokens to redeem for"
   )
 
-  -- get position data
-  local capacity, usedCapacity = position.getGlobalCollateralization(sender)
 
   -- init oracle for the collateral
   local oracle = Oracle:new{ [CollateralTicker] = CollateralDenomination }
@@ -67,9 +65,12 @@ local function redeem(msg)
   -- of that quantity
   local burnValue = oracle:getValue(quantity, CollateralTicker)
 
+  -- get position data
+  local pos = position.globalPosition(sender)
+
   -- do not allow reserved collateral to be burned
   assert(
-    bint.ule(burnValue, capacity - usedCapacity),
+    assertions.isCollateralized(burnValue, pos),
     "Redeem value is too high and requires higher collateralization"
   )
 

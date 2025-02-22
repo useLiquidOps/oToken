@@ -47,9 +47,6 @@ local function borrow(msg)
   -- the wallet that will borrow the tokens
   local account = msg.From
 
-  -- get position data
-  local capacity, usedCapacity = position.getGlobalCollateralization(account)
-
   -- init oracle for the collateral token
   local oracle = Oracle:new{ [CollateralTicker] = CollateralDenomination }
 
@@ -58,10 +55,12 @@ local function borrow(msg)
   -- in this case the oracle might not have to sync the price
   local borrowValue = oracle:getValue(quantity, CollateralTicker)
 
+  -- get position data
+  local pos = position.globalPosition(account)
+
   -- make sure the user is allowed to borrow
-  assert(bint.ult(usedCapacity, capacity), "Borrow balance is too high")
   assert(
-    bint.ule(borrowValue, capacity - usedCapacity),
+    assertions.isCollateralized(borrowValue, pos),
     "Not enough collateral for this borrow"
   )
 

@@ -50,4 +50,20 @@ function mod.isTokenQuantity(qty)
   return true
 end
 
+-- Verify that user user has enough collateralization for an action
+---@param qty Bint Required collateralization
+---@param position Position User position
+---@return boolean
+function mod.isCollateralized(qty, position)
+  -- first we check if the borrow balance is less than the capacity
+  --
+  -- this is important and required, because in the second part of the assertion,
+  -- we subtract the borrow balance from the capacity, but we're dealing
+  -- with unsigned integers
+  -- without this, the second part of the assertion could be an invalid
+  -- number, if the borrow balance is higher than the capacity
+  return bint.ult(position.borrowBalance, position.capacity) and
+    bint.ule(qty, position.capacity - position.borrowBalance)
+end
+
 return mod

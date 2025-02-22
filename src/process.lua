@@ -69,8 +69,6 @@ local function setup_handlers()
       if
         utils.includes(msg.Tags.Action, {
           "Borrow",
-          "Borrow-Balance",
-          "Borrow-Capacity",
           "Position",
           "Global-Position",
           "Positions",

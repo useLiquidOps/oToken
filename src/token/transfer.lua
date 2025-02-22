@@ -23,9 +23,6 @@ local function transfer(msg)
   -- check if the user has enough tokens
   assert(bint.ule(quantity, walletBalance), "Insufficient balance")
 
-  -- get position data
-  local capacity, usedCapacity = position.getGlobalCollateralization(sender)
-
   -- init oracle for the collateral
   local oracle = Oracle:new{ [CollateralTicker] = CollateralDenomination }
 
@@ -34,9 +31,12 @@ local function transfer(msg)
   -- of that quantity
   local transferValue = oracle:getValue(quantity, CollateralTicker)
 
+  -- get position data
+  local pos = position.globalPosition(sender)
+
   -- do not allow reserved collateral to be transferred
   assert(
-    bint.ule(transferValue, capacity - usedCapacity),
+    assertions.isCollateralized(transferValue, pos),
     "Transfer value is too high and requires higher collateralization"
   )
 
