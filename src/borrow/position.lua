@@ -1,4 +1,4 @@
-local oracle = require ".liquidations.oracle"
+local Oracle = require ".liquidations.oracle"
 local scheduler = require ".utils.scheduler"
 local bint = require ".utils.bint"(1024)
 local utils = require ".utils.utils"
@@ -68,24 +68,22 @@ end
 ---@param address string User address
 ---@return Position
 function mod.globalPosition(address)
-  local zero = bint.zero()
-
   -- get local positions from friend processes
   local positions = scheduler.schedule(table.unpack(utils.map(
     function (id) return { Target = id, Action = "Position", Recipient = address } end,
     Friends
   )))
 
-  -- tickers to fetch prices for
-  local tickers = utils.map(
-    ---@param pos Message
-    function (pos) return pos.Tags["Collateral-Ticker"] end,
-    positions
-  )
-  table.insert(tickers, CollateralTicker)
+  -- ticker - denomination data for the oracle
+  local oracleData = { [CollateralTicker] = CollateralDenomination }
 
-  -- load prices for friend process collaterals + the local collateral
-  local rawPrices = oracle.getPrices(tickers)
+  -- add ticker - denomination data from the positions
+  for _, msg in ipairs(positions) do
+    oracleData[msg.Tags["Collateral-Ticker"]] = tonumber(msg.Tags["Collateral-Denomination"])
+  end
+
+  -- init oracle for all collaterals
+  local oracle = Oracle:new(oracleData)
 
   -- load local position
   local localPosition = mod.position(address)
@@ -93,36 +91,28 @@ function mod.globalPosition(address)
   -- result template
   ---@type Position
   local res = {
-    collateralization = oracle.getValue(
-      rawPrices,
-      localPosition.collateralization,
-      CollateralTicker,
-      CollateralDenomination
-    ),
-    capacity = oracle.getValue(
-      rawPrices,
-      localPosition.capacity,
-      CollateralTicker,
-      CollateralDenomination
-    ),
-    borrowBalance = oracle.getValue(
-      rawPrices,
-      localPosition.borrowBalance,
-      CollateralTicker,
-      CollateralDenomination
-    ),
-    liquidationLimit = oracle.getValue(
-      rawPrices,
-      localPosition.liquidationLimit,
-      CollateralTicker,
-      CollateralDenomination
-    ),
+    collateralization = oracle:getValue(localPosition.collateralization, CollateralTicker),
+    capacity = oracle:getValue(localPosition.capacity, CollateralTicker),
+    borrowBalance = oracle:getValue(localPosition.borrowBalance, CollateralTicker),
+    liquidationLimit = oracle:getValue(localPosition.liquidationLimit, CollateralTicker),
   }
 
   -- calculate global position in USD
   for _, position in ipairs(positions) do
-    res.collateralization = res.collateralization + ora
+    local ticker = position.Tags["Collateral-Ticker"]
+
+    local collateralization = bint(position.Tags["Collateralization"] or 0)
+    local capacity = bint(position.Tags.Capacity or 0)
+    local borrowBalance = bint(position.Tags["Borrow-Balance"] or 0)
+    local liquidationLimit = bint(position.Tags["Liquidation-Limit"] or 0)
+
+    res.collateralization = res.collateralization + oracle:getValue(collateralization, ticker)
+    res.capacity = res.collateralization + oracle:getValue(capacity, ticker)
+    res.borrowBalance = res.collateralization + oracle:getValue(borrowBalance, ticker)
+    res.liquidationLimit = res.collateralization + oracle:getValue(liquidationLimit, ticker)
   end
+
+  return res
 end
 
 -- Local position action handler
@@ -138,6 +128,20 @@ function mod.handlers.localPosition(msg)
     Capacity = tostring(position.capacity),
     ["Borrow-Balance"] = tostring(position.borrowBalance),
     ["Liquidation-Limit"] = tostring(position.liquidationLimit)
+  })
+end
+
+-- Global position action handler
+function mod.handlers.globalPosition(msg)
+  local account = msg.Tags.Recipient or msg.From
+  local position = mod.globalPosition(account)
+
+  msg.reply({
+    Collateralization = tostring(position.collateralization),
+    Capacity = tostring(position.capacity),
+    ["Borrow-Balance"] = tostring(position.borrowBalance),
+    ["Liquidation-Limit"] = tostring(position.liquidationLimit),
+    ["USD-Denomination"] = tostring(Oracle.usdDenomination)
   })
 end
 
