@@ -2,7 +2,6 @@ local assertions = require ".utils.assertions"
 local oracle = require ".liquidations.oracle"
 local position = require ".borrow.position"
 local bint = require ".utils.bint"(1024)
-local utils = require ".utils.utils"
 
 ---@type HandlerFunction
 local function borrow(msg)
