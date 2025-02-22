@@ -36,6 +36,105 @@ function mod.timeoutSync(msg)
   end
 end
 
+-- Get price data for an array of token symbols
+---@param symbols string[] Token symbols
+function mod.getPrices(symbols)
+  ---@type RawPrices
+  local res = {}
+
+  -- nothing to sync
+  if #symbols == 0 then return res end
+
+  -- request prices from oracle
+  ---@type string|nil
+  local rawData = ao.send({
+    Target = Oracle,
+    Action = "v2.Request-Latest-Data",
+    Tickers = json.encode(symbols)
+  }).receive().Data
+
+  -- no price data returned
+  if not rawData or rawData == "" then
+    return res
+  end
+
+  ---@type OracleData
+  local data = json.decode(rawData)
+
+  for ticker, p in pairs(data) do
+    -- only add data if the timestamp is up to date
+    if p.t + MaxOracleDelay >= Timestamp then
+      res[ticker] = {
+        price = p.v,
+        timestamp = p.t
+      }
+    end
+  end
+
+  return res
+end
+
+-- Get the value of a single quantity
+---@param rawPrices RawPrices Raw price data
+---@param quantity Bint Token quantity
+---@param ticker string Token ticker
+---@param denomination number Token denomination
+function mod.getValue(rawPrices, quantity, ticker, denomination)
+  local res = mod.getValues(rawPrices, {
+    { ticker = ticker, denomination = denomination, quantity = quantity }
+  })
+
+  assert(res[1] ~= nil, "No price calculated")
+
+  return res[1].value
+end
+
+-- Get the value of quantities of the provided assets. The function
+-- will only provide up to date values, outdated and nil values will be
+-- filtered out
+---@param rawPrices RawPrices Raw results from the oracle
+---@param quantities PriceParam[] Token quantities
+function mod.getValues(rawPrices, quantities)
+  ---@type { ticker: string, value: Bint }[]
+  local results = {}
+
+  local one = bint.one()
+  local zero = bint.zero()
+
+  for _, v in ipairs(quantities) do
+    if not v.quantity then v.quantity = one end
+    if not bint.eq(v.quantity, zero) then
+      -- make sure the oracle returned the price
+      assert(rawPrices[v.ticker] ~= nil, "No price returned from the oracle for " .. v.ticker)
+
+      -- the value of the quantity
+      -- (USD price value is denominated for precision,
+      -- but the result needs to be divided according
+      -- to the underlying asset's denomination,
+      -- because the price data is for the non-denominated
+      -- unit)
+      local value = bint.udiv(
+        v.quantity * oracleUtils.getUSDDenominated(rawPrices[v.ticker].price),
+        -- optimize performance by repeating "0" instead of a power operation
+        bint("1" .. string.rep("0", v.denomination))
+      )
+
+      -- add data
+      table.insert(results, {
+        ticker = v.ticker,
+        value = value
+      })
+    else
+      table.insert(results, {
+        ticker = v.ticker,
+        value = zero
+      })
+    end
+  end
+
+  return results
+end
+
 -- Get the price/value of a quantity of the provided assets. The function
 -- will only provide up to date values, outdated and nil values will be
 -- filtered out
