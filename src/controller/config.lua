@@ -14,7 +14,7 @@ function config.setOracle(msg)
   )
 
   -- update
-  Oracle = newOracle
+  OracleID = newOracle
 
   -- notify the user
   msg.reply({

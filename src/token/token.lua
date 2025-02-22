@@ -30,7 +30,7 @@ function mod.info(msg)
     ["Collateral-Denomination"] = tostring(CollateralDenomination),
     ["Liquidation-Threshold"] = tostring(LiquidationThreshold),
     ["Value-Limit"] = ValueLimit,
-    Oracle = Oracle,
+    Oracle = OracleID,
     ["Oracle-Delay-Tolerance"] = tostring(MaxOracleDelay)
   })
 end
