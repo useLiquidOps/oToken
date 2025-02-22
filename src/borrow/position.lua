@@ -6,40 +6,44 @@ local json = require "json"
 
 local mod = {}
 
--- Get the local borrow capacity, based on the collateral in this pool
--- and the current collateralization
+-- Get the local borrow capacity, based on the collateral in this pool, the
+-- current collateralization and the liquidation threshold
 ---@param address string Address to get the borrow capacity for
----@return Bint, Bint
+---@return Bint, Bint, Bint
 function mod.getLocalBorrowCapacity(address)
   local zero = bint.zero()
 
   -- optimize 0 results
   if not Balances[address] or Balances[address] == "0" then
-    return zero, zero
+    return zero, zero, zero
   end
 
   -- user oToken balance
   local balance = bint(Balances[address] or 0)
 
-  -- TODO: calculating the total amount pooled can probably be improved
-  -- an option would be to re-calculate this every time a new message is
-  -- handled, before calling any handlers and removing the value after
-  -- all handlers have been evaluated
-
   -- total tokens pooled
   local totalPooled = bint(Available) + bint(Lent)
 
   -- the value of the balance in terms of the underlying asset
-  local balanceValue = bint.udiv(
+  -- (the total collateral represented by the oToken)
+  local collateralization = bint.udiv(
     totalPooled * balance,
     bint(TotalSupply)
   )
 
-  -- capacity in units of the underlying asset
-  return bint.udiv(
-    balanceValue * bint(CollateralFactor),
+  -- local borrow capacity in units of the underlying asset
+  local capacity = bint.udiv(
+    collateralization * bint(CollateralFactor),
     bint(100)
-  ), balanceValue
+  )
+
+  -- liquidation threshold in units of the underlying assets
+  local threshold = bint.udiv(
+    collateralization * bint(LiquidationThreshold),
+    bint(100)
+  )
+
+  return capacity, collateralization, threshold
 end
 
 -- Get the amount of tokens borrowed + owned as interest
