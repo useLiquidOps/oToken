@@ -225,17 +225,17 @@ local function setup_handlers()
   Handlers.add(
     "borrow-position-collateralization",
     Handlers.utils.hasMatchingTag("Action", "Position"),
-    position.position
+    position.handlers.localPosition
   )
   Handlers.add(
     "borrow-position-global-collateralization",
     Handlers.utils.hasMatchingTag("Action", "Global-Position"),
-    position.globalPosition
+    position.handlers.globalPosition
   )
   Handlers.add(
     "borrow-position-all-positions",
     Handlers.utils.hasMatchingTag("Action", "Positions"),
-    position.allPositions
+    position.handlers.allPositions
   )
 
   Handlers.advanced({

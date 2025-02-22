@@ -205,7 +205,7 @@ function mod.allPositions(msg)
   -- because it is possible that their collateralization
   -- is not in this instance of the process
   --
-  -- we only need to go through the "Loand" and
+  -- we only need to go through the "Loans" and
   -- not the "Interests", because the interest is repaid
   -- first, the loan is only repaid after the owned
   -- interest is zero

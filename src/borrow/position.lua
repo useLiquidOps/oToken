@@ -2,8 +2,11 @@ local Oracle = require ".liquidations.oracle"
 local scheduler = require ".utils.scheduler"
 local bint = require ".utils.bint"(1024)
 local utils = require ".utils.utils"
+local json = require "json"
 
-local mod = { handlers = {} }
+local mod = {
+  handlers = {}
+}
 
 ---@alias Position { collateralization: Bint, capacity: Bint, borrowBalance: Bint, liquidationLimit: Bint }
 
@@ -132,6 +135,7 @@ function mod.handlers.localPosition(msg)
 end
 
 -- Global position action handler
+---@type HandlerFunction
 function mod.handlers.globalPosition(msg)
   local account = msg.Tags.Recipient or msg.From
   local position = mod.globalPosition(account)
@@ -142,6 +146,56 @@ function mod.handlers.globalPosition(msg)
     ["Borrow-Balance"] = tostring(position.borrowBalance),
     ["Liquidation-Limit"] = tostring(position.liquidationLimit),
     ["USD-Denomination"] = tostring(Oracle.usdDenomination)
+  })
+end
+
+-- All local user positions in this oToken
+---@type HandlerFunction
+function mod.handlers.allPositions(msg)
+  ---@type table<string, { Collateralization: string, Capacity: string, Borrow-Balance: string, Liquidation-Limit: string }>
+  local positions = {}
+
+  -- go through all users who have collateral deposited
+  -- and add their position
+  for address, _ in pairs(Balances) do
+    local position = mod.position(address)
+
+    positions[address] = {
+      Collateralization = tostring(position.collateralization),
+      Capacity = tostring(position.capacity),
+      ["Borrow-Balance"] = tostring(position.borrowBalance),
+      ["Liquidation-Limit"] = tostring(position.liquidationLimit)
+    }
+  end
+
+  -- go through all users who have "Loans"
+  -- because it is possible that their collateralization
+  -- is not in this instance of the process
+  --
+  -- we only need to go through the "Loans" and
+  -- not the "Interests", because the interest is repaid
+  -- first, the loan is only repaid after the owned
+  -- interest is zero
+  for address, _ in pairs(Loans) do
+    -- do not handle positions that have
+    -- already been added above
+    if not positions[address] then
+      local position = mod.position(address)
+
+      positions[address] = {
+        Collateralization = tostring(position.collateralization),
+        Capacity = tostring(position.capacity),
+        ["Borrow-Balance"] = tostring(position.borrowBalance),
+        ["Liquidation-Limit"] = tostring(position.liquidationLimit)
+      }
+    end
+  end
+
+  -- reply with the serialized result
+  msg.reply({
+    ["Collateral-Ticker"] = CollateralTicker,
+    ["Collateral-Denomination"] = tostring(CollateralDenomination),
+    Data = next(positions) ~= nil and json.encode(positions) or "{}"
   })
 end
 
