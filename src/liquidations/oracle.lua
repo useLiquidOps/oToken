@@ -5,11 +5,9 @@ local json = require "json"
 local mod = {}
 local oracleUtils = {}
 
----@alias OracleData table<string, { t: number, a: string, v: number }>
 ---@alias PriceParam { ticker: string, quantity: Bint?, denomination: number }
 ---@alias ResultItem { ticker: string, price: Bint }
 ---@alias CachedPrice { price: number, timestamp: number }
----@alias RawPrices table<string, { price: number, timestamp: number }>
 
 ---@type HandlerFunction
 function mod.setup()
