@@ -4,6 +4,7 @@ local json = require "json"
 
 ---@alias OracleData table<string, { t: number, a: string, v: number }>
 ---@alias FetchedPrices table<string, { price: Bint, timestamp: number }>
+---@alias RawPrices table<string, { price: number, timestamp: number }>
 
 ---@class Oracle
 local Oracle = {
@@ -46,6 +47,21 @@ function Oracle.setup()
   -- oracle delay tolerance in milliseconds
   ---@type number
   MaxOracleDelay = MaxOracleDelay or tonumber(ao.env.Process.Tags["Oracle-Delay-Tolerance"]) or 0
+
+  -- cached price
+  -- this should only be used within the same request
+  ---@type RawPrices
+  PriceCache = PriceCache or {}
+end
+
+---@type HandlerFunction
+function Oracle.timeoutSync(msg)
+  -- filter out prices that are no longer up to date
+  for ticker, data in pairs(PriceCache) do
+    if data.timestamp + MaxOracleDelay < msg.Timestamp then
+      PriceCache[ticker] = nil
+    end
+  end
 end
 
 -- Sync oracle prices
@@ -53,27 +69,51 @@ function Oracle:sync()
   -- don't sync if no symbols are given
   if #self.symbols < 1 then return end
 
-  -- request prices from oracle
-  ---@type string|nil
-  local rawData = ao.send({
-    Target = OracleID,
-    Action = "v2.Request-Latest-Data",
-    Tickers = json.encode(self.symbols)
-  }).receive().Data
+  -- prices to sync (that were outdated or not cached)
+  local toSync = {}
 
-  -- try parsing as json
-  ---@type boolean, OracleData
-  local parsed, data = pcall(json.decode, rawData)
+  -- add cached prices or push to the toSync list if needed
+  for _, symbol in ipairs(self.symbols) do
+    local cached = PriceCache[symbol]
 
-  -- could not parse price data, don't sync
-  if not parsed then return end
+    if cached then
+      self.prices[symbol] = {
+        price = Oracle.utils.getUSDDenominated(cached.price),
+        timestamp = cached.timestamp
+      }
+    else
+      table.insert(toSync, symbol)
+    end
+  end
 
-  -- sync price data
-  for ticker, p in pairs(data) do
-    self.prices[ticker] = {
-      price = Oracle.utils.getUSDDenominated(p.v),
-      timestamp = p.t
-    }
+  -- if there are any prices left to fetch, get them
+  if #toSync > 0 then
+    -- request prices from oracle
+    ---@type string|nil
+    local rawData = ao.send({
+      Target = OracleID,
+      Action = "v2.Request-Latest-Data",
+      Tickers = json.encode(toSync)
+    }).receive().Data
+
+    -- try parsing as json
+    ---@type boolean, OracleData
+    local parsed, data = pcall(json.decode, rawData)
+
+    -- could not parse price data, don't sync
+    if not parsed then return end
+
+    -- sync price data
+    for ticker, p in pairs(data) do
+      self.prices[ticker] = {
+        price = Oracle.utils.getUSDDenominated(p.v),
+        timestamp = p.t
+      }
+      PriceCache[ticker] = {
+        price = p.v,
+        timestamp = p.t
+      }
+    end
   end
 end
 
@@ -87,14 +127,14 @@ function Oracle:getValue(quantity, symbol)
   if quantity == zero then return zero end
 
   -- price per unit
-  local price = self.prices[symbol]
+  local priceData = self.prices[symbol]
 
   -- check if price is fetched
-  assert(price ~= nil, symbol .. " price has not been received from the oracle")
+  assert(priceData ~= nil, symbol .. " price has not been received from the oracle")
 
   -- check if price is outdated
   assert(
-    price.timestamp + MaxOracleDelay >= Timestamp,
+    priceData.timestamp + MaxOracleDelay >= Timestamp,
     symbol .. " price is outdated"
   )
 
@@ -112,7 +152,7 @@ function Oracle:getValue(quantity, symbol)
   -- for this reason, the result is divided according
   -- to its denomination)
   return bint.udiv(
-    quantity * price,
+    quantity * priceData.price,
     -- optimize performance by repeating "0" instead of a power operation
     bint("1" .. string.rep("0", denomination))
   )

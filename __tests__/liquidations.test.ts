@@ -450,7 +450,7 @@ describe("Loan liquidation", () => {
         expect.objectContaining({
           Tags: expect.arrayContaining([
             expect.objectContaining({
-              name: "Used-Capacity",
+              name: "Borrow-Balance",
               value: halfQty.toString()
             })
           ])
