@@ -170,7 +170,7 @@ function mod.liquidatePosition(msg)
     "The liquidation target owns less oTokens than the supplied quantity's worth"
   )
 
-  -- liquidate position by updating the reserves, etc.
+  -- liquidate position by updating the oToken quantities, etc.
   Balances[target] = tostring(balance - qtyValueInoToken)
   Available = tostring(availableTokens - quantity)
   TotalSupply = tostring(totalSupply - qtyValueInoToken)

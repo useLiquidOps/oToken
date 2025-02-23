@@ -24,8 +24,8 @@ function mod.handler(msg)
   local returnPrice = quantity
   local totalSupply = bint(TotalSupply)
 
-  -- price is one if the reserves are empty, otherwise
-  -- calculate it
+  -- price is one if there are no tokens supplied,
+  -- otherwise calculate it
   if not bint.eq(totalSupply, bint.zero()) then
     returnPrice = bint.udiv(
       totalPooled * quantity,

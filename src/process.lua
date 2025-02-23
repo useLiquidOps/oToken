@@ -28,7 +28,6 @@ local liquidate = require ".liquidations.liquidate"
 
 local mint = require ".supply.mint"
 local price = require ".supply.price"
-local reserves = require ".supply.reserves"
 local redeem = require ".supply.redeem"
 
 local utils = require ".utils.utils"
@@ -252,9 +251,14 @@ local function setup_handlers()
     price.handler
   )
   Handlers.add(
-    "supply-reserves",
-    Handlers.utils.hasMatchingTag("Action", "Get-Reserves"),
-    reserves
+    "supply-cash",
+    Handlers.utils.hasMatchingTag("Action", "Cash"),
+    function (msg) msg.reply({ Cash = Available }) end
+  )
+  Handlers.add(
+    "supply-total-borrows",
+    Handlers.utils.hasMatchingTag("Action", "Total-Borrows"),
+    function (msg) msg.reply({ ["Total-Borrows"] = Lent }) end
   )
   -- needs unqueueing because of coroutines
   Handlers.add(
