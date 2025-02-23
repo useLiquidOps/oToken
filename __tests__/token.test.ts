@@ -654,7 +654,7 @@ describe("Token standard functionalities", () => {
             expect.objectContaining({
               name: "Error",
               value: expect.stringContaining(
-                "No price returned from the oracle"
+                "AR price has not been received from the oracle"
               )
             })
           ])
@@ -756,7 +756,7 @@ describe("Token standard functionalities", () => {
             expect.objectContaining({
               name: "Error",
               value: expect.stringContaining(
-                "No price returned from the oracle"
+                "AR price is outdated"
               )
             })
           ])
