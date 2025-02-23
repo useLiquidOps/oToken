@@ -96,6 +96,14 @@ describe("Token standard functionalities", () => {
             expect.objectContaining({
               name: "Oracle-Delay-Tolerance",
               value: expect.toBeIntegerStringEncoded()
+            }),
+            expect.objectContaining({
+              name: "Cash",
+              value: expect.toBeIntegerStringEncoded()
+            }),
+            expect.objectContaining({
+              name: "Total-Borrows",
+              value: expect.toBeIntegerStringEncoded()
             })
           ])
         })
