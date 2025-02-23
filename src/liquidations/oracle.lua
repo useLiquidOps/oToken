@@ -68,14 +68,12 @@ function Oracle:sync()
   -- could not parse price data, don't sync
   if not parsed then return end
 
-  -- sync price data - if up to date - for each symbol
+  -- sync price data
   for ticker, p in pairs(data) do
-    if p.t + MaxOracleDelay >= Timestamp then
-      self.prices[ticker] = {
-        price = Oracle.utils.getUSDDenominated(p.v),
-        timestamp = p.t
-      }
-    end
+    self.prices[ticker] = {
+      price = Oracle.utils.getUSDDenominated(p.v),
+      timestamp = p.t
+    }
   end
 end
 
@@ -93,6 +91,12 @@ function Oracle:getValue(quantity, symbol)
 
   -- check if price is fetched
   assert(price ~= nil, symbol .. " price has not been received from the oracle")
+
+  -- check if price is outdated
+  assert(
+    price.timestamp + MaxOracleDelay >= Timestamp,
+    symbol .. " price is outdated"
+  )
 
   -- check if denomination is present
   local denomination = self.denominations[symbol]
