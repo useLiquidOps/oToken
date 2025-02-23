@@ -91,28 +91,32 @@ function mod.globalPosition(address)
   -- load local position
   local localPosition = mod.position(address)
 
+  -- scope the oracle
+  local locOracle = oracle:token(CollateralTicker)
+
   -- result template
   ---@type Position
   local res = {
-    collateralization = oracle:getValue(localPosition.collateralization, CollateralTicker),
-    capacity = oracle:getValue(localPosition.capacity, CollateralTicker),
-    borrowBalance = oracle:getValue(localPosition.borrowBalance, CollateralTicker),
-    liquidationLimit = oracle:getValue(localPosition.liquidationLimit, CollateralTicker),
+    collateralization = locOracle.getValue(localPosition.collateralization),
+    capacity = locOracle.getValue(localPosition.capacity),
+    borrowBalance = locOracle.getValue(localPosition.borrowBalance),
+    liquidationLimit = locOracle.getValue(localPosition.liquidationLimit),
   }
 
   -- calculate global position in USD
   for _, position in ipairs(positions) do
-    local ticker = position.Tags["Collateral-Ticker"]
+    -- scope the oracle
+    local posOracle = oracle:token(position.Tags["Collateral-Ticker"])
 
     local collateralization = bint(position.Tags["Collateralization"] or 0)
     local capacity = bint(position.Tags.Capacity or 0)
     local borrowBalance = bint(position.Tags["Borrow-Balance"] or 0)
     local liquidationLimit = bint(position.Tags["Liquidation-Limit"] or 0)
 
-    res.collateralization = res.collateralization + oracle:getValue(collateralization, ticker)
-    res.capacity = res.collateralization + oracle:getValue(capacity, ticker)
-    res.borrowBalance = res.collateralization + oracle:getValue(borrowBalance, ticker)
-    res.liquidationLimit = res.collateralization + oracle:getValue(liquidationLimit, ticker)
+    res.collateralization = res.collateralization + posOracle.getValue(collateralization)
+    res.capacity = res.collateralization + posOracle.getValue(capacity)
+    res.borrowBalance = res.collateralization + posOracle.getValue(borrowBalance)
+    res.liquidationLimit = res.collateralization + posOracle.getValue(liquidationLimit)
   end
 
   return res

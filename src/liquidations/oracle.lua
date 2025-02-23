@@ -118,6 +118,18 @@ function Oracle:getValue(quantity, symbol)
   )
 end
 
+-- Scope an Oracle instance to a token
+---@param symbol string Token symbol/ticker
+function Oracle:token(symbol)
+  return {
+    -- Get value in USD for a token quantity
+    ---@param quantity Bint Quantity to get the value for
+    getValue = function (quantity)
+      return self:getValue(quantity, symbol)
+    end
+  }
+end
+
 -- Get the fractional part's length
 ---@param val number Full number
 function Oracle.utils.getFractionsCount(val)
