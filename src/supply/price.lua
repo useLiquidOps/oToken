@@ -18,7 +18,7 @@ function mod.handler(msg)
   end
 
   -- total tokens pooled
-  local totalPooled = bint(Available) + bint(Lent)
+  local totalPooled = bint(Cash) + bint(TotalBorrows)
 
   -- calculate price based on the underlying value of the total supply
   local returnPrice = quantity

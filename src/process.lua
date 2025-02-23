@@ -253,12 +253,12 @@ local function setup_handlers()
   Handlers.add(
     "supply-cash",
     Handlers.utils.hasMatchingTag("Action", "Cash"),
-    function (msg) msg.reply({ Cash = Available }) end
+    function (msg) msg.reply({ Cash = Cash }) end
   )
   Handlers.add(
     "supply-total-borrows",
     Handlers.utils.hasMatchingTag("Action", "Total-Borrows"),
-    function (msg) msg.reply({ ["Total-Borrows"] = Lent }) end
+    function (msg) msg.reply({ ["Total-Borrows"] = TotalBorrows }) end
   )
   -- needs unqueueing because of coroutines
   Handlers.add(

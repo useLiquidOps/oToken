@@ -14,12 +14,12 @@ local function borrow(msg)
   local quantity = bint(msg.Tags.Quantity)
 
   -- check if there are enough tokens available
-  local available = bint(Available)
+  local cash = bint(Cash)
 
   -- we check if the quantity is less (and not less than equal) than
   -- the amount of tokens available to be lent so the interest ratio
   -- is never broken
-  assert(bint.ult(quantity, available), "Not enough tokens available to be lent")
+  assert(bint.ult(quantity, cash), "Not enough tokens available to be lent")
 
   -- validate value limit
   assert(
@@ -28,7 +28,7 @@ local function borrow(msg)
   )
 
   -- calculate the max borrow amount (borrow capacity)
-  local lent = bint(Lent)
+  local lent = bint(TotalBorrows)
 
   -- TODO: implement the reserve factor here
   --[[
@@ -66,8 +66,8 @@ local function borrow(msg)
 
   -- add loan
   Loans[account] = tostring(bint(Loans[account] or 0) + quantity)
-  Available = tostring(available - quantity)
-  Lent = tostring(lent + quantity)
+  Cash = tostring(cash - quantity)
+  TotalBorrows = tostring(lent + quantity)
 
   -- send out the tokens
   ao.send({

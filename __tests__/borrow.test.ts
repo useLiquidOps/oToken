@@ -257,7 +257,7 @@ describe("Borrowing", () => {
       }));
     }
 
-    expect((await handle(createMessage({ Action: "Info" }))).Messages).toEqual(
+    expect((await handle(createMessage({ Action: "Cash" }))).Messages).toEqual(
       expect.arrayContaining([
         expect.objectContaining({
           Tags: expect.arrayContaining([

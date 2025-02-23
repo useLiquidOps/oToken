@@ -14,10 +14,10 @@ function mod.setup(msg)
   LiquidationThreshold = LiquidationThreshold or tonumber(ao.env.Process.Tags["Liquidation-Threshold"]) or CollateralFactor + 5
 
   -- available tokens to be lent
-  Available = Available or "0"
+  Cash = Cash or "0"
 
   -- tokens borrowed by borrowers
-  Lent = Lent or "0"
+  TotalBorrows = TotalBorrows or "0"
 
   -- all loans (values are Bint in string format)
   ---@type table<string, string>

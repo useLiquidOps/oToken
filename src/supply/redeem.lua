@@ -29,8 +29,8 @@ local function redeem(msg)
   local rewardQty = quantity
 
   -- total tokens pooled
-  local availableTokens = bint(Available)
-  local totalPooled = availableTokens + bint(Lent)
+  local availableTokens = bint(Cash)
+  local totalPooled = availableTokens + bint(TotalBorrows)
   local totalSupply = bint(TotalSupply)
 
   -- if the total pooled and the total supply is not
@@ -76,7 +76,7 @@ local function redeem(msg)
 
   -- update stored quantities (balance, available, total supply)
   Balances[sender] = tostring(walletBalance - quantity)
-  Available = tostring(availableTokens - rewardQty)
+  Cash = tostring(availableTokens - rewardQty)
   TotalSupply = tostring(totalSupply - quantity)
 
   msg.reply({

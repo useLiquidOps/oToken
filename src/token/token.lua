@@ -30,8 +30,8 @@ function mod.info(msg)
     ["Value-Limit"] = ValueLimit,
     Oracle = OracleID,
     ["Oracle-Delay-Tolerance"] = tostring(MaxOracleDelay),
-    ["Total-Borrows"] = Lent,
-    Cash = Available
+    ["Total-Borrows"] = TotalBorrows,
+    Cash = Cash
   })
 end
 

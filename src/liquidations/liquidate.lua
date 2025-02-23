@@ -148,8 +148,8 @@ function mod.liquidatePosition(msg)
 
   -- helpers
   local totalSupply = bint(TotalSupply)
-  local availableTokens = bint(Available)
-  local totalPooled = availableTokens + bint(Lent)
+  local availableTokens = bint(Cash)
+  local totalPooled = availableTokens + bint(TotalBorrows)
 
   -- validate if there are enough available tokens
   assert(
@@ -172,7 +172,7 @@ function mod.liquidatePosition(msg)
 
   -- liquidate position by updating the oToken quantities, etc.
   Balances[target] = tostring(balance - qtyValueInoToken)
-  Available = tostring(availableTokens - quantity)
+  Cash = tostring(availableTokens - quantity)
   TotalSupply = tostring(totalSupply - qtyValueInoToken)
 
   -- transfer to the liquidator

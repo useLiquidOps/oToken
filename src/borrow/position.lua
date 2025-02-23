@@ -30,7 +30,7 @@ function mod.position(address)
   if Balances[address] and Balances[address] ~= "0" then
     -- base data for calculations
     local balance = bint(Balances[address])
-    local totalPooled = bint(Available) + bint(Lent)
+    local totalPooled = bint(Cash) + bint(TotalBorrows)
 
     -- the value of the balance in terms of the underlying asset
     -- (the total collateral for the user, represented by the oToken)
