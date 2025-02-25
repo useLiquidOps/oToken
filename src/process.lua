@@ -27,7 +27,7 @@ local oracle = require ".liquidations.oracle"
 local liquidate = require ".liquidations.liquidate"
 
 local mint = require ".supply.mint"
-local price = require ".supply.price"
+local exchangeRate = require ".supply.rate"
 local redeem = require ".supply.redeem"
 
 local utils = require ".utils.utils"
@@ -254,8 +254,8 @@ local function setup_handlers()
   })
   Handlers.add(
     "supply-price",
-    Handlers.utils.hasMatchingTag("Action", "Get-Price"),
-    price.handler
+    Handlers.utils.hasMatchingTag("Action", "Exchange-Rate-Current"),
+    exchangeRate
   )
   Handlers.add(
     "supply-cash",

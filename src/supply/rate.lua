@@ -1,10 +1,8 @@
 local assertions = require ".utils.assertions"
 local bint = require ".utils.bint"(1024)
 
-local mod = {}
-
 ---@type HandlerFunction
-function mod.handler(msg)
+local function exchangeRate(msg)
   -- default qty
   local quantity = bint.one()
 
@@ -34,10 +32,9 @@ function mod.handler(msg)
   end
 
   msg.reply({
-    Action = "Price",
     Quantity = tostring(quantity),
     Price = tostring(returnPrice)
   })
 end
 
-return mod
+return exchangeRate
