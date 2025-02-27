@@ -277,6 +277,22 @@ Handlers.add(
 )
 
 Handlers.add(
+  "batch-update",
+  { From = ao.env.Process.Id, Action = "Batch-Update" },
+  function (msg)
+    -- check if update is already in progress
+    assert(not UpdateInProgress, "An update is already in progress")
+
+    -- set updating in progress. this will halt interactions
+    -- by making the queue check always return true for any
+    -- address
+    UpdateInProgress = true
+
+    
+  end
+)
+
+Handlers.add(
   "get-tokens",
   { Action = "Get-Tokens" },
   function (msg)
