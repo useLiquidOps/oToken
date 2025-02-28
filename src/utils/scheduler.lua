@@ -2,6 +2,39 @@ local coroutine = require "coroutine"
 
 local mod = {}
 
+---@param ... OutgoingMessage
+---@return Message[]
+function mod.receiveAll(...)
+  local messages = {...}
+  local results = {}
+
+  -- get current thread
+  local thread = coroutine.running()
+
+  -- handle all responses
+  for i, msg in ipairs(messages) do
+    local normalized = ao.normalize(msg)
+
+    Handlers.once(
+      { From = normalized.Target, ["X-Reference"] = normalized.Reference },
+      function (result)
+        -- insert to the same position as the message
+        results[i] = result
+
+        -- continue exection if all results are in,
+        -- throw error if execution errors
+        if #results == #messages then
+          local _, success, error = coroutine.resume(thread, results)
+
+          assert(success, error)
+        end
+      end
+    )
+  end
+
+  return coroutine.yield({})
+end
+
 -- Schedule a batch of messages and wait for all of them
 -- to return. Uses lua coroutines under the hood
 ---@param ... MessageParam
