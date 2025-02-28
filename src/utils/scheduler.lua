@@ -8,28 +8,82 @@ function mod.receiveAll(...)
   local messages = {...}
   local results = {}
 
+  if #messages == 0 then return {} end
+
   -- get current thread
+  ---@type thread|nil
   local thread = coroutine.running()
+
+  -- original handler environment
+  local currentErrorHandler = Handlers.currentErrorHandler
+  local originalMsg = ao.clone(ao.msg)
+  local originalEnv = ao.clone(ao.env)
+
+  -- handles incoming result
+  local function handle(result, idx)
+    -- insert to the same position as the message
+    results[idx] = result
+
+    -- continue exection if all results are in,
+    -- throw error if execution errors
+    if #results == #messages and thread ~= nil then
+
+      -- TODO: new way of keeping the environment/upvalues
+      -- - use string.dump(, true) (true for strip to save space) for coroutine.resume(thread, results)
+      -- - run the binary using load()
+      -- - include the old "_G" in load() to recreate the exact environment
+
+      local _, success, error = coroutine.resume(thread, results)
+
+      assert(success, error)
+    end
+  end
+
+  -- handle removal (expiry)
+  local function remove(reason)
+    -- do not continue if the handler wasn't removed because of a timeout
+    -- or if the coroutine has already been resumed
+    if reason ~= "timeout" or thread == nil or coroutine.status(thread) ~= "suspended" then return end
+
+    -- protected call the error handler, so if it errors,
+    -- it still doesn't affect the main execution
+    local success, err = pcall(
+      currentErrorHandler,
+      originalMsg,
+      originalEnv,
+      "Response expired"
+    )
+
+    -- call default error handler, if the current error
+    -- handler also errored
+    if not success then
+      Handlers.defaultErrorHandler(
+        originalMsg,
+        originalEnv,
+        "Response expired, but expiry was not handled: " .. err
+      )
+    end
+
+    thread = nil
+  end
 
   -- handle all responses
   for i, msg in ipairs(messages) do
     local normalized = ao.normalize(msg)
 
-    Handlers.once(
-      { From = normalized.Target, ["X-Reference"] = normalized.Reference },
-      function (result)
-        -- insert to the same position as the message
-        results[i] = result
-
-        -- continue exection if all results are in,
-        -- throw error if execution errors
-        if #results == #messages then
-          local _, success, error = coroutine.resume(thread, results)
-
-          assert(success, error)
-        end
-      end
-    )
+    Handlers.advanced({
+      name = "_once_" .. tostring(Handlers.onceNonce),
+      position = "prepend",
+      pattern = {
+        From = normalized.Target,
+        ["X-Reference"] = normalized.Reference
+      },
+      maxRuns = 1,
+      timeout = Block + 1,
+      handle = function (result) handle(result, i) end,
+      onRemove = remove
+    })
+    Handlers.onceNonce = Handlers.onceNonce + 1
   end
 
   return coroutine.yield({})
