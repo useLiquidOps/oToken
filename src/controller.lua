@@ -288,7 +288,30 @@ Handlers.add(
     -- address
     UpdateInProgress = true
 
-    
+    local oTokens = utils.values(Tokens)
+
+    -- request updates
+    ---@type Message[]
+    local updates = scheduler.schedule(table.unpack(utils.map(
+      function (id) return { Target = id, Action = "Update", Data = msg.Data } end,
+      oTokens
+    )))
+    local failed = utils.filter(
+      ---@param res Message
+      function (res) return res.Tags.Error ~= nil or res.Tags.Updated ~= "true" end,
+      updates
+    )
+
+    -- reply with results
+    msg.reply({
+      Updated = tostring(#oTokens - #failed),
+      Failed = tostring(#failed),
+      Data = json.encode(utils.map(
+        ---@param res Message
+        function (res) return res.From end,
+        failed
+      ))
+    })
   end
 )
 
@@ -658,7 +681,7 @@ Handlers.add(
     end
 
     -- check if the user has already been added
-    if utils.includes(user, CollateralQueue) or utils.includes(user, LiquidationQueue) then
+    if utils.includes(user, CollateralQueue) or utils.includes(user, LiquidationQueue) or UpdateInProgress then
       return msg.reply({ Error = "User already queued" })
     end
 
