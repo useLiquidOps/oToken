@@ -1250,3 +1250,145 @@ describe("Cooldown tests", () => {
     );
   });
 });
+
+describe("Updater tests", () => {
+  let handle: HandleFunction;
+  let controller: string;
+
+  beforeAll(async () => {
+    handle = await setupProcess(env);
+    controller = env.Process.Owner;
+  });
+
+  it("Rejects updating if the caller is not the controller", async () => {
+    const otherAddr = generateArweaveAddress();
+    const res = await handle(createMessage({
+      From: otherAddr,
+      Owner: otherAddr,
+      Action: "Update",
+      Data: "Handlers.add('test', { Action = 'Test' }, function (msg) msg.reply({ Hi = 'test' }) end)"
+    }));
+
+    expect(res.Messages).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          Target: otherAddr,
+          Tags: expect.arrayContaining([
+            expect.objectContaining({
+              name: "Error",
+              value: "The request could not be handled"
+            })
+          ])
+        })
+      ])
+    );
+  });
+
+  it("Does not load invalid update code", async () => {
+    const res = await handle(createMessage({
+      From: controller,
+      Owner: controller,
+      Action: "Update",
+      Data: "}) end)"
+    }));
+
+    expect(res.Messages).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          Target: controller,
+          Tags: expect.arrayContaining([
+            expect.objectContaining({
+              name: "Error"
+            })
+          ])
+        })
+      ])
+    );
+  });
+
+  it("Throws an error if the update script errors", async () => {
+    const res = await handle(createMessage({
+      From: controller,
+      Owner: controller,
+      Action: "Update",
+      Data: "error('test')"
+    }));
+
+    expect(res.Messages).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          Target: controller,
+          Tags: expect.arrayContaining([
+            expect.objectContaining({
+              name: "Error",
+              value: "test"
+            })
+          ])
+        })
+      ])
+    );
+  });
+
+  it("Updates successfully", async () => {
+    const updateRes = await handle(createMessage({
+      From: controller,
+      Owner: controller,
+      Action: "Update",
+      Data: "Handlers.add('test', { Action = 'Test' }, function (msg) msg.reply({ Hi = 'test' }) end)"
+    }));
+
+    expect(updateRes.Messages).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          Target: controller,
+          Tags: expect.arrayContaining([
+            expect.objectContaining({
+              name: "Updated",
+              value: "true"
+            })
+          ])
+        })
+      ])
+    );
+
+    // test the added handler
+    const handlerRes = await handle(createMessage({ Action: "Test" }));
+
+    expect(handlerRes.Messages).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          Tags: expect.arrayContaining([
+            expect.objectContaining({
+              name: "Hi",
+              value: "test"
+            })
+          ])
+        })
+      ])
+    );
+
+    // test if previous handlers are still working
+    const infoRes = await handle(createMessage({ Action: "Info" }));
+
+    expect(infoRes.Messages).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          Tags: expect.arrayContaining([
+            expect.objectContaining({
+              name: "Name",
+              value: expect.any(String)
+            }),
+            expect.objectContaining({
+              name: "Ticker",
+              value: expect.any(String)
+            }),
+            expect.objectContaining({
+              name: "Logo",
+              value: expect.toBeArweaveAddress()
+            })
+          ])
+        })
+      ])
+    );
+  });
+});

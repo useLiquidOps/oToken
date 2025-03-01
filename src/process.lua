@@ -12,6 +12,7 @@ local friend = require ".controller.friend"
 local config = require ".controller.config"
 local queue = require ".controller.queue"
 local cooldown = require ".controller.cooldown"
+local updater = require ".controller.updater"
 
 local balance = require ".token.balance"
 local token = require ".token.token"
@@ -133,6 +134,11 @@ local function setup_handlers()
   })
 
   -- communication with the controller
+  Handlers.add(
+    "controller-updater",
+    { From = ao.env.Process.Owner, Action = "Update" },
+    updater
+  )
   Handlers.add(
     "controller-friend-add",
     { From = ao.env.Process.Owner, Action = "Add-Friend" },
