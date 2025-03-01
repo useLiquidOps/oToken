@@ -2,19 +2,47 @@ local bint = require ".utils.bint"(1024)
 local utils = require ".utils.utils"
 local json = require "json"
 
-local mod = {}
-local oracleUtils = {}
-
 ---@alias OracleData table<string, { t: number, a: string, v: number }>
----@alias PriceParam { ticker: string, quantity: Bint?, denomination: number }
----@alias ResultItem { ticker: string, price: Bint }
----@alias CachedPrice { price: number, timestamp: number }
+---@alias FetchedPrices table<string, { price: Bint, timestamp: number }>
 ---@alias RawPrices table<string, { price: number, timestamp: number }>
 
+---@class Oracle
+local Oracle = {
+  ---@type string[]
+  symbols = {},
+  ---@type table<string, number>
+  denominations = {},
+  ---@type FetchedPrices
+  prices = {},
+  -- denomination for usd precision
+  usdDenomination = 12,
+  utils = {}
+}
+
+-- Creates a new Oracle instance and pre-fetches 
+-- the price for the given symbols
+---@param data table<string, number> Symbol - denomination pairs
+---@return Oracle
+function Oracle:new(data)
+  local instance = {}
+  setmetatable(instance, self)
+  self.__index = self
+
+  -- construct
+  self.symbols = utils.keys(data)
+  self.denominations = data
+
+  -- pre-fetch prices
+  self:sync()
+
+  return instance
+end
+
+-- Initializes the oracle configuration from the spawn message
 ---@type HandlerFunction
-function mod.setup()
+function Oracle.setup()
   -- oracle process id
-  Oracle = Oracle or ao.env.Process.Tags.Oracle
+  OracleID = OracleID or ao.env.Process.Tags.Oracle
 
   -- oracle delay tolerance in milliseconds
   ---@type number
@@ -27,7 +55,7 @@ function mod.setup()
 end
 
 ---@type HandlerFunction
-function mod.timeoutSync(msg)
+function Oracle.timeoutSync(msg)
   -- filter out prices that are no longer up to date
   for ticker, data in pairs(PriceCache) do
     if data.timestamp + MaxOracleDelay < msg.Timestamp then
@@ -36,101 +64,115 @@ function mod.timeoutSync(msg)
   end
 end
 
--- Get the price/value of a quantity of the provided assets. The function
--- will only provide up to date values, outdated and nil values will be
--- filtered out
----@param ... PriceParam
----@return ResultItem[]
-function mod.getPrice(...)
-  local args = {...}
-  local zero = bint.zero()
+-- Sync oracle prices
+function Oracle:sync()
+  -- don't sync if no symbols are given
+  if #self.symbols < 1 then return end
 
-  -- prices that require to be synced
-  ---@type string[]
-  local pricesToSync = utils.map(
-    ---@param v PriceParam
-    function (v) return v.ticker end,
-    utils.filter(
-      ---@param v PriceParam
-      function (v) return not PriceCache[v.ticker] and not bint.eq(v.quantity, zero) end,
-      args
-    )
-  )
+  -- prices to sync (that were outdated or not cached)
+  local toSync = {}
 
-  -- if the cache is disabled or there is no price
-  -- data cached, fetch the price
-  if #pricesToSync > 0 then
+  -- add cached prices or push to the toSync list if needed
+  for _, symbol in ipairs(self.symbols) do
+    local cached = PriceCache[symbol]
+
+    if cached then
+      self.prices[symbol] = {
+        price = Oracle.utils.getUSDDenominated(cached.price),
+        timestamp = cached.timestamp
+      }
+    else
+      table.insert(toSync, symbol)
+    end
+  end
+
+  -- if there are any prices left to fetch, get them
+  if #toSync > 0 then
+    -- request prices from oracle
     ---@type string|nil
     local rawData = ao.send({
-      Target = Oracle,
+      Target = OracleID,
       Action = "v2.Request-Latest-Data",
-      Tickers = json.encode(pricesToSync)
-    }).receive(nil, Block + 1).Data
+      Tickers = json.encode(toSync)
+    }).receive().Data
 
-    -- check if there was any data returned
-    assert(rawData ~= nil and rawData ~= "", "No data returned from the oracle")
+    -- try parsing as json
+    ---@type boolean, OracleData
+    local parsed, data = pcall(json.decode, rawData)
 
-    ---@type OracleData
-    local data = json.decode(rawData)
+    -- could not parse price data, don't sync
+    if not parsed then return end
 
+    -- sync price data
     for ticker, p in pairs(data) do
-      -- only add data if the timestamp is up to date
-      if p.t <= Timestamp + MaxOracleDelay and p.t >= Timestamp - MaxOracleDelay then
-        PriceCache[ticker] = {
-          price = p.v,
-          timestamp = p.t
-        }
-      end
+      self.prices[ticker] = {
+        price = Oracle.utils.getUSDDenominated(p.v),
+        timestamp = p.t
+      }
+      PriceCache[ticker] = {
+        price = p.v,
+        timestamp = p.t
+      }
     end
   end
-
-  ---@type ResultItem[]
-  local results = {}
-
-  local one = bint.one()
-  for _, v in ipairs(args) do
-    if not v.quantity then v.quantity = one end
-    if not bint.eq(v.quantity, zero) then
-      -- get cached value
-      local cached = PriceCache[v.ticker]
-
-      -- make sure the cached value exists
-      assert(cached ~= nil, "No price returned from the oracle for " .. v.ticker)
-
-      -- the value of the quantity
-      -- (USD price value is denominated for precision,
-      -- but the result needs to be divided according
-      -- to the underlying asset's denomination,
-      -- because the price data is for the non-denominated
-      -- unit)
-      local price = bint.udiv(
-        v.quantity * oracleUtils.getUSDDenominated(cached.price),
-        -- optimize performance by repeating "0" instead of a power operation
-        bint("1" .. string.rep("0", v.denomination))
-      )
-
-      -- add data
-      table.insert(results, {
-        ticker = v.ticker,
-        price = price
-      })
-    else
-      table.insert(results, {
-        ticker = v.ticker,
-        price = zero
-      })
-    end
-  end
-
-  return results
 end
 
--- Get the precision used for USD biginteger values
-function mod.getUSDDenomination() return 12 end
+-- Get value in USD for a token quantity
+---@param quantity Bint Quantity to get the value for
+---@param symbol string Token symbol for the quantity
+---@return Bint
+function Oracle:getValue(quantity, symbol)
+  -- no calculations needed for 0 quantity
+  local zero = bint.zero()
+  if quantity == zero then return zero end
+
+  -- price per unit
+  local priceData = self.prices[symbol]
+
+  -- check if price is fetched
+  assert(priceData ~= nil, symbol .. " price has not been received from the oracle")
+
+  -- check if price is outdated
+  assert(
+    priceData.timestamp + MaxOracleDelay >= Timestamp,
+    symbol .. " price is outdated"
+  )
+
+  -- check if denomination is present
+  local denomination = self.denominations[symbol]
+
+  assert(denomination ~= nil, "No denomination provided for " .. symbol)
+
+  -- the value of the quantity
+  -- (USD price value is denominated for precision,
+  -- but the result needs to be divided according
+  -- to the underlying asset's denomination,
+  -- because the price data is for the non-denominated
+  -- unit.
+  -- for this reason, the result is divided according
+  -- to its denomination)
+  return bint.udiv(
+    quantity * priceData.price,
+    -- optimize performance by repeating "0" instead of a power operation
+    bint("1" .. string.rep("0", denomination))
+  )
+end
+
+-- Scope an Oracle instance to a token
+---@param symbol string Token symbol/ticker
+function Oracle:token(symbol)
+  return {
+    -- Get value in USD for a token quantity
+    ---@param quantity Bint Quantity to get the value for
+    getValue = function (quantity)
+      return self:getValue(quantity, symbol)
+    end
+  }
+end
 
 -- Get the fractional part's length
 ---@param val number Full number
-function oracleUtils.getFractionsCount(val)
+function Oracle.utils.getFractionsCount(val)
   -- check if there is a fractional part 
   -- by trying to find it with a pattern
   local fractionalPart = string.match(tostring(val), "%.(.*)")
@@ -143,14 +185,15 @@ end
 
 -- Get a USD value in a 12 denominated form
 ---@param val number USD value as a floating point number
-function oracleUtils.getUSDDenominated(val)
-  local denominator = mod.getUSDDenomination()
+---@return Bint
+function Oracle.utils.getUSDDenominated(val)
+  local denominator = Oracle.usdDenomination
 
   -- remove decimal point
   local denominated = string.gsub(tostring(val), "%.", "")
 
   -- get the count of decimal places after the decimal point
-  local fractions = oracleUtils.getFractionsCount(val)
+  local fractions = Oracle.utils.getFractionsCount(val)
 
   if fractions < denominator then
     denominated = denominated .. string.rep("0", denominator - fractions)
@@ -164,4 +207,4 @@ function oracleUtils.getUSDDenominated(val)
   return bint(denominated)
 end
 
-return mod
+return Oracle

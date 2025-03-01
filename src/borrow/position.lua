@@ -1,199 +1,174 @@
-local oracle = require ".liquidations.oracle"
+local Oracle = require ".liquidations.oracle"
 local scheduler = require ".utils.scheduler"
 local bint = require ".utils.bint"(1024)
 local utils = require ".utils.utils"
 local json = require "json"
 
-local mod = {}
+local mod = {
+  handlers = {}
+}
 
--- Get the local borrow capacity, based on the collateral in this pool
--- and the current collateralization
----@param address string Address to get the borrow capacity for
----@return Bint, Bint
-function mod.getLocalBorrowCapacity(address)
+---@alias Position { collateralization: Bint, capacity: Bint, borrowBalance: Bint, liquidationLimit: Bint }
+
+-- Get local position for a user (in units of the collateral)
+---@param address string User address
+---@return Position
+function mod.position(address)
   local zero = bint.zero()
 
-  -- optimize 0 results
-  if not Balances[address] or Balances[address] == "0" then
-    return zero, zero
+  -- result template
+  ---@type Position
+  local res = {
+    collateralization = zero,
+    capacity = zero,
+    borrowBalance = zero,
+    liquidationLimit = zero
+  }
+
+  -- the process holds collateral, let's calculate limits
+  -- from the oToken balance (capacity, liquidation limit, etc.)
+  if Balances[address] and Balances[address] ~= "0" then
+    -- base data for calculations
+    local balance = bint(Balances[address])
+    local totalPooled = bint(Cash) + bint(TotalBorrows)
+
+    -- the value of the balance in terms of the underlying asset
+    -- (the total collateral for the user, represented by the oToken)
+    res.collateralization = bint.udiv(
+      totalPooled * balance,
+      bint(TotalSupply)
+    )
+
+    -- local borrow capacity in units of the underlying asset
+    res.capacity = bint.udiv(
+      res.collateralization * bint(CollateralFactor),
+      bint(100)
+    )
+
+    -- liquidation limit in units of the underlying assets
+    res.liquidationLimit = bint.udiv(
+      res.collateralization * bint(LiquidationThreshold),
+      bint(100)
+    )
   end
 
-  -- user oToken balance
-  local balance = bint(Balances[address] or 0)
-
-  -- TODO: calculating the total amount pooled can probably be improved
-  -- an option would be to re-calculate this every time a new message is
-  -- handled, before calling any handlers and removing the value after
-  -- all handlers have been evaluated
-
-  -- total tokens pooled
-  local totalPooled = bint(Available) + bint(Lent)
-
-  -- the value of the balance in terms of the underlying asset
-  local balanceValue = bint.udiv(
-    totalPooled * balance,
-    bint(TotalSupply)
-  )
-
-  -- capacity in units of the underlying asset
-  return bint.udiv(
-    balanceValue * bint(CollateralFactor),
-    bint(100)
-  ), balanceValue
-end
-
--- Get the amount of tokens borrowed + owned as interest
----@param address string Address to get the borrow capacity for
----@return Bint
-function mod.getLocalUsedCapacity(address)
-  -- optimize 0 results
-  if (not Loans[address] or Loans[address] == "0") and (not Interests[address] or Interests[address].value == "0") then
-    return bint.zero()
+  -- if the user has unpaid depth (an active loan),
+  -- that will be the borrow balance
+  if Loans[address] and Loans[address] ~= "0" then
+    res.borrowBalance = bint(Loans[address])
   end
 
-  return bint(Loans[address] or 0) + bint((Interests[address] and Interests[address].value) or 0)
+  -- if the user has unpaid interest, that also needs
+  -- to be added to the borrow balance
+  if Interests[address] and Interests[address].value ~= "0" then
+    res.borrowBalance = res.borrowBalance + bint(Interests[address].value or 0)
+  end
+
+  return res
 end
 
--- Get the global collateralization state (across all friend oTokens) in denominated USD
----@param address string Address to get the collateralization for
-function mod.getGlobalCollateralization(address)
-  -- get friend values
-  local friendsCollateralRes = scheduler.schedule(table.unpack(utils.map(
+-- Get the global position for a user (in USD, using oracle prices)
+---@param address string User address
+---@return Position
+function mod.globalPosition(address)
+  -- get local positions from friend processes
+  local positions = scheduler.schedule(table.unpack(utils.map(
     function (id) return { Target = id, Action = "Position", Recipient = address } end,
     Friends
   )))
 
-  -- list capacity values separately
-  ---@type PriceParam[]
-  local capacities = {
-    -- add local value
-    { ticker = CollateralTicker, quantity = mod.getLocalBorrowCapacity(address), denomination = CollateralDenomination }
-  }
+  -- ticker - denomination data for the oracle
+  local oracleData = { [CollateralTicker] = CollateralDenomination }
 
-  ---@type PriceParam[]
-  local usedCapacities = {
-    -- add local value
-    {
-      ticker = CollateralTicker,
-      quantity = mod.getLocalUsedCapacity(address),
-      denomination = CollateralDenomination
-    }
-  }
-
-  for _, msg in ipairs(friendsCollateralRes) do
-    table.insert(capacities, {
-      ticker = msg.Tags["Collateral-Ticker"],
-      quantity = bint(msg.Tags.Capacity),
-      denomination = tonumber(msg.Tags["Collateral-Denomination"])
-    })
-    table.insert(usedCapacities, {
-      ticker = msg.Tags["Collateral-Ticker"],
-      quantity = bint(msg.Tags["Used-Capacity"]),
-      denomination = tonumber(msg.Tags["Collateral-Denomination"])
-    })
+  -- add ticker - denomination data from the positions
+  for _, msg in ipairs(positions) do
+    oracleData[msg.Tags["Collateral-Ticker"]] = tonumber(msg.Tags["Collateral-Denomination"])
   end
 
-  -- get collateralization values
-  local zero = bint.zero()
+  -- init oracle for all collaterals
+  local oracle = Oracle:new(oracleData)
 
-  -- TODO: this could be optimized
-  -- (in cases where the "usedCapacities" has some tokens that
-  -- are not in the "capacities", the prices are requested 2x.
-  -- these could be requested in one price request)
+  -- load local position
+  local localPosition = mod.position(address)
 
-  ---@type Bint
-  local capacity = utils.reduce(
-    ---@param result Bint
-    ---@param v ResultItem
-    function (result, v) return result + v.price end,
-    zero,
-    oracle.getPrice(table.unpack(capacities))
-  )
-  ---@type Bint
-  local usedCapacity = utils.reduce(
-    ---@param result Bint
-    ---@param v ResultItem
-    function (result, v) return result + v.price end,
-    zero,
-    oracle.getPrice(table.unpack(usedCapacities))
-  )
+  -- scope the oracle
+  local locOracle = oracle:token(CollateralTicker)
 
-  return capacity, usedCapacity
+  -- result template
+  ---@type Position
+  local res = {
+    collateralization = locOracle.getValue(localPosition.collateralization),
+    capacity = locOracle.getValue(localPosition.capacity),
+    borrowBalance = locOracle.getValue(localPosition.borrowBalance),
+    liquidationLimit = locOracle.getValue(localPosition.liquidationLimit),
+  }
+
+  -- calculate global position in USD
+  for _, position in ipairs(positions) do
+    -- scope the oracle
+    local posOracle = oracle:token(position.Tags["Collateral-Ticker"])
+
+    local collateralization = bint(position.Tags["Collateralization"] or 0)
+    local capacity = bint(position.Tags.Capacity or 0)
+    local borrowBalance = bint(position.Tags["Borrow-Balance"] or 0)
+    local liquidationLimit = bint(position.Tags["Liquidation-Limit"] or 0)
+
+    res.collateralization = res.collateralization + posOracle.getValue(collateralization)
+    res.capacity = res.collateralization + posOracle.getValue(capacity)
+    res.borrowBalance = res.collateralization + posOracle.getValue(borrowBalance)
+    res.liquidationLimit = res.collateralization + posOracle.getValue(liquidationLimit)
+  end
+
+  return res
 end
 
+-- Local position action handler
 ---@type HandlerFunction
-function mod.capacity(msg)
+function mod.handlers.localPosition(msg)
   local account = msg.Tags.Recipient or msg.From
-
-  -- get the capacity in the wrapped token
-  local capacity = mod.getLocalBorrowCapacity(account)
-
-  -- reply with the results
-  msg.reply({
-    Action = "Borrow-Capacity-Response",
-    ["Borrow-Capacity"] = tostring(capacity)
-  })
-end
-
----@type HandlerFunction
-function mod.balance(msg)
-  local account = msg.Tags.Recipient or msg.From
+  local position = mod.position(account)
 
   msg.reply({
-    Action = "Borrow-Balance-Response",
-    ["Borrowed-Quantity"] = Loans[account] or "0",
-    ["Interest-Quantity"] = Interests[account] and Interests[account].value or "0"
-  })
-end
-
----@type HandlerFunction
-function mod.position(msg)
-  local account = msg.Tags.Recipient or msg.From
-
-  -- get the capacity
-  local capacity, totalCollateral = mod.getLocalBorrowCapacity(account)
-
-  -- get the used capacity
-  local usedCapacity = mod.getLocalUsedCapacity(account)
-
-  msg.reply({
-    Action = "Collateralization-Response",
-    Capacity = tostring(capacity),
-    ["Used-Capacity"] = tostring(usedCapacity),
-    ["Total-Collateral"] = tostring(totalCollateral),
     ["Collateral-Ticker"] = CollateralTicker,
-    ["Collateral-Denomination"] = tostring(CollateralDenomination)
+    ["Collateral-Denomination"] = tostring(CollateralDenomination),
+    Collateralization = tostring(position.collateralization),
+    Capacity = tostring(position.capacity),
+    ["Borrow-Balance"] = tostring(position.borrowBalance),
+    ["Liquidation-Limit"] = tostring(position.liquidationLimit)
   })
 end
 
+-- Global position action handler
 ---@type HandlerFunction
-function mod.globalPosition(msg)
+function mod.handlers.globalPosition(msg)
   local account = msg.Tags.Recipient or msg.From
-
-  -- reach out to friend processes
-  local capacity, usedCapacity = mod.getGlobalCollateralization(account)
+  local position = mod.globalPosition(account)
 
   msg.reply({
-    Capacity = tostring(capacity),
-    ["Used-Capacity"] = tostring(usedCapacity),
-    ["USD-Denomination"] = tostring(oracle.getUSDDenomination())
+    Collateralization = tostring(position.collateralization),
+    Capacity = tostring(position.capacity),
+    ["Borrow-Balance"] = tostring(position.borrowBalance),
+    ["Liquidation-Limit"] = tostring(position.liquidationLimit),
+    ["USD-Denomination"] = tostring(Oracle.usdDenomination)
   })
 end
 
+-- All local user positions in this oToken
 ---@type HandlerFunction
-function mod.allPositions(msg)
-  ---@type table<string, { Capacity: string, Used-Capacity: string }>
+function mod.handlers.allPositions(msg)
+  ---@type table<string, { Collateralization: string, Capacity: string, Borrow-Balance: string, Liquidation-Limit: string }>
   local positions = {}
 
   -- go through all users who have collateral deposited
   -- and add their position
   for address, _ in pairs(Balances) do
-    local capacity, totalCollateral = mod.getLocalBorrowCapacity(address)
+    local position = mod.position(address)
 
     positions[address] = {
-      Capacity = tostring(capacity),
-      ["Used-Capacity"] = tostring(mod.getLocalUsedCapacity(address)),
-      ["Total-Collateral"] = tostring(totalCollateral)
+      Collateralization = tostring(position.collateralization),
+      Capacity = tostring(position.capacity),
+      ["Borrow-Balance"] = tostring(position.borrowBalance),
+      ["Liquidation-Limit"] = tostring(position.liquidationLimit)
     }
   end
 
@@ -201,7 +176,7 @@ function mod.allPositions(msg)
   -- because it is possible that their collateralization
   -- is not in this instance of the process
   --
-  -- we only need to go through the "Loand" and
+  -- we only need to go through the "Loans" and
   -- not the "Interests", because the interest is repaid
   -- first, the loan is only repaid after the owned
   -- interest is zero
@@ -209,12 +184,13 @@ function mod.allPositions(msg)
     -- do not handle positions that have
     -- already been added above
     if not positions[address] then
-      local capacity, totalCollateral = mod.getLocalBorrowCapacity(address)
+      local position = mod.position(address)
 
       positions[address] = {
-        Capacity = tostring(capacity),
-        ["Used-Capacity"] = tostring(mod.getLocalUsedCapacity(address)),
-        ["Total-Collateral"] = tostring(totalCollateral)
+        Collateralization = tostring(position.collateralization),
+        Capacity = tostring(position.capacity),
+        ["Borrow-Balance"] = tostring(position.borrowBalance),
+        ["Liquidation-Limit"] = tostring(position.liquidationLimit)
       }
     end
   end

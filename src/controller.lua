@@ -43,6 +43,7 @@ MaxDiscount = MaxDiscount or 10
 DiscountInterval = DiscountInterval or 1000 * 60 * 60 -- 1 hour
 
 ---@alias TokenData { ticker: string, denomination: number }
+---@alias PriceParam { ticker: string, quantity: Bint?, denomination: number }
 
 Handlers.add(
   "sync-timestamp",
@@ -69,43 +70,43 @@ Handlers.add(
     ))
 
     -- protocol positions in USD
-    ---@type table<string, { capacity: Bint, usedCapacity: Bint }>
+    ---@type table<string, { liquidationLimit: Bint, borrowBalance: Bint }>
     local allPositions = {}
     local zero = bint.zero()
 
     -- add positions
     for _, market in ipairs(rawPositions) do
-      ---@type table<string, { Capacity: string, ["Used-Capacity"]: string, ["Total-Collateral"]: string }>
+      ---@type table<string, { Capacity: string, ["Borrow-Balance"]: string, Collateralization: string, ["Liquidation-Limit"]: string }>
       local marketPositions = json.decode(market.Data)
       local ticker = market.Tags["Collateral-Ticker"]
       local denomination = tonumber(market.Tags["Collateral-Denomination"]) or 0
 
       -- add each position in the market by their usd value
       for address, position in pairs(marketPositions) do
-        local posCapacity = bint(position.Capacity)
-        local posUsedCapacity = bint(position["Used-Capacity"])
+        local posLiquidationLimit = bint(position["Liquidation-Limit"])
+        local posBorrowBalance = bint(position["Borrow-Balance"])
 
-        local hasCollateral = bint.ult(zero, posCapacity)
-        local hasLoan = bint.ult(zero, posUsedCapacity)
+        local hasCollateral = bint.ult(zero, posLiquidationLimit)
+        local hasLoan = bint.ult(zero, posBorrowBalance)
 
         if hasCollateral or hasLoan then
-          allPositions[address] = allPositions[address] or { capacity = zero, usedCapacity = zero }
+          allPositions[address] = allPositions[address] or { liquidationLimit = zero, borrowBalance = zero }
 
-          -- add capacity
+          -- add liquidation limit
           if hasCollateral then
-            allPositions[address].capacity = allPositions[address].capacity + oracle.getValue(
+            allPositions[address].liquidationLimit = allPositions[address].liquidationLimit + oracle.getValue(
               rawPrices,
-              posCapacity,
+              posLiquidationLimit,
               ticker,
               denomination
             )
           end
 
-          -- add used capacity
+          -- add borrow balance
           if hasLoan then
-            allPositions[address].usedCapacity = allPositions[address].usedCapacity + oracle.getValue(
+            allPositions[address].borrowBalance = allPositions[address].borrowBalance + oracle.getValue(
               rawPrices,
-              posUsedCapacity,
+              posBorrowBalance,
               ticker,
               denomination
             )
@@ -118,7 +119,7 @@ Handlers.add(
     -- and update existing auctions
     for address, position in pairs(allPositions) do
       -- check if the position can be liquidated
-      if bint.ult(position.capacity, position.usedCapacity) then
+      if bint.ult(position.liquidationLimit, position.borrowBalance) then
         -- if the liquidation has just been discovered, add it to the auctions
         if Auctions[address] == nil then
           Auctions[address] = msg.Timestamp
@@ -376,7 +377,7 @@ Handlers.add(
       local zero = bint.zero()
 
       ---@type PriceParam[], PriceParam[]
-      local capacities, usedCapacities = {}, {}
+      local liquidationLimits, borrowBalances = {}, {}
 
       -- symbols to sync
       ---@type string[]
@@ -402,30 +403,30 @@ Handlers.add(
           inTokenData = { ticker = symbol, denomination = denomination }
         elseif pos.From == rewardToken then
           outTokenData = { ticker = symbol, denomination = denomination }
-          availableRewardQty = bint(pos.Tags["Total-Collateral"])
+          availableRewardQty = bint(pos.Tags.Collateralization)
         end
 
         -- convert quantities
-        local capacity = bint(pos.Tags.Capacity)
-        local usedCapacity = bint(pos.Tags["Used-Capacity"])
+        local liquidationLimit = bint(pos.Tags["Liquidation-Limit"])
+        local borrowBalance = bint(pos.Tags["Borrow-Balance"])
 
         -- only sync if there is a position
-        if bint.ult(zero, capacity) or bint.ult(zero, usedCapacity) then
+        if bint.ult(zero, borrowBalance) or bint.ult(zero, liquidationLimit) then
           table.insert(symbols, symbol)
-          table.insert(capacities, {
+          table.insert(borrowBalances, {
             ticker = symbol,
-            quantity = capacity,
+            quantity = borrowBalance,
             denomination = denomination
           })
-          table.insert(usedCapacities, {
+          table.insert(liquidationLimits, {
             ticker = symbol,
-            quantity = usedCapacity,
+            quantity = liquidationLimit,
             denomination = denomination
           })
         end
 
         -- update user position indicator
-        if bint.ult(zero, usedCapacity) then
+        if bint.ult(zero, borrowBalance) then
           hasOpenPosition = true
         end
       end
@@ -442,22 +443,21 @@ Handlers.add(
       -- fetch prices
       local prices = oracle.getPrices(symbols)
 
-      -- ensure health factor is <1 (eligible for liquidation)
-      -- (health factor = capacity / usedCapacity)
-      -- the values below are in USD
-      local totalCapacity = utils.reduce(
+      -- ensure "liquidation-limit / borrow-balance < 1"
+      -- this means that the user is eligible for liquidation
+      local totalLiquidationLimit = utils.reduce(
         function (acc, curr) return acc + curr.value end,
         zero,
-        oracle.getValues(prices, capacities)
+        oracle.getValues(prices, liquidationLimits)
       )
-      local totalUsedCapacity = utils.reduce(
+      local totalBorrowBalance = utils.reduce(
         function (acc, curr) return acc + curr.value end,
         zero,
-        oracle.getValues(prices, usedCapacities)
+        oracle.getValues(prices, borrowBalances)
       )
 
       assert(
-        bint.ult(totalCapacity, totalUsedCapacity),
+        bint.ult(totalLiquidationLimit, totalBorrowBalance),
         "Target not eligible for liquidation"
       )
 
@@ -553,7 +553,7 @@ Handlers.add(
           -- besides the one that is liquidated currently
           return bint.ult(zero, c.quantity)
         end,
-        usedCapacities
+        borrowBalances
       ) ~= nil
 
       return "", expectedRewardQty, removeWhenDone

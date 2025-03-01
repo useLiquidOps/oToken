@@ -28,8 +28,7 @@ local oracle = require ".liquidations.oracle"
 local liquidate = require ".liquidations.liquidate"
 
 local mint = require ".supply.mint"
-local price = require ".supply.price"
-local reserves = require ".supply.reserves"
+local exchangeRate = require ".supply.rate"
 local redeem = require ".supply.redeem"
 
 local utils = require ".utils.utils"
@@ -69,6 +68,7 @@ local function setup_handlers()
     Handlers.utils.continue({}),
     oracle.timeoutSync
   )
+
   -- interest payment sync (must be the third handler)
   Handlers.add(
     "borrow-loan-interest-sync-dynamic",
@@ -76,8 +76,6 @@ local function setup_handlers()
       if
         utils.includes(msg.Tags.Action, {
           "Borrow",
-          "Borrow-Balance",
-          "Borrow-Capacity",
           "Position",
           "Global-Position",
           "Positions",
@@ -235,29 +233,19 @@ local function setup_handlers()
     errorHandler = repay.error
   })
   Handlers.add(
-    "borrow-position-balance",
-    Handlers.utils.hasMatchingTag("Action", "Borrow-Balance"),
-    position.balance
-  )
-  Handlers.add(
-    "borrow-position-capacity",
-    Handlers.utils.hasMatchingTag("Action", "Borrow-Capacity"),
-    position.capacity
-  )
-  Handlers.add(
     "borrow-position-collateralization",
     Handlers.utils.hasMatchingTag("Action", "Position"),
-    position.position
+    position.handlers.localPosition
   )
   Handlers.add(
     "borrow-position-global-collateralization",
     Handlers.utils.hasMatchingTag("Action", "Global-Position"),
-    position.globalPosition
+    position.handlers.globalPosition
   )
   Handlers.add(
     "borrow-position-all-positions",
     Handlers.utils.hasMatchingTag("Action", "Positions"),
-    position.allPositions
+    position.handlers.allPositions
   )
 
   Handlers.advanced({
@@ -272,13 +260,18 @@ local function setup_handlers()
   })
   Handlers.add(
     "supply-price",
-    Handlers.utils.hasMatchingTag("Action", "Get-Price"),
-    price.handler
+    Handlers.utils.hasMatchingTag("Action", "Exchange-Rate-Current"),
+    exchangeRate
   )
   Handlers.add(
-    "supply-reserves",
-    Handlers.utils.hasMatchingTag("Action", "Get-Reserves"),
-    reserves
+    "supply-cash",
+    Handlers.utils.hasMatchingTag("Action", "Cash"),
+    function (msg) msg.reply({ Cash = Cash }) end
+  )
+  Handlers.add(
+    "supply-total-borrows",
+    Handlers.utils.hasMatchingTag("Action", "Total-Borrows"),
+    function (msg) msg.reply({ ["Total-Borrows"] = TotalBorrows }) end
   )
   -- needs unqueueing because of coroutines
   Handlers.add(

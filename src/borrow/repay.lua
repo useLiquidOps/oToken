@@ -163,8 +163,8 @@ function repay.repayToPool(target, quantity)
   local actualRepaidQty = quantity - refundQty
 
   -- finally, we add the repaid amount back to the pool
-  Available = tostring(bint(Available) + actualRepaidQty)
-  Lent = tostring(bint(Lent) - actualRepaidQty)
+  Cash = tostring(bint(Cash) + actualRepaidQty)
+  TotalBorrows = tostring(bint(TotalBorrows) - actualRepaidQty)
 
   return refundQty, actualRepaidQty
 end

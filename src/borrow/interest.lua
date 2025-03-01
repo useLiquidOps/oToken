@@ -6,8 +6,8 @@ local mod = {}
 ---@type HandlerFunction
 function mod.interestRate(msg)
   -- helper values
-  local totalLent = bint(Lent)
-  local totalPooled = totalLent + bint(Available)
+  local totalLent = bint(TotalBorrows)
+  local totalPooled = totalLent + bint(Cash)
   local baseRateB, rateMul = utils.floatBintRepresentation(BaseRate)
   local initRateB = utils.floatBintRepresentation(InitRate, rateMul)
   local zero = bint.zero()
@@ -86,13 +86,13 @@ end
 ---@returns InterestPerformanceHelper
 function mod.genHelperData()
   -- setup the helper data
-  local totalLent = bint(Lent)
+  local totalLent = bint(TotalBorrows)
   local initRate, rateMul = utils.floatBintRepresentation(InitRate)
 
   return {
     zero = bint.zero(),
     totalLent = totalLent,
-    totalPooled = totalLent + bint(Available),
+    totalPooled = totalLent + bint(Cash),
     oneYearInMs = bint("31560000000"),
     initRate = initRate,
     baseRate = utils.floatBintRepresentation(BaseRate, rateMul),

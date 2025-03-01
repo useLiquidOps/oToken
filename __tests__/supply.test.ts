@@ -485,12 +485,12 @@ describe("Redeeming and burning", () => {
       }));
     }
 
-    expect((await handle(createMessage({ Action: "Get-Reserves" }))).Messages).toEqual(
+    expect((await handle(createMessage({ Action: "Cash" }))).Messages).toEqual(
       expect.arrayContaining([
         expect.objectContaining({
           Tags: expect.arrayContaining([
             expect.objectContaining({
-              name: "Available",
+              name: "Cash",
               value: (BigInt(testQty) + valueLimit * 2n).toString()
             })
           ])
@@ -573,7 +573,7 @@ describe("Redeeming and burning", () => {
   it.todo("Redeems the correct quantity after interests");
 });
 
-describe("Price and underlying asset value, reserves (empty)", () => {
+describe("Price and underlying asset value, pooled (empty)", () => {
   let handle: HandleFunction;
 
   const testQty = "4";
@@ -582,8 +582,8 @@ describe("Price and underlying asset value, reserves (empty)", () => {
     handle = await setupProcess(env);
   });
 
-  it("Reserves are empty on init", async () => {
-    const msg = createMessage({ Action: "Get-Reserves" });
+  it("Supplies are empty on init", async () => {
+    const msg = createMessage({ Action: "Info" });
     const res = await handle(msg);
 
     expect(res.Messages).toEqual(
@@ -592,11 +592,11 @@ describe("Price and underlying asset value, reserves (empty)", () => {
           Target: msg.From,
           Tags: expect.arrayContaining([
             expect.objectContaining({
-              name: "Available",
+              name: "Cash",
               value: "0"
             }),
             expect.objectContaining({
-              name: "Lent",
+              name: "Total-Borrows",
               value: "0"
             })
           ])
@@ -605,9 +605,9 @@ describe("Price and underlying asset value, reserves (empty)", () => {
     );
   });
 
-  it("Price does not allow invalid quantities", async () => {
+  it("Exchange rate current does not allow invalid quantities", async () => {
     const msg = createMessage({
-      Action: "Get-Price",
+      Action: "Exchange-Rate-Current",
       Quantity: "-12"
     });
     const res = await handle(msg);
@@ -629,9 +629,9 @@ describe("Price and underlying asset value, reserves (empty)", () => {
     );
   });
 
-  it("Price is 1 when the reserves are empty", async () => {
+  it("Price is 1 when the supplies are empty", async () => {
     const msg = createMessage({
-      Action: "Get-Price",
+      Action: "Exchange-Rate-Current",
       Quantity: testQty
     });
     const res = await handle(msg);
@@ -642,7 +642,7 @@ describe("Price and underlying asset value, reserves (empty)", () => {
           Target: msg.From,
           Tags: expect.arrayContaining([
             expect.objectContaining({
-              name: "Price",
+              name: "Value",
               value: testQty
             }),
             expect.objectContaining({
@@ -658,7 +658,7 @@ describe("Price and underlying asset value, reserves (empty)", () => {
   it.todo("Price is the same as the input quantity on initial provide");
 });
 
-describe("Price and underlying asset value, reserves after initial provide", () => {
+describe("Price and underlying asset value, supplies after initial provide", () => {
   let handle: HandleFunction;
   let testWallet: string;
   let tags: Record<string, string>;
@@ -684,8 +684,8 @@ describe("Price and underlying asset value, reserves after initial provide", () 
     }));
   });
 
-  it("Reserves return the correct quantities", async () => {
-    const msg = createMessage({ Action: "Get-Reserves" });
+  it("Supplies return the correct quantities", async () => {
+    const msg = createMessage({ Action: "Info" });
     const res = await handle(msg);
 
     expect(res.Messages).toEqual(
@@ -694,11 +694,11 @@ describe("Price and underlying asset value, reserves after initial provide", () 
           Target: msg.From,
           Tags: expect.arrayContaining([
             expect.objectContaining({
-              name: "Available",
+              name: "Cash",
               value: testQty
             }),
             expect.objectContaining({
-              name: "Lent",
+              name: "Total-Borrows",
               value: "0"
             })
           ])
@@ -707,7 +707,7 @@ describe("Price and underlying asset value, reserves after initial provide", () 
     );
   });
 
-  it.todo("Reserves return the correct quantities when there is an active borrow");
+  it.todo("Supplies return the correct quantities when there is an active borrow");
 
   it.todo("Returns the correct price after the oToken:collateral ratio is not 1:1");
 

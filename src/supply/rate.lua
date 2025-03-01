@@ -1,10 +1,8 @@
 local assertions = require ".utils.assertions"
 local bint = require ".utils.bint"(1024)
 
-local mod = {}
-
 ---@type HandlerFunction
-function mod.handler(msg)
+local function exchangeRate(msg)
   -- default qty
   local quantity = bint.one()
 
@@ -18,26 +16,25 @@ function mod.handler(msg)
   end
 
   -- total tokens pooled
-  local totalPooled = bint(Available) + bint(Lent)
+  local totalPooled = bint(Cash) + bint(TotalBorrows)
 
-  -- calculate price based on the underlying value of the total supply
-  local returnPrice = quantity
+  -- calculate value based on the underlying value of the total supply
+  local returnValue = quantity
   local totalSupply = bint(TotalSupply)
 
-  -- price is one if the reserves are empty, otherwise
-  -- calculate it
+  -- value is one if there are no tokens supplied,
+  -- otherwise calculate it
   if not bint.eq(totalSupply, bint.zero()) then
-    returnPrice = bint.udiv(
+    returnValue = bint.udiv(
       totalPooled * quantity,
       totalSupply
     )
   end
 
   msg.reply({
-    Action = "Price",
     Quantity = tostring(quantity),
-    Price = tostring(returnPrice)
+    Value = tostring(returnValue)
   })
 end
 
-return mod
+return exchangeRate

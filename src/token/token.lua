@@ -1,5 +1,3 @@
-local json = require "json"
-
 local mod = {}
 
 ---@type HandlerFunction
@@ -30,8 +28,10 @@ function mod.info(msg)
     ["Collateral-Denomination"] = tostring(CollateralDenomination),
     ["Liquidation-Threshold"] = tostring(LiquidationThreshold),
     ["Value-Limit"] = ValueLimit,
-    Oracle = Oracle,
-    ["Oracle-Delay-Tolerance"] = tostring(MaxOracleDelay)
+    Oracle = OracleID,
+    ["Oracle-Delay-Tolerance"] = tostring(MaxOracleDelay),
+    ["Total-Borrows"] = TotalBorrows,
+    Cash = Cash
   })
 end
 

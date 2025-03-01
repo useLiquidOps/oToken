@@ -27,8 +27,8 @@ function mint.handler(msg)
   local mintQty = quantity
 
   -- total tokens pooled and supply
-  local availableTokens = bint(Available)
-  local totalPooled = availableTokens + bint(Lent)
+  local availableTokens = bint(Cash)
+  local totalPooled = availableTokens + bint(TotalBorrows)
   local totalSupply = bint(TotalSupply)
 
   if not bint.eq(totalPooled, bint.zero()) then
@@ -41,7 +41,7 @@ function mint.handler(msg)
 
   -- update stored quantities (balance, available, total supply)
   Balances[sender] = tostring(bint(Balances[sender] or 0) + mintQty)
-  Available = tostring(availableTokens + quantity)
+  Cash = tostring(availableTokens + quantity)
   TotalSupply = tostring(totalSupply + mintQty)
 
   -- TODO: maybe we could msg.reply, but the target of that would be

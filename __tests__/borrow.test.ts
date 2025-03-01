@@ -257,12 +257,12 @@ describe("Borrowing", () => {
       }));
     }
 
-    expect((await handle(createMessage({ Action: "Get-Reserves" }))).Messages).toEqual(
+    expect((await handle(createMessage({ Action: "Cash" }))).Messages).toEqual(
       expect.arrayContaining([
         expect.objectContaining({
           Tags: expect.arrayContaining([
             expect.objectContaining({
-              name: "Available",
+              name: "Cash",
               value: (BigInt(tags["Value-Limit"]) * 2n).toString()
             })
           ])

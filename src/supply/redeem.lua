@@ -1,5 +1,5 @@
 local assertions = require ".utils.assertions"
-local oracle = require ".liquidations.oracle"
+local Oracle = require ".liquidations.oracle"
 local position = require ".borrow.position"
 local bint = require ".utils.bint"(1024)
 
@@ -29,8 +29,8 @@ local function redeem(msg)
   local rewardQty = quantity
 
   -- total tokens pooled
-  local availableTokens = bint(Available)
-  local totalPooled = availableTokens + bint(Lent)
+  local availableTokens = bint(Cash)
+  local totalPooled = availableTokens + bint(TotalBorrows)
   local totalSupply = bint(TotalSupply)
 
   -- if the total pooled and the total supply is not
@@ -56,30 +56,27 @@ local function redeem(msg)
     "Not enough available tokens to redeem for"
   )
 
-  -- get position data
-  local capacity, usedCapacity = position.getGlobalCollateralization(sender)
+
+  -- init oracle for the collateral
+  local oracle = Oracle:new{ [CollateralTicker] = CollateralDenomination }
 
   -- get the value of the tokens to be burned in
   -- terms of the underlying asset and then get the price
   -- of that quantity
-  local burnValue = oracle.getPrice({
-    ticker = CollateralTicker,
-    quantity = quantity,
-    denomination = CollateralDenomination
-  })
+  local burnValue = oracle:getValue(quantity, CollateralTicker)
 
-  -- check if a price was returned
-  assert(burnValue[1] ~= nil, "No price data returned from the oracle for the redeem value")
+  -- get position data
+  local pos = position.globalPosition(sender)
 
   -- do not allow reserved collateral to be burned
   assert(
-    bint.ule(burnValue[1].price, capacity - usedCapacity),
+    assertions.isCollateralized(burnValue, pos),
     "Redeem value is too high and requires higher collateralization"
   )
 
   -- update stored quantities (balance, available, total supply)
   Balances[sender] = tostring(walletBalance - quantity)
-  Available = tostring(availableTokens - rewardQty)
+  Cash = tostring(availableTokens - rewardQty)
   TotalSupply = tostring(totalSupply - quantity)
 
   msg.reply({
