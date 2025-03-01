@@ -605,9 +605,9 @@ describe("Price and underlying asset value, pooled (empty)", () => {
     );
   });
 
-  it("Price does not allow invalid quantities", async () => {
+  it("Exchange rate current does not allow invalid quantities", async () => {
     const msg = createMessage({
-      Action: "Get-Price",
+      Action: "Exchange-Rate-Current",
       Quantity: "-12"
     });
     const res = await handle(msg);
@@ -631,7 +631,7 @@ describe("Price and underlying asset value, pooled (empty)", () => {
 
   it("Price is 1 when the supplies are empty", async () => {
     const msg = createMessage({
-      Action: "Get-Price",
+      Action: "Exchange-Rate-Current",
       Quantity: testQty
     });
     const res = await handle(msg);
@@ -642,7 +642,7 @@ describe("Price and underlying asset value, pooled (empty)", () => {
           Target: msg.From,
           Tags: expect.arrayContaining([
             expect.objectContaining({
-              name: "Price",
+              name: "Value",
               value: testQty
             }),
             expect.objectContaining({
