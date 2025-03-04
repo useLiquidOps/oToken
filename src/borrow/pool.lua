@@ -44,6 +44,10 @@ function mod.setup(msg)
   -- global current timestamp and block for the oracle
   Timestamp = msg.Timestamp
   Block = msg["Block-Height"]
+
+  -- reserves
+  ReserveFactor = ReserveFactor or tonumber(ao.env.Process.Tags["Reserve-Factor"]) or 0
+  Reserves = Reserves or "0"
 end
 
 -- This syncs the global timestamp anc block using the current message

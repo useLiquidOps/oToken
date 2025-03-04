@@ -153,6 +153,11 @@ local function setup_handlers()
     friend.list
   )
   Handlers.add(
+    "controller-reserves-total",
+    Handlers.utils.hasMatchingTag("Action", "Total-Reserves"),
+    function (msg) msg.reply({ ["Total-Reserves"] = Reserves }) end
+  )
+  Handlers.add(
     "controller-config-oracle",
     { From = ao.env.Process.Owner, Action = "Set-Oracle" },
     config.setOracle
