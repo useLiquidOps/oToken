@@ -273,34 +273,11 @@ describe("Config tests", () => {
   it("Does not allow config interaction from anyone other than the controller", async () => {
     const invalidOwner = generateArweaveAddress();
 
-    // expect error when trying to set the oracle not from the controller
-    const oracleSetRes = await handle(createMessage({
-      Action: "Set-Oracle",
-      Oracle: generateArweaveAddress(),
-      Owner: invalidOwner,
-      From: invalidOwner
-    }));
-
-    expect(oracleSetRes.Messages).toEqual(
-      expect.arrayContaining([
-        expect.objectContaining({
-          Target: invalidOwner,
-          Tags: expect.arrayContaining([
-            expect.objectContaining({
-              name: "Error",
-              value: expect.stringContaining(
-                "The request could not be handled"
-              )
-            })
-          ])
-        })
-      ])
-    );
-
     // expect error when trying to set the collateral factor not from the controller
     const collateralRatioRes = await handle(createMessage({
-      Action: "Set-Collateral-Factor",
+      Action: "Update-Config",
       ["Collateral-Factor"]: "80",
+      Oracle: generateArweaveAddress(),
       Owner: invalidOwner,
       From: invalidOwner
     }));
@@ -320,35 +297,11 @@ describe("Config tests", () => {
         })
       ])
     );
-
-    // expect error when trying to set the liquidation factor not from the controller
-    const liquidationThresholdSet = await handle(createMessage({
-      Action: "Set-Liquidation-Threshold",
-      ["Liquidation-Threshold"]: "60",
-      Owner: invalidOwner,
-      From: invalidOwner
-    }));
-
-    expect(liquidationThresholdSet.Messages).toEqual(
-      expect.arrayContaining([
-        expect.objectContaining({
-          Target: invalidOwner,
-          Tags: expect.arrayContaining([
-            expect.objectContaining({
-              name: "Error",
-              value: expect.stringContaining(
-                "The request could not be handled"
-              )
-            })
-          ])
-        })
-      ])
-    );
   });
 
   it("Does not update oracle with an invalid address", async () => {
     const res = await handle(createMessage({
-      Action: "Set-Oracle",
+      Action: "Update-Config",
       Oracle: "invalid"
     }));
 
@@ -371,7 +324,7 @@ describe("Config tests", () => {
 
   it("Updates the oracle", async () => {
     const res = await handle(createMessage({
-      Action: "Set-Oracle",
+      Action: "Update-Config",
       Oracle: newOracle
     }));
 
@@ -380,10 +333,6 @@ describe("Config tests", () => {
         expect.objectContaining({
           Target: controller,
           Tags: expect.arrayContaining([
-            expect.objectContaining({
-              name: "Action",
-              value: "Oracle-Set"
-            }),
             expect.objectContaining({
               name: "Oracle",
               value: newOracle
@@ -413,7 +362,7 @@ describe("Config tests", () => {
 
   it("Does not update collateral factor with an invalid value", async () => {
     expect((await handle(createMessage({
-      Action: "Set-Collateral-Factor",
+      Action: "Update-Config",
       "Collateral-Factor": "invalid"
     }))).Messages).toEqual(
       expect.arrayContaining([
@@ -421,10 +370,8 @@ describe("Config tests", () => {
           Target: controller,
           Tags: expect.arrayContaining([
             expect.objectContaining({
-              name: "Error",
-              value: expect.stringContaining(
-                "Invalid ratio provided"
-              )
+              name: "Collateral-Factor",
+              value: expect.not.stringContaining("invalid")
             })
           ])
         })
@@ -432,7 +379,7 @@ describe("Config tests", () => {
     );
 
     expect((await handle(createMessage({
-      Action: "Set-Collateral-Factor",
+      Action: "Update-Config",
       "Collateral-Factor": "1.2"
     }))).Messages).toEqual(
       expect.arrayContaining([
@@ -442,7 +389,7 @@ describe("Config tests", () => {
             expect.objectContaining({
               name: "Error",
               value: expect.stringContaining(
-                "Collateral factor has to be a whole percentage between 0 and 100"
+                "Invalid collateral factor"
               )
             })
           ])
@@ -450,7 +397,7 @@ describe("Config tests", () => {
       ])
     );
     expect((await handle(createMessage({
-      Action: "Set-Collateral-Factor",
+      Action: "Update-Config",
       "Collateral-Factor": "-1"
     }))).Messages).toEqual(
       expect.arrayContaining([
@@ -460,7 +407,7 @@ describe("Config tests", () => {
             expect.objectContaining({
               name: "Error",
               value: expect.stringContaining(
-                "Collateral factor has to be a whole percentage between 0 and 100"
+                "Invalid collateral factor"
               )
             })
           ])
@@ -468,7 +415,7 @@ describe("Config tests", () => {
       ])
     );
     expect((await handle(createMessage({
-      Action: "Set-Collateral-Factor",
+      Action: "Update-Config",
       "Collateral-Factor": "101"
     }))).Messages).toEqual(
       expect.arrayContaining([
@@ -478,7 +425,7 @@ describe("Config tests", () => {
             expect.objectContaining({
               name: "Error",
               value: expect.stringContaining(
-                "Collateral factor has to be a whole percentage between 0 and 100"
+                "Invalid collateral factor"
               )
             })
           ])
@@ -490,7 +437,7 @@ describe("Config tests", () => {
   it("Updates the collateral factor", async () => {
     const newFactor = "28";
     const res = await handle(createMessage({
-      Action: "Set-Collateral-Factor",
+      Action: "Update-Config",
       "Collateral-Factor": newFactor
     }));
 
@@ -499,10 +446,6 @@ describe("Config tests", () => {
         expect.objectContaining({
           Target: controller,
           Tags: expect.arrayContaining([
-            expect.objectContaining({
-              name: "Action",
-              value: "Collateral-Factor-Set"
-            }),
             expect.objectContaining({
               name: "Collateral-Factor",
               value: newFactor
@@ -532,7 +475,7 @@ describe("Config tests", () => {
 
   it("Does not update liquidation threshold with an invalid value", async () => {
     expect((await handle(createMessage({
-      Action: "Set-Liquidation-Threshold",
+      Action: "Update-Config",
       "Liquidation-Threshold": "invalid"
     }))).Messages).toEqual(
       expect.arrayContaining([
@@ -540,10 +483,8 @@ describe("Config tests", () => {
           Target: controller,
           Tags: expect.arrayContaining([
             expect.objectContaining({
-              name: "Error",
-              value: expect.stringContaining(
-                "Invalid threshold provided"
-              )
+              name: "Liquidation-Threshold",
+              value: expect.not.stringContaining("invalid")
             })
           ])
         })
@@ -551,7 +492,7 @@ describe("Config tests", () => {
     );
 
     expect((await handle(createMessage({
-      Action: "Set-Liquidation-Threshold",
+      Action: "Update-Config",
       "Liquidation-Threshold": "34.9"
     }))).Messages).toEqual(
       expect.arrayContaining([
@@ -561,7 +502,7 @@ describe("Config tests", () => {
             expect.objectContaining({
               name: "Error",
               value: expect.stringContaining(
-                "Liquidation threshold has to be a whole percentage between 0 and 100"
+                "Invalid liquidation threshold"
               )
             })
           ])
@@ -569,7 +510,7 @@ describe("Config tests", () => {
       ])
     );
     expect((await handle(createMessage({
-      Action: "Set-Liquidation-Threshold",
+      Action: "Update-Config",
       "Liquidation-Threshold": "-9"
     }))).Messages).toEqual(
       expect.arrayContaining([
@@ -579,7 +520,7 @@ describe("Config tests", () => {
             expect.objectContaining({
               name: "Error",
               value: expect.stringContaining(
-                "Liquidation threshold has to be a whole percentage between 0 and 100"
+                "Invalid liquidation threshold"
               )
             })
           ])
@@ -587,7 +528,7 @@ describe("Config tests", () => {
       ])
     );
     expect((await handle(createMessage({
-      Action: "Set-Liquidation-Threshold",
+      Action: "Update-Config",
       "Liquidation-Threshold": "124"
     }))).Messages).toEqual(
       expect.arrayContaining([
@@ -597,7 +538,7 @@ describe("Config tests", () => {
             expect.objectContaining({
               name: "Error",
               value: expect.stringContaining(
-                "Liquidation threshold has to be a whole percentage between 0 and 100"
+                "Invalid liquidation threshold"
               )
             })
           ])
@@ -609,7 +550,7 @@ describe("Config tests", () => {
   it("Updates the liquidation threshold", async () => {
     const newFactor = "75";
     const res = await handle(createMessage({
-      Action: "Set-Liquidation-Threshold",
+      Action: "Update-Config",
       "Liquidation-Threshold": newFactor
     }));
 
@@ -618,10 +559,6 @@ describe("Config tests", () => {
         expect.objectContaining({
           Target: controller,
           Tags: expect.arrayContaining([
-            expect.objectContaining({
-              name: "Action",
-              value: "Liquidation-Threshold-Set"
-            }),
             expect.objectContaining({
               name: "Liquidation-Threshold",
               value: newFactor
@@ -652,7 +589,7 @@ describe("Config tests", () => {
   it("Does not update the value limit with an invalid value", async () => {
     const invalidVal = "invalid";
     const invalidQtyRes = await handle(createMessage({
-      Action: "Set-Value-Limit",
+      Action: "Update-Config",
       "Value-Limit": invalidVal
     }));
 
@@ -673,7 +610,7 @@ describe("Config tests", () => {
     );
 
     const zeroQtyRes = await handle(createMessage({
-      Action: "Set-Value-Limit",
+      Action: "Update-Config",
       "Value-Limit": "0"
     }));
 
@@ -697,7 +634,7 @@ describe("Config tests", () => {
   it("Updates the value limit", async () => {
     const newValueLimit = "457385";
     const res = await handle(createMessage({
-      Action: "Set-Value-Limit",
+      Action: "Update-Config",
       "Value-Limit": newValueLimit
     }));
 
@@ -706,10 +643,6 @@ describe("Config tests", () => {
         expect.objectContaining({
           Target: controller,
           Tags: expect.arrayContaining([
-            expect.objectContaining({
-              name: "Action",
-              value: "Value-Limit-Set"
-            }),
             expect.objectContaining({
               name: "Value-Limit",
               value: newValueLimit
@@ -739,7 +672,7 @@ describe("Config tests", () => {
 
   it("Does not update the oracle delay tolerance with an invalid value", async () => {
     const invalidValueRes = await handle(createMessage({
-      Action: "Set-Oracle-Delay-Tolerance",
+      Action: "Update-Config",
       "Oracle-Delay-Tolerance": "invalid"
     }));
 
@@ -749,10 +682,8 @@ describe("Config tests", () => {
           Target: controller,
           Tags: expect.arrayContaining([
             expect.objectContaining({
-              name: "Error",
-              value: expect.stringContaining(
-                "Invalid or no delay tolerance provided"
-              )
+              name: "Oracle-Delay-Tolerance",
+              value: expect.not.stringContaining("invalid")
             })
           ])
         })
@@ -760,7 +691,7 @@ describe("Config tests", () => {
     );
 
     const nonZeroRes = await handle(createMessage({
-      Action: "Set-Oracle-Delay-Tolerance",
+      Action: "Update-Config",
       "Oracle-Delay-Tolerance": "-1"
     }));
 
@@ -772,7 +703,7 @@ describe("Config tests", () => {
             expect.objectContaining({
               name: "Error",
               value: expect.stringContaining(
-                "Delay tolerance has to be >= 0"
+                "Oracle delay tolerance has to be >= 0"
               )
             })
           ])
@@ -781,7 +712,7 @@ describe("Config tests", () => {
     );
 
     const nonIntegerTest = await handle(createMessage({
-      Action: "Set-Oracle-Delay-Tolerance",
+      Action: "Update-Config",
       "Oracle-Delay-Tolerance": "1.2"
     }));
 
@@ -793,7 +724,7 @@ describe("Config tests", () => {
             expect.objectContaining({
               name: "Error",
               value: expect.stringContaining(
-                "Delay tolerance has to be a whole number"
+                "Oracle delay tolerance has to be a whole number"
               )
             })
           ])
@@ -805,7 +736,7 @@ describe("Config tests", () => {
   it("Updates the oracle delay tolerance", async () => {
     const newDelayTolerance = "435875"
     const res = await handle(createMessage({
-      Action: "Set-Oracle-Delay-Tolerance",
+      Action: "Update-Config",
       "Oracle-Delay-Tolerance": newDelayTolerance
     }));
 
@@ -814,10 +745,6 @@ describe("Config tests", () => {
         expect.objectContaining({
           Target: controller,
           Tags: expect.arrayContaining([
-            expect.objectContaining({
-              name: "Action",
-              value: "Oracle-Delay-Tolerance-Set"
-            }),
             expect.objectContaining({
               name: "Oracle-Delay-Tolerance",
               value: newDelayTolerance

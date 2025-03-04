@@ -13,14 +13,14 @@ function mod.update(msg)
   local oracleDelayTolerance = tonumber(msg.Tags["Oracle-Delay-Tolerance"])
   local reserveFactor = tonumber(msg.Tags["Reserve-Factor"])
 
-  -- validate new config values
+  -- validate new config values, update
   assert(
     not oracle or assertions.isAddress(oracle),
     "Invalid oracle ID"
   )
   assert(
     not collateralFactor or assertions.isPercentage(collateralFactor),
-    "Invalid collateralFactor"
+    "Invalid collateral factor"
   )
   assert(
     not liquidationThreshold or assertions.isPercentage(liquidationThreshold),
