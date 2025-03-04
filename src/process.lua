@@ -158,29 +158,9 @@ local function setup_handlers()
     function (msg) msg.reply({ ["Total-Reserves"] = Reserves }) end
   )
   Handlers.add(
-    "controller-config-oracle",
-    { From = ao.env.Process.Owner, Action = "Set-Oracle" },
-    config.setOracle
-  )
-  Handlers.add(
-    "controller-config-collateral-factor",
-    { From = ao.env.Process.Owner, Action = "Set-Collateral-Factor" },
-    config.setCollateralFactor
-  )
-  Handlers.add(
-    "controller-config-liquidation-threshold",
-    { From = ao.env.Process.Owner, Action = "Set-Liquidation-Threshold" },
-    config.setLiquidationThreshold
-  )
-  Handlers.add(
-    "controller-config-value-limit",
-    { From = ao.env.Process.Owner, Action = "Set-Value-Limit" },
-    config.setValueLimit
-  )
-  Handlers.add(
-    "controller-config-delay-tolerance",
-    { From = ao.env.Process.Owner, Action = "Set-Oracle-Delay-Tolerance" },
-    config.setOracleDelayTolerance
+    "controller-config-update",
+    { From = ao.env.Process.Owner, Action = "Update-Config" },
+    config.update
   )
 
   Handlers.advanced({

@@ -66,4 +66,12 @@ function mod.isCollateralized(qty, position)
     bint.ule(qty, position.capacity - position.borrowBalance)
 end
 
+-- Verify that provided value is a valid integer percentage (between 0 and 100)
+---@param val unknown Value to test
+---@return boolean
+function mod.isPercentage(val)
+  if not val or type(val) ~= "number" then return false end
+  return val // 1 == val and val >= 0 and val <= 100
+end
+
 return mod

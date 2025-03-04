@@ -1,125 +1,75 @@
 local assertions = require ".utils.assertions"
 local bint = require ".utils.bint"(1024)
 
-local config = {}
+local mod = {}
 
 ---@type HandlerFunction
-function config.setOracle(msg)
-  -- validate oracle address
-  local newOracle = msg.Tags.Oracle
+function mod.update(msg)
+  -- get and parse incoming config updates
+  local oracle = msg.Tags.Oracle
+  local collateralFactor = tonumber(msg.Tags["Collateral-Factor"])
+  local liquidationThreshold = tonumber(msg.Tags["Liquidation-Threshold"])
+  local valueLimit = msg.Tags["Value-Limit"]
+  local oracleDelayTolerance = tonumber(msg.Tags["Oracle-Delay-Tolerance"])
+  local reserveFactor = tonumber(msg.Tags["Reserve-Factor"])
 
+  -- validate new config values
   assert(
-    assertions.isAddress(newOracle),
+    not oracle or assertions.isAddress(oracle),
     "Invalid oracle ID"
   )
+  assert(
+    not collateralFactor or assertions.isPercentage(collateralFactor),
+    "Invalid collateralFactor"
+  )
+  assert(
+    not liquidationThreshold or assertions.isPercentage(liquidationThreshold),
+    "Invalid liquidation threshold"
+  )
+  assert(
+    not reserveFactor or assertions.isPercentage(reserveFactor),
+    "Invalid reserve factor"
+  )
 
-  -- update
-  OracleID = newOracle
+  if valueLimit then
+    assert(
+      assertions.isTokenQuantity(valueLimit),
+      "Invalid value limit"
+    )
+    assert(
+      bint.ult(bint.zero(), bint(valueLimit)),
+      "Value limit must be higher than zero"
+    )
 
-  -- notify the user
+    ValueLimit = valueLimit
+  end
+
+  if oracleDelayTolerance then
+    assert(
+      oracleDelayTolerance >= 0,
+      "Oracle delay tolerance has to be >= 0"
+    )
+    assert(
+      oracleDelayTolerance // 1 == oracleDelayTolerance,
+      "Oracle delay tolerance has to be a whole number"
+    )
+
+    MaxOracleDelay = oracleDelayTolerance
+  end
+
+  if oracle then Oracle = oracle end
+  if collateralFactor then CollateralFactor = collateralFactor end
+  if liquidationThreshold then LiquidationThreshold = liquidationThreshold end
+  if reserveFactor then ReserveFactor = reserveFactor end
+
   msg.reply({
-    Action = "Oracle-Set",
-    Oracle = newOracle
+    Oracle = Oracle,
+    ["Collateral-Factor"] = tostring(CollateralFactor),
+    ["Liquidation-Threshold"] = tostring(LiquidationThreshold),
+    ["Value-Limit"] = ValueLimit,
+    ["Oracle-Delay-Tolerance"] = tostring(MaxOracleDelay),
+    ["Reserve-Factor"] = tostring(reserveFactor)
   })
 end
 
----@type HandlerFunction
-function config.setCollateralFactor(msg)
-  -- validate collateral factor
-  local factor = tonumber(msg.Tags["Collateral-Factor"])
-
-  assert(
-    factor ~= nil and type(factor) == "number",
-    "Invalid ratio provided"
-  )
-  assert(
-    factor // 1 == factor and factor >= 0 and factor <= 100,
-    "Collateral factor has to be a whole percentage between 0 and 100"
-  )
-
-  -- update
-  CollateralFactor = factor
-
-  -- notify the user
-  msg.reply({
-    Action = "Collateral-Factor-Set",
-    ["Collateral-Factor"] = tostring(factor)
-  })
-end
-
----@type HandlerFunction
-function config.setLiquidationThreshold(msg)
-  -- validate threshold
-  local threshold = tonumber(msg.Tags["Liquidation-Threshold"])
-
-  assert(
-    threshold ~= nil and type(threshold) == "number",
-    "Invalid threshold provided"
-  )
-  assert(
-    threshold // 1 == threshold and threshold >= 0 and threshold <= 100,
-    "Liquidation threshold has to be a whole percentage between 0 and 100"
-  )
-
-  -- update
-  LiquidationThreshold = threshold
-
-  -- notify the user
-  msg.reply({
-    Action = "Liquidation-Threshold-Set",
-    ["Liquidation-Threshold"] = tostring(threshold)
-  })
-end
-
----@type HandlerFunction
-function config.setValueLimit(msg)
-  local newLimit = msg.Tags["Value-Limit"]
-
-  -- validate limit
-  assert(
-    assertions.isTokenQuantity(newLimit),
-    "Invalid value limit"
-  )
-  assert(
-    bint.ult(bint.zero(), bint(newLimit)),
-    "Value limit must be higher than zero"
-  )
-
-  -- update
-  ValueLimit = newLimit
-
-  -- notify the sender
-  msg.reply({
-    Action = "Value-Limit-Set",
-    ["Value-Limit"] = newLimit
-  })
-end
-
-function config.setOracleDelayTolerance(msg)
-  local newTolerance = tonumber(msg.Tags["Oracle-Delay-Tolerance"])
-
-  -- validate new tolerance
-  assert(
-    newTolerance ~= nil,
-    "Invalid or no delay tolerance provided"
-  )
-  assert(
-    newTolerance >= 0,
-    "Delay tolerance has to be >= 0"
-  )
-  assert(
-    newTolerance // 1 == newTolerance,
-    "Delay tolerance has to be a whole number"
-  )
-
-  -- update
-  MaxOracleDelay = newTolerance
-
-  -- notify the sender
-  msg.reply({
-    Action = "Oracle-Delay-Tolerance-Set",
-    ["Oracle-Delay-Tolerance"] = msg.Tags["Oracle-Delay-Tolerance"]
-  })
-end
-
-return config
+return mod
