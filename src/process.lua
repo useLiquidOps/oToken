@@ -13,6 +13,7 @@ local config = require ".controller.config"
 local queue = require ".controller.queue"
 local cooldown = require ".controller.cooldown"
 local updater = require ".controller.updater"
+local reserves = require ".controller.reserves"
 
 local balance = require ".token.balance"
 local token = require ".token.token"
@@ -178,6 +179,17 @@ local function setup_handlers()
     "liquidate-position",
     Handlers.utils.hasMatchingTag("Action", "Liquidate-Position"),
     liquidate.liquidatePosition
+  )
+
+  Handlers.add(
+    "controller-reserves-withdraw",
+    { From = ao.env.Process.Owner, Action = "Withdraw-From-Reserves" },
+    reserves.withdraw
+  )
+  Handlers.add(
+    "controller-reserves-deploy",
+    { From = ao.env.Process.Owner, Action = "Deploy-From-Reserves" },
+    reserves.deploy
   )
 
   Handlers.add(
