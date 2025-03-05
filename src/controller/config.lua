@@ -57,13 +57,13 @@ function mod.update(msg)
     MaxOracleDelay = oracleDelayTolerance
   end
 
-  if oracle then Oracle = oracle end
+  if oracle then OracleID = oracle end
   if collateralFactor then CollateralFactor = collateralFactor end
   if liquidationThreshold then LiquidationThreshold = liquidationThreshold end
   if reserveFactor then ReserveFactor = reserveFactor end
 
   msg.reply({
-    Oracle = Oracle,
+    Oracle = OracleID,
     ["Collateral-Factor"] = tostring(CollateralFactor),
     ["Liquidation-Threshold"] = tostring(LiquidationThreshold),
     ["Value-Limit"] = ValueLimit,
