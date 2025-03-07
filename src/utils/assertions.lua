@@ -46,6 +46,7 @@ function mod.isTokenQuantity(qty)
   if type(qty) == "string" and string.sub(qty, 1, 1) == "-" then
     return false
   end
+  if tonumber(qty) == 0 then return false end
 
   return true
 end
@@ -64,6 +65,14 @@ function mod.isCollateralized(qty, position)
   -- number, if the borrow balance is higher than the capacity
   return bint.ult(position.borrowBalance, position.capacity) and
     bint.ule(qty, position.capacity - position.borrowBalance)
+end
+
+-- Verify that provided value is a valid integer percentage (between 0 and 100)
+---@param val unknown Value to test
+---@return boolean
+function mod.isPercentage(val)
+  if not val or type(val) ~= "number" then return false end
+  return val // 1 == val and val >= 0 and val <= 100
 end
 
 return mod

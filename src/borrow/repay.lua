@@ -26,7 +26,8 @@ function repay.handler(msg)
   -- execute repay
   local refundQty, actualRepaidQty = repay.repayToPool(
     target,
-    quantity
+    quantity,
+    true
   )
 
   -- refund the sender, if necessary
@@ -121,7 +122,9 @@ end
 -- params before calling this function
 ---@param target string Target to repay the loan for
 ---@param quantity Bint Amount of tokens to be repaid
-function repay.repayToPool(target, quantity)
+---@param reserve boolean? Should the interest paid accounted with the reserve factor be set aside to the reserve
+---@return Bint, Bint
+function repay.repayToPool(target, quantity, reserve)
   -- borrow & interest balances for the target
   local borrowBalance = bint(Loans[target] or "0")
   local interestBalance = bint(Interests[target].value)
@@ -131,17 +134,22 @@ function repay.repayToPool(target, quantity)
   -- refund quantity, in case the user overpaid
   local refundQty = zero
 
+  -- amount of interest repaid
+  local interestRepaid = zero
+
   -- first we repay the interests
   --
   -- in case the quantity is less than or equal to the
   -- outstanding interest, we just deduct from the interest
   if bint.ule(quantity, interestBalance) then
+    interestRepaid = quantity
     Interests[target].value = tostring(interestBalance - quantity)
   else
     -- the quantity is more than the outstanding interest,
     -- so we reset the owned interest quantity and calculate
     -- the remainder of the repay interaction
     local remainingQty = quantity - interestBalance
+    interestRepaid = interestBalance
     Interests[target].value = "0"
 
     -- then if there are any tokens left, we repay the borrow
@@ -162,9 +170,21 @@ function repay.repayToPool(target, quantity)
   -- the actual quantity repaid (needed in case we need to refund the user)
   local actualRepaidQty = quantity - refundQty
 
-  -- finally, we add the repaid amount back to the pool
-  Cash = tostring(bint(Cash) + actualRepaidQty)
+  -- interest set aside as cash to the reserves
+  local cashToReserves = bint.udiv(
+    interestRepaid * bint(ReserveFactor),
+    bint(100)
+  )
+
+  -- finally, we add the repaid amount back to the pool (minus the reserve amount if needed)
+  Cash = tostring(bint(Cash) + actualRepaidQty - (reserve and cashToReserves or zero))
   TotalBorrows = tostring(bint(TotalBorrows) - actualRepaidQty)
+
+  -- if the interaction is a repay action (not liquidation),
+  -- we deposit the interest set aside to the reserves
+  if reserve then
+    Reserves = tostring(bint(Reserves) + cashToReserves)
+  end
 
   return refundQty, actualRepaidQty
 end

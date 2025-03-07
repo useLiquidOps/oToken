@@ -31,7 +31,9 @@ function mod.info(msg)
     Oracle = OracleID,
     ["Oracle-Delay-Tolerance"] = tostring(MaxOracleDelay),
     ["Total-Borrows"] = TotalBorrows,
-    Cash = Cash
+    Cash = Cash,
+    ["Reserve-Factor"] = tostring(ReserveFactor),
+    ["Total-Reserves"] = Reserves
   })
 end
 

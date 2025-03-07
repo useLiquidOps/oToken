@@ -284,12 +284,12 @@ Handlers.add(
     -- check if update is already in progress
     assert(not UpdateInProgress, "An update is already in progress")
 
+    local oTokens = utils.values(Tokens)
+
     -- set updating in progress. this will halt interactions
     -- by making the queue check always return true for any
     -- address
     UpdateInProgress = true
-
-    local oTokens = utils.values(Tokens)
 
     -- request updates
     ---@type Message[]
@@ -297,6 +297,10 @@ Handlers.add(
       function (id) return { Target = id, Action = "Update", Data = msg.Data } end,
       oTokens
     )))
+
+    UpdateInProgress = false
+
+    -- filter failed updates
     local failed = utils.filter(
       ---@param res Message
       function (res) return res.Tags.Error ~= nil or res.Tags.Updated ~= "true" end,

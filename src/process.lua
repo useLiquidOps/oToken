@@ -13,6 +13,7 @@ local config = require ".controller.config"
 local queue = require ".controller.queue"
 local cooldown = require ".controller.cooldown"
 local updater = require ".controller.updater"
+local reserves = require ".controller.reserves"
 
 local balance = require ".token.balance"
 local token = require ".token.token"
@@ -153,29 +154,14 @@ local function setup_handlers()
     friend.list
   )
   Handlers.add(
-    "controller-config-oracle",
-    { From = ao.env.Process.Owner, Action = "Set-Oracle" },
-    config.setOracle
+    "controller-reserves-total",
+    Handlers.utils.hasMatchingTag("Action", "Total-Reserves"),
+    function (msg) msg.reply({ ["Total-Reserves"] = Reserves }) end
   )
   Handlers.add(
-    "controller-config-collateral-factor",
-    { From = ao.env.Process.Owner, Action = "Set-Collateral-Factor" },
-    config.setCollateralFactor
-  )
-  Handlers.add(
-    "controller-config-liquidation-threshold",
-    { From = ao.env.Process.Owner, Action = "Set-Liquidation-Threshold" },
-    config.setLiquidationThreshold
-  )
-  Handlers.add(
-    "controller-config-value-limit",
-    { From = ao.env.Process.Owner, Action = "Set-Value-Limit" },
-    config.setValueLimit
-  )
-  Handlers.add(
-    "controller-config-delay-tolerance",
-    { From = ao.env.Process.Owner, Action = "Set-Oracle-Delay-Tolerance" },
-    config.setOracleDelayTolerance
+    "controller-config-update",
+    { From = ao.env.Process.Owner, Action = "Update-Config" },
+    config.update
   )
 
   Handlers.advanced({
@@ -193,6 +179,17 @@ local function setup_handlers()
     "liquidate-position",
     Handlers.utils.hasMatchingTag("Action", "Liquidate-Position"),
     liquidate.liquidatePosition
+  )
+
+  Handlers.add(
+    "controller-reserves-withdraw",
+    { From = ao.env.Process.Owner, Action = "Withdraw-From-Reserves" },
+    reserves.withdraw
+  )
+  Handlers.add(
+    "controller-reserves-deploy",
+    { From = ao.env.Process.Owner, Action = "Deploy-From-Reserves" },
+    reserves.deploy
   )
 
   Handlers.add(
