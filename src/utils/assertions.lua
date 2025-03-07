@@ -46,6 +46,7 @@ function mod.isTokenQuantity(qty)
   if type(qty) == "string" and string.sub(qty, 1, 1) == "-" then
     return false
   end
+  if tonumber(qty) == 0 then return false end
 
   return true
 end
