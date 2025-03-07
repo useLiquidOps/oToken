@@ -1,5 +1,6 @@
 local assertions = require ".utils.assertions"
 local Oracle = require ".liquidations.oracle"
+local interests = require ".borrow.interest"
 local position = require ".borrow.position"
 local bint = require ".utils.bint"(1024)
 
@@ -49,6 +50,24 @@ local function borrow(msg)
     assertions.isCollateralized(borrowValue, pos),
     "Not enough collateral for this borrow"
   )
+
+  -- add initial interest date if the user has no interest balance
+  if not Interests[account] then
+    Interests[account] = {
+      value = "0",
+      updated = Timestamp
+    }
+  else
+    -- if the user has an interest balance, we sync it before
+    -- adding the loan, to avoid overcharging for the time
+    -- between the last sync (when the "Borrow" action was
+    -- received by the process) and the oracle response
+    interests.updateInterest(
+      account,
+      Timestamp,
+      interests.genHelperData()
+    )
+  end
 
   -- add loan
   Loans[account] = tostring(bint(Loans[account] or 0) + quantity)
