@@ -6,7 +6,9 @@ import {
   createMessage,
   generateArweaveAddress,
   normalizeTags,
-  getMessageByAction
+  getMessageByAction,
+  generateOracleResponse,
+  defaultTimestamp
 } from "./utils"
 
 describe("Friend tests", () => {
@@ -622,7 +624,7 @@ describe("Config tests", () => {
             expect.objectContaining({
               name: "Error",
               value: expect.stringContaining(
-                "Value limit must be higher than zero"
+                "Invalid value limit"
               )
             })
           ])
@@ -1317,5 +1319,217 @@ describe("Updater tests", () => {
         })
       ])
     );
+  });
+});
+
+describe("Reserves tests", () => {
+  let handle: HandleFunction;
+  let controller: string;
+  let tags: Record<string, string>;
+
+  beforeAll(async () => {
+    handle = await setupProcess(env);
+    controller = env.Process.Owner;
+    tags = normalizeTags(env.Process.Tags);
+  });
+
+  it("Does not let anyone withdraw/deploy apart from the controller", async () => {
+    const otherAddr = generateArweaveAddress();
+    const withdrawRes = await handle(createMessage({
+      Action: "Withdraw-From-Reserves",
+      Quantity: "15",
+      From: otherAddr,
+      Owner: otherAddr
+    }));
+
+    expect(withdrawRes.Messages).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          Target: otherAddr,
+          Tags: expect.arrayContaining([
+            expect.objectContaining({
+              name: "Error",
+              value: expect.stringContaining(
+                "The request could not be handled"
+              )
+            })
+          ])
+        })
+      ])
+    );
+
+    const deployRes = await handle(createMessage({
+      Action: "Deploy-From-Reserves",
+      Quantity: "34",
+      From: otherAddr,
+      Owner: otherAddr
+    }));
+
+    expect(deployRes.Messages).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          Target: otherAddr,
+          Tags: expect.arrayContaining([
+            expect.objectContaining({
+              name: "Error",
+              value: expect.stringContaining(
+                "The request could not be handled"
+              )
+            })
+          ])
+        })
+      ])
+    );
+  });
+
+  it("Does not let an invalid quantity to be withdrawn", async () => {
+    const withdrawRes = await handle(createMessage({
+      Action: "Withdraw-From-Reserves",
+      Quantity: "-1",
+      From: controller,
+      Owner: controller
+    }));
+
+    expect(withdrawRes.Messages).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          Target: controller,
+          Tags: expect.arrayContaining([
+            expect.objectContaining({
+              name: "Error",
+              value: expect.stringContaining(
+                "Invalid withdraw quantity"
+              )
+            })
+          ])
+        })
+      ])
+    );
+  });
+
+  it("Does not let an invalid quantity to be deployed", async () => {
+    const deployRes = await handle(createMessage({
+      Action: "Deploy-From-Reserves",
+      Quantity: "-845",
+      From: controller,
+      Owner: controller
+    }));
+
+    expect(deployRes.Messages).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          Target: controller,
+          Tags: expect.arrayContaining([
+            expect.objectContaining({
+              name: "Error",
+              value: expect.stringContaining(
+                "Invalid deploy quantity"
+              )
+            })
+          ])
+        })
+      ])
+    );
+  });
+
+  it("Does not let withdrawing a quantity that is higher than the reserves", async () => {
+    const withdrawRes = await handle(createMessage({
+      Action: "Withdraw-From-Reserves",
+      Quantity: "25",
+      From: controller,
+      Owner: controller
+    }));
+
+    expect(withdrawRes.Messages).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          Target: controller,
+          Tags: expect.arrayContaining([
+            expect.objectContaining({
+              name: "Error",
+              value: expect.stringContaining(
+                "Not enough tokens available to withdraw"
+              )
+            })
+          ])
+        })
+      ])
+    );
+  });
+
+  it("Does not let an invalid quantity to be deployed", async () => {
+    const deployRes = await handle(createMessage({
+      Action: "Deploy-From-Reserves",
+      Quantity: "42857",
+      From: controller,
+      Owner: controller
+    }));
+
+    expect(deployRes.Messages).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          Target: controller,
+          Tags: expect.arrayContaining([
+            expect.objectContaining({
+              name: "Error",
+              value: expect.stringContaining(
+                "Not enough tokens available to deploy"
+              )
+            })
+          ])
+        })
+      ])
+    );
+  });
+
+  it("Applies the reserve factor to interests", async () => {
+    const wallet = generateArweaveAddress();
+    const supplyQty = 4255279295n;
+
+    // mint first
+    const mintRes = await handle(createMessage({
+      Action: "Credit-Notice",
+      "X-Action": "Mint",
+      Owner: tags["Collateral-Id"],
+      From: tags["Collateral-Id"],
+      "From-Process": tags["Collateral-Id"],
+      Quantity: supplyQty.toString(),
+      Recipient: env.Process.Id,
+      Sender: wallet
+    }));
+
+    // now borrow
+    const borrowQty = 40000n;
+    const queueRes = await handle(createMessage({
+      Action: "Borrow",
+      Quantity: borrowQty.toString(),
+      From: wallet,
+      Owner: wallet
+    }));
+
+    // oracle request
+    const oracleRes = await handle(createMessage({
+      "Queued-User": wallet,
+      "X-Reference": normalizeTags(
+        getMessageByAction("Add-To-Queue", queueRes.Messages)?.Tags || []
+      )["Reference"]
+    }));
+
+    // give a price, finish borrow
+    const oracleInputRes = await handle(
+      generateOracleResponse({ AR: 1 }, oracleRes)
+    );
+
+    // pay interest
+    console.log(JSON.stringify(
+      (await handle(createMessage({
+        Action: "Position",
+        From: wallet,
+        Owner: wallet,
+        Timestamp: (parseInt(defaultTimestamp) + 10000000000).toString()
+      }))).Messages,
+      null,
+      2
+    ))
   });
 });

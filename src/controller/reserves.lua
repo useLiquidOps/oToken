@@ -7,7 +7,7 @@ local mod = {}
 function mod.withdraw(msg)
   assert(
     assertions.isTokenQuantity(msg.Tags.Quantity),
-    "Invalid borrow quantity"
+    "Invalid withdraw quantity"
   )
 
   -- amount of tokens to withdraw
@@ -39,7 +39,7 @@ end
 function mod.deploy(msg)
   assert(
     assertions.isTokenQuantity(msg.Tags.Quantity),
-    "Invalid borrow quantity"
+    "Invalid deploy quantity"
   )
 
   -- amount of tokens to deploy
