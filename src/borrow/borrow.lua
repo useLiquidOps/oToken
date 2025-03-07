@@ -55,6 +55,14 @@ local function borrow(msg)
   Cash = tostring(cash - quantity)
   TotalBorrows = tostring(lent + quantity)
 
+  -- add initial interest date
+  if not Interests[account] then
+    Interests[account] = {
+      value = "0",
+      updated = Timestamp
+    }
+  end
+
   -- send out the tokens
   ao.send({
     Target = CollateralID,
