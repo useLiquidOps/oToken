@@ -1595,4 +1595,82 @@ describe("Reserves tests", () => {
       ])
     );
   });
+
+  it("Withdraws the correct quantity", async () => {
+    // get current reserves
+    const reservesRes = await handle(createMessage({ Action: "Total-Reserves" }));
+    const reserves = BigInt(reservesRes.Messages[0]?.Tags?.find((t) => t.name == "Total-Reserves")?.value || 0);
+
+    // withdraw
+    const qty = "15";
+    const withdrawRes = await handle(createMessage({
+      Action: "Withdraw-From-Reserves",
+      Quantity: qty,
+      From: controller,
+      Owner: controller
+    }));
+
+    expect(withdrawRes.Messages).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          Target: tags["Collateral-Id"],
+          Tags: expect.arrayContaining([
+            expect.objectContaining({
+              name: "Action",
+              value: "Transfer"
+            }),
+            expect.objectContaining({
+              name: "Quantity",
+              value: qty,
+            }),
+            expect.objectContaining({
+              name: "Recipient",
+              value: controller
+            })
+          ])
+        }),
+        expect.objectContaining({
+          Tags: expect.arrayContaining([
+            expect.objectContaining({
+              name: "Total-Reserves",
+              value: (reserves - BigInt(qty)).toString()
+            })
+          ])
+        })
+      ])
+    );
+  });
+
+  it("Deploys the correct quantity", async () => {
+    // get current reserves
+    const infoRes = await handle(createMessage({ Action: "Info" }));
+    const resp = infoRes.Messages.find((msg) => !!msg.Tags.find(t => t.name === "Name"));
+    const respTags = normalizeTags(resp?.Tags || []);
+
+    // deploy
+    const qty = 20n;
+    const deployRes = await handle(createMessage({
+      Action: "Deploy-From-Reserves",
+      Quantity: qty.toString(),
+      From: controller,
+      Owner: controller
+    }));
+
+    expect(deployRes.Messages).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          Tags: expect.arrayContaining([
+            expect.objectContaining({
+              name: "Total-Reserves",
+              value: (BigInt(respTags["Total-Reserves"]) - qty).toString()
+            }),
+            expect.objectContaining({
+              name: "Cash",
+              value: (BigInt(respTags["Cash"]) + qty).toString()
+            })
+          ])
+        })
+      ])
+    );
+  });
 });
