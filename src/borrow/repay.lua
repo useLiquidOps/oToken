@@ -176,7 +176,7 @@ function repay.repayToPool(target, quantity, reserve)
     bint(100)
   )
 
-  -- finally, we add the repaid amount back to the pool
+  -- finally, we add the repaid amount back to the pool (minus the reserve amount if needed)
   Cash = tostring(bint(Cash) + actualRepaidQty - (reserve and cashToReserves or zero))
   TotalBorrows = tostring(bint(TotalBorrows) - actualRepaidQty)
 

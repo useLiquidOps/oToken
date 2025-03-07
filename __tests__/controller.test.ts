@@ -1327,10 +1327,23 @@ describe("Reserves tests", () => {
   let controller: string;
   let tags: Record<string, string>;
 
+  // in percentage
+  const reserveFactor = 50;
+
   beforeAll(async () => {
-    handle = await setupProcess(env);
-    controller = env.Process.Owner;
-    tags = normalizeTags(env.Process.Tags);
+    const envWithReserves = {
+      Process: {
+        ...env.Process,
+        Tags: [
+          ...env.Process.Tags,
+          { name: "Reserve-Factor", value: reserveFactor.toString() }
+        ]
+      }
+    };
+
+    handle = await setupProcess(envWithReserves);
+    controller = envWithReserves.Process.Owner;
+    tags = normalizeTags(envWithReserves.Process.Tags);
   });
 
   it("Does not let anyone withdraw/deploy apart from the controller", async () => {
@@ -1520,16 +1533,66 @@ describe("Reserves tests", () => {
       generateOracleResponse({ AR: 1 }, oracleRes)
     );
 
-    // pay interest
-    console.log(JSON.stringify(
-      (await handle(createMessage({
-        Action: "Position",
-        From: wallet,
-        Owner: wallet,
-        Timestamp: (parseInt(defaultTimestamp) + 10000000000).toString()
-      }))).Messages,
-      null,
-      2
-    ))
+    // a timestamp, where the user already owns some interest
+    const later = (parseInt(defaultTimestamp) + 10000000000).toString()
+
+    // get how much we owe
+    const position = await handle(createMessage({
+      Action: "Position",
+      From: wallet,
+      Owner: wallet,
+      Timestamp: later
+    }));
+    const owned = BigInt(position.Messages.find(
+      (msg) => !!msg.Tags.find((tag) => tag.name === "Borrow-Balance")
+    )?.Tags?.find((tag) => tag.name === "Borrow-Balance")?.value || "0");
+
+    expect(owned).toBeGreaterThan(borrowQty);
+
+    const interest = owned - borrowQty;
+
+    // repay the loan
+    const repayRes = await handle(createMessage({
+      Action: "Credit-Notice",
+      "X-Action": "Repay",
+      Owner: tags["Collateral-Id"],
+      From: tags["Collateral-Id"],
+      "From-Process": tags["Collateral-Id"],
+      Quantity: owned.toString(),
+      Recipient: env.Process.Id,
+      Sender: wallet
+    }));
+
+    // expect the reserves to contain some the amount the reserve factor dictates
+    const reservesRes = await handle(createMessage({ Action: "Total-Reserves" }));
+
+    expect(reservesRes.Messages).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          Tags: expect.arrayContaining([
+            expect.objectContaining({
+              name: "Total-Reserves",
+              value: ((interest * BigInt(reserveFactor)) / 100n).toString()
+            })
+          ])
+        })
+      ])
+    );
+
+    // expect the pool to include the provided amount + the interest - the amount in the reserves
+    const cashRes = await handle(createMessage({ Action: "Cash" }));
+
+    expect(cashRes.Messages).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          Tags: expect.arrayContaining([
+            expect.objectContaining({
+              name: "Cash",
+              value: ((interest * BigInt(100 - reserveFactor)) / 100n + supplyQty).toString()
+            })
+          ])
+        })
+      ])
+    );
   });
 });
