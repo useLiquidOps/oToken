@@ -14,6 +14,9 @@ local function borrow(msg)
   -- amount of tokens to borrow
   local quantity = bint(msg.Tags.Quantity)
 
+  -- init oracle for the collateral token
+  local oracle = Oracle:new{ [CollateralTicker] = CollateralDenomination }
+
   -- check if there are enough tokens available
   local cash = bint(Cash)
 
@@ -33,9 +36,6 @@ local function borrow(msg)
 
   -- the wallet that will borrow the tokens
   local account = msg.From
-
-  -- init oracle for the collateral token
-  local oracle = Oracle:new{ [CollateralTicker] = CollateralDenomination }
 
   -- get borrow value in USD
   -- we request this after the collateralization, because
