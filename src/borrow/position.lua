@@ -71,11 +71,17 @@ end
 ---@param address string User address
 ---@return Position
 function mod.globalPosition(address)
+  -- generate position messages (we don't use map and utils.values for optimization,
+  -- because they create 2 loops instead of the one needed)
+  ---@type MessageParam[]
+  local positionMsgs = {}
+
+  for _, friend in pairs(Friends) do
+    table.insert(positionMsgs, { Target = friend, Action = "Position", Recipient = address })
+  end
+
   -- get local positions from friend processes
-  local positions = scheduler.schedule(table.unpack(utils.map(
-    function (id) return { Target = id, Action = "Position", Recipient = address } end,
-    Friends
-  )))
+  local positions = scheduler.schedule(table.unpack(positionMsgs))
 
   -- ticker - denomination data for the oracle
   local oracleData = { [CollateralTicker] = CollateralDenomination }

@@ -112,7 +112,7 @@ end
 function mod.liquidatePosition(msg)
   -- check if the message is coming from a friend process
   assert(
-    utils.includes(msg.From, Friends),
+    utils.includes(msg.From, utils.values(Friends)),
     "Only a friend process is authorized to call this function"
   )
 

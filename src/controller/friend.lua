@@ -8,27 +8,33 @@ local friend = {}
 function friend.add(msg)
   -- validate address
   local newFriend = msg.Tags.Friend
+  local friendTicker = msg.Tags["Friend-Ticker"]
 
   assert(
     assertions.isAddress(newFriend),
     "Invalid friend address " .. newFriend
   )
   assert(
-    not utils.includes(newFriend, Friends),
+    friendTicker ~= nil,
+    "No ticker supplied for friend collateral"
+  )
+  assert(
+    not Friends[friendTicker] and not utils.includes(newFriend, utils.values(Friends)),
     "Friend already added"
   )
   assert(
-    newFriend ~= ao.id,
+    newFriend ~= ao.id and friendTicker ~= CollateralTicker,
     "Cannot add itself as a friend"
   )
 
   -- add friend
-  table.insert(Friends, newFriend)
+  Friends[friendTicker] = newFriend
 
   -- notify the sender
   msg.reply({
     Action = "Friend-Added",
-    Friend = newFriend
+    Friend = newFriend,
+    ["Friend-Ticker"] = friendTicker
   })
 end
 
@@ -36,21 +42,30 @@ end
 function friend.remove(msg)
   -- find friend
   local target = msg.Tags.Friend
-  local _, friendIndex = utils.find(
-    function (v) return v == target end,
-    Friends
-  )
 
-  -- check if the address provided is in the friend list
-  assert(friendIndex ~= nil, "Address is not a friend yet")
+  -- remove by ticker
+  if Friends[target] then
+    Friends[target] = nil
+  else
+    ---@type string|nil
+    local friendTicker = nil
 
-  -- remove friend
-  table.remove(Friends, friendIndex)
+    for ticker, oToken in pairs(Friends) do
+      if oToken == target then
+        friendTicker = ticker
+      end
+    end
+
+    -- check if the address provided is in the friend list
+    assert(friendTicker ~= nil, "Address is not a friend yet")
+
+    Friends[friendTicker] = nil
+  end
 
   -- notify the sender
   msg.reply({
     Action = "Friend-Removed",
-    Friend = target
+    Removed = target
   })
 end
 
@@ -58,7 +73,7 @@ end
 function friend.list(msg)
   msg.reply({
     Action = "Friend-List",
-    Data = json.encode(Friends)
+    Data = next(Friends) ~= nil and json.encode(Friends) or "{}"
   })
 end
 
