@@ -16,7 +16,7 @@ local mod = {
 ---@type HandlerFunction
 function mod.setup()
   -- oracle process id
-  OracleID = OracleID or ao.env.Process.Tags.Oracle
+  Oracle = Oracle or ao.env.Process.Tags.Oracle
 
   -- oracle delay tolerance in milliseconds
   ---@type number
@@ -34,7 +34,7 @@ function mod.sync()
   -- request prices from oracle
   ---@type string|nil
   local rawData = ao.send({
-    Target = OracleID,
+    Target = Oracle,
     Action = "v2.Request-Latest-Data",
     Tickers = json.encode(utils.keys(Friends))
   }).receive().Data

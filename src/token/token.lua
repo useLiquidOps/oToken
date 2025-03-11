@@ -28,7 +28,7 @@ function mod.info(msg)
     ["Collateral-Denomination"] = tostring(CollateralDenomination),
     ["Liquidation-Threshold"] = tostring(LiquidationThreshold),
     ["Value-Limit"] = ValueLimit,
-    Oracle = OracleID,
+    Oracle = Oracle,
     ["Oracle-Delay-Tolerance"] = tostring(MaxOracleDelay),
     ["Total-Borrows"] = TotalBorrows,
     Cash = Cash,
