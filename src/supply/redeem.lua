@@ -61,7 +61,7 @@ local function redeem(msg, _, oracle)
   -- get the value of the tokens to be burned in
   -- terms of the underlying asset and then get the price
   -- of that quantity
-  local burnValue = oracle.getValue(quantity, CollateralTicker, CollateralDenomination)
+  local burnValue = oracle.getValue(quantity, CollateralTicker)
 
   -- do not allow reserved collateral to be burned
   assert(

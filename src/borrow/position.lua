@@ -91,57 +91,37 @@ function mod.globalPosition(address, oracle)
   local res = {
     collateralization = oracle.getValue(
       localPosition.collateralization,
-      CollateralTicker,
-      CollateralDenomination
+      CollateralTicker
     ),
     capacity = oracle.getValue(
       localPosition.capacity,
-      CollateralTicker,
-      CollateralDenomination
+      CollateralTicker
     ),
     borrowBalance = oracle.getValue(
       localPosition.borrowBalance,
-      CollateralTicker,
-      CollateralDenomination
+      CollateralTicker
     ),
     liquidationLimit = oracle.getValue(
       localPosition.liquidationLimit,
-      CollateralTicker,
-      CollateralDenomination
+      CollateralTicker
     )
   }
 
   -- calculate global position in USD
   for _, position in ipairs(positions) do
-    -- scope the oracle
+    -- the currently iterated position's collateral's ticker
     local pTicker = position.Tags["Collateral-Ticker"]
-    local pDenom = tonumber(position.Tags["Collateral-Denomination"]) or 0
 
+    -- parse position
     local collateralization = bint(position.Tags["Collateralization"] or 0)
     local capacity = bint(position.Tags.Capacity or 0)
     local borrowBalance = bint(position.Tags["Borrow-Balance"] or 0)
     local liquidationLimit = bint(position.Tags["Liquidation-Limit"] or 0)
 
-    res.collateralization = res.collateralization + oracle.getValue(
-      collateralization,
-      pTicker,
-      pDenom
-    )
-    res.capacity = res.collateralization + oracle.getValue(
-      capacity,
-      pTicker,
-      pDenom
-    )
-    res.borrowBalance = res.collateralization + oracle.getValue(
-      borrowBalance,
-      pTicker,
-      pDenom
-    )
-    res.liquidationLimit = res.collateralization + oracle.getValue(
-      liquidationLimit,
-      pTicker,
-      pDenom
-    )
+    res.collateralization = res.collateralization + oracle.getValue(collateralization, pTicker)
+    res.capacity = res.collateralization + oracle.getValue(capacity, pTicker)
+    res.borrowBalance = res.collateralization + oracle.getValue(borrowBalance, pTicker)
+    res.liquidationLimit = res.collateralization + oracle.getValue(liquidationLimit, pTicker)
   end
 
   return res

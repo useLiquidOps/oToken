@@ -7,7 +7,7 @@ local mod = {
   usdDenomination = 12
 }
 
----@alias OracleInstance { getValue: fun(quantity: Bint, symbol: string, denomination: number): Bint }
+---@alias OracleInstance { getValue: fun(quantity: Bint, symbol: string): Bint }
 ---@alias HandlerWithOracle fun(msg: Message, env: Message, oracle: OracleInstance): any
 ---@alias OracleData table<string, { t: number, a: string, v: number }>
 ---@alias FetchedPrices table<string, { price: Bint, timestamp: number }>

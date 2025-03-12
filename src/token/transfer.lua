@@ -28,7 +28,7 @@ local function transfer(msg, _, oracle)
   -- get the value of the tokens to be transferred in
   -- terms of the underlying asset and then get the price
   -- of that quantity
-  local transferValue = oracle.getValue(quantity, CollateralTicker, CollateralDenomination)
+  local transferValue = oracle.getValue(quantity, CollateralTicker)
 
   -- do not allow reserved collateral to be transferred
   assert(
