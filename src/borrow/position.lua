@@ -1,7 +1,6 @@
-local Oracle = require ".liquidations.oracle"
 local scheduler = require ".utils.scheduler"
+local oracle = require ".liquidations.oracle"
 local bint = require ".utils.bint"(1024)
-local utils = require ".utils.utils"
 local json = require "json"
 
 local mod = {
@@ -69,8 +68,9 @@ end
 
 -- Get the global position for a user (in USD, using oracle prices)
 ---@param address string User address
+---@param oracle OracleInstance A loaded oracle instance
 ---@return Position
-function mod.globalPosition(address)
+function mod.globalPosition(address, oracle)
   -- generate position messages (we don't use map and utils.values for optimization,
   -- because they create 2 loops instead of the one needed)
   ---@type MessageParam[]
@@ -83,46 +83,65 @@ function mod.globalPosition(address)
   -- get local positions from friend processes
   local positions = scheduler.schedule(table.unpack(positionMsgs))
 
-  -- ticker - denomination data for the oracle
-  local oracleData = { [CollateralTicker] = CollateralDenomination }
-
-  -- add ticker - denomination data from the positions
-  for _, msg in ipairs(positions) do
-    oracleData[msg.Tags["Collateral-Ticker"]] = tonumber(msg.Tags["Collateral-Denomination"])
-  end
-
-  -- init oracle for all collaterals
-  local oracle = Oracle:new(oracleData)
-
   -- load local position
   local localPosition = mod.position(address)
-
-  -- scope the oracle
-  local locOracle = oracle:token(CollateralTicker)
 
   -- result template
   ---@type Position
   local res = {
-    collateralization = locOracle.getValue(localPosition.collateralization),
-    capacity = locOracle.getValue(localPosition.capacity),
-    borrowBalance = locOracle.getValue(localPosition.borrowBalance),
-    liquidationLimit = locOracle.getValue(localPosition.liquidationLimit),
+    collateralization = oracle.getValue(
+      localPosition.collateralization,
+      CollateralTicker,
+      CollateralDenomination
+    ),
+    capacity = oracle.getValue(
+      localPosition.capacity,
+      CollateralTicker,
+      CollateralDenomination
+    ),
+    borrowBalance = oracle.getValue(
+      localPosition.borrowBalance,
+      CollateralTicker,
+      CollateralDenomination
+    ),
+    liquidationLimit = oracle.getValue(
+      localPosition.liquidationLimit,
+      CollateralTicker,
+      CollateralDenomination
+    )
   }
 
   -- calculate global position in USD
   for _, position in ipairs(positions) do
     -- scope the oracle
-    local posOracle = oracle:token(position.Tags["Collateral-Ticker"])
+    local pTicker = position.Tags["Collateral-Ticker"]
+    local pDenom = tonumber(position.Tags["Collateral-Denomination"]) or 0
 
     local collateralization = bint(position.Tags["Collateralization"] or 0)
     local capacity = bint(position.Tags.Capacity or 0)
     local borrowBalance = bint(position.Tags["Borrow-Balance"] or 0)
     local liquidationLimit = bint(position.Tags["Liquidation-Limit"] or 0)
 
-    res.collateralization = res.collateralization + posOracle.getValue(collateralization)
-    res.capacity = res.collateralization + posOracle.getValue(capacity)
-    res.borrowBalance = res.collateralization + posOracle.getValue(borrowBalance)
-    res.liquidationLimit = res.collateralization + posOracle.getValue(liquidationLimit)
+    res.collateralization = res.collateralization + oracle.getValue(
+      collateralization,
+      pTicker,
+      pDenom
+    )
+    res.capacity = res.collateralization + oracle.getValue(
+      capacity,
+      pTicker,
+      pDenom
+    )
+    res.borrowBalance = res.collateralization + oracle.getValue(
+      borrowBalance,
+      pTicker,
+      pDenom
+    )
+    res.liquidationLimit = res.collateralization + oracle.getValue(
+      liquidationLimit,
+      pTicker,
+      pDenom
+    )
   end
 
   return res
@@ -145,17 +164,17 @@ function mod.handlers.localPosition(msg)
 end
 
 -- Global position action handler
----@type HandlerFunction
-function mod.handlers.globalPosition(msg)
+---@type HandlerWithOracle
+function mod.handlers.globalPosition(msg, _, _oracle)
   local account = msg.Tags.Recipient or msg.From
-  local position = mod.globalPosition(account)
+  local position = mod.globalPosition(account, _oracle)
 
   msg.reply({
     Collateralization = tostring(position.collateralization),
     Capacity = tostring(position.capacity),
     ["Borrow-Balance"] = tostring(position.borrowBalance),
     ["Liquidation-Limit"] = tostring(position.liquidationLimit),
-    ["USD-Denomination"] = tostring(Oracle.usdDenomination)
+    ["USD-Denomination"] = tostring(oracle.usdDenomination)
   })
 end
 

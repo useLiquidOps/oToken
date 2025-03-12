@@ -1,10 +1,9 @@
 local assertions = require ".utils.assertions"
-local Oracle = require ".liquidations.oracle"
 local position = require ".borrow.position"
 local bint = require ".utils.bint"(1024)
 
----@type HandlerFunction
-local function transfer(msg)
+---@type HandlerWithOracle
+local function transfer(msg, _, oracle)
   -- transfer target and sender
   local target = msg.Tags.Recipient or msg.Target
   local sender = msg.From
@@ -23,16 +22,13 @@ local function transfer(msg)
   -- check if the user has enough tokens
   assert(bint.ule(quantity, walletBalance), "Insufficient balance")
 
-  -- init oracle for the collateral
-  local oracle = Oracle:new{ [CollateralTicker] = CollateralDenomination }
-
   -- get the value of the tokens to be transferred in
   -- terms of the underlying asset and then get the price
   -- of that quantity
-  local transferValue = oracle:getValue(quantity, CollateralTicker)
+  local transferValue = oracle.getValue(quantity, CollateralTicker, CollateralDenomination)
 
   -- get position data
-  local pos = position.globalPosition(sender)
+  local pos = position.globalPosition(sender, oracle)
 
   -- do not allow reserved collateral to be transferred
   assert(

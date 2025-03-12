@@ -7,7 +7,8 @@ local mod = {
   usdDenomination = 12
 }
 
----@alias HandlerWithOracle fun(msg: Message, env: Message, oracle: { getValue: fun(q: Bint, s: string): Bint }): any
+---@alias OracleInstance { getValue: fun(quantity: Bint, symbol: string, denomination: number): Bint }
+---@alias HandlerWithOracle fun(msg: Message, env: Message, oracle: OracleInstance): any
 ---@alias OracleData table<string, { t: number, a: string, v: number }>
 ---@alias FetchedPrices table<string, { price: Bint, timestamp: number }>
 ---@alias RawPrices table<string, { price: number, timestamp: number }>
@@ -63,13 +64,13 @@ function mod.sync()
   return res
 end
 
--- Get value in USD for a token quantity
+-- Calculate a token quantity value in USD
 ---@param quantity Bint Quantity to get the value for
 ---@param symbol string Token symbol for the quantity
+---@param denomination number Token denomination
 ---@param data FetchedPrices Parsed price data from the oracle
----@param denominations table<string, number> Denominations data
 ---@return Bint
-function mod.getValue(quantity, symbol, data, denominations)
+function mod.calculateValue(quantity, symbol, denomination, data)
   -- no calculations needed for 0 quantity
   local zero = bint.zero()
   if quantity == zero then return zero end
@@ -87,8 +88,6 @@ function mod.getValue(quantity, symbol, data, denominations)
   )
 
   -- check if denomination is present
-  local denomination = denominations[symbol]
-
   assert(denomination ~= nil, "No denomination provided for " .. symbol)
 
   -- the value of the quantity
@@ -119,13 +118,12 @@ function mod.withOracle(handler)
       msg,
       env,
       {
-        getValue = function (quantity, symbol)
-          return mod.getValue(
+        getValue = function (quantity, symbol, denomination)
+          return mod.calculateValue(
             quantity,
             symbol,
-            prices,
-            --- TODO
-            denominations
+            denomination,
+            prices
           )
         end
       }
