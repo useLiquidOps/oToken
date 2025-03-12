@@ -4,6 +4,12 @@ local bint = require ".utils.bint"(1024)
 
 ---@type HandlerWithOracle
 local function redeem(msg, _, oracle)
+  -- the wallet that is burning the tokens
+  local sender = msg.From
+
+  -- get position data
+  local pos = position.globalPosition(sender, oracle)
+
   assert(
     assertions.isTokenQuantity(msg.Tags.Quantity),
     "Invalid redeem quantity"
@@ -11,9 +17,6 @@ local function redeem(msg, _, oracle)
 
   -- amount of tokens to burn
   local quantity = bint(msg.Tags.Quantity)
-
-  -- the wallet that is burning the tokens
-  local sender = msg.From
 
   -- oToken wallet balance for sender
   local walletBalance = bint(Balances[sender] or "0")
@@ -59,9 +62,6 @@ local function redeem(msg, _, oracle)
   -- terms of the underlying asset and then get the price
   -- of that quantity
   local burnValue = oracle.getValue(quantity, CollateralTicker, CollateralDenomination)
-
-  -- get position data
-  local pos = position.globalPosition(sender, oracle)
 
   -- do not allow reserved collateral to be burned
   assert(

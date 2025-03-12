@@ -8,6 +8,9 @@ local function transfer(msg, _, oracle)
   local target = msg.Tags.Recipient or msg.Target
   local sender = msg.From
 
+  -- get position data
+  local pos = position.globalPosition(sender, oracle)
+
   -- validate target and quantity
   assert(assertions.isAddress(target), "Invalid address")
   assert(target ~= sender, "Target cannot be the sender")
@@ -26,9 +29,6 @@ local function transfer(msg, _, oracle)
   -- terms of the underlying asset and then get the price
   -- of that quantity
   local transferValue = oracle.getValue(quantity, CollateralTicker, CollateralDenomination)
-
-  -- get position data
-  local pos = position.globalPosition(sender, oracle)
 
   -- do not allow reserved collateral to be transferred
   assert(

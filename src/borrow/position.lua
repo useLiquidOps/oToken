@@ -1,5 +1,5 @@
+local oracleMod = require ".liquidations.oracle"
 local scheduler = require ".utils.scheduler"
-local oracle = require ".liquidations.oracle"
 local bint = require ".utils.bint"(1024)
 local json = require "json"
 
@@ -165,16 +165,16 @@ end
 
 -- Global position action handler
 ---@type HandlerWithOracle
-function mod.handlers.globalPosition(msg, _, _oracle)
+function mod.handlers.globalPosition(msg, _, oracle)
   local account = msg.Tags.Recipient or msg.From
-  local position = mod.globalPosition(account, _oracle)
+  local position = mod.globalPosition(account, oracle)
 
   msg.reply({
     Collateralization = tostring(position.collateralization),
     Capacity = tostring(position.capacity),
     ["Borrow-Balance"] = tostring(position.borrowBalance),
     ["Liquidation-Limit"] = tostring(position.liquidationLimit),
-    ["USD-Denomination"] = tostring(oracle.usdDenomination)
+    ["USD-Denomination"] = tostring(oracleMod.usdDenomination)
   })
 end
 
