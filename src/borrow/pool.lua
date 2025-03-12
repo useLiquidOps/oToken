@@ -36,7 +36,7 @@ function mod.setup(msg)
   -- other oToken processes
   -- format: key - friend collateral ticker, value - friend process
   ---@type Friend[]
-  Friends = Friends or json.decode(ao.env.Process.Data or "{}").Friends or {}
+  Friends = Friends or json.decode(ao.env.Process.Data or "[]").Friends or {}
 
   -- limit the value of an interaction
   -- (in units of the collateral)

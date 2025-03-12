@@ -1,4 +1,5 @@
 local bint = require ".utils.bint"(1024)
+local utils = require ".utils.utils"
 
 local mod = {}
 
@@ -73,6 +74,20 @@ end
 function mod.isPercentage(val)
   if not val or type(val) ~= "number" then return false end
   return val // 1 == val and val >= 0 and val <= 100
+end
+
+-- Check if a process is a "friend" process
+-- (part of the protocol as an oToken)
+---@param process string Address of the process
+---@return boolean
+function mod.isFriend(process)
+  return utils.find(
+    ---@param friend Friend
+    function (friend)
+      return friend.oToken == process
+    end,
+    Friends
+  ) ~= nil
 end
 
 return mod

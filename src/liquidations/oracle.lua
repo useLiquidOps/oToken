@@ -32,12 +32,22 @@ end
 -- Sync all known friends' collateral price
 ---@return FetchedPrices
 function mod.sync()
+  -- collect tickers to fetch the price for
+  local tickers = utils.map(
+    ---@param friend Friend
+    function (friend) return friend.ticker end,
+    Friends
+  )
+
+  -- add local collateral
+  table.insert(tickers, CollateralTicker)
+
   -- request prices from oracle
   ---@type string|nil
   local rawData = ao.send({
     Target = Oracle,
     Action = "v2.Request-Latest-Data",
-    Tickers = json.encode(utils.keys(Friends))
+    Tickers = json.encode(tickers)
   }).receive().Data
 
   -- check if the oracle returned anything in the data field
@@ -67,10 +77,9 @@ end
 -- Calculate a token quantity value in USD
 ---@param quantity Bint Quantity to get the value for
 ---@param symbol string Token symbol for the quantity
----@param denomination number Token denomination
 ---@param data FetchedPrices Parsed price data from the oracle
 ---@return Bint
-function mod.calculateValue(quantity, symbol, denomination, data)
+function mod.calculateValue(quantity, symbol, data)
   -- no calculations needed for 0 quantity
   local zero = bint.zero()
   if quantity == zero then return zero end
@@ -87,7 +96,18 @@ function mod.calculateValue(quantity, symbol, denomination, data)
     symbol .. " price is outdated"
   )
 
-  -- check if denomination is present
+  -- find denomination, error if there is none defined
+  local denomination = (utils.find(
+    ---@param friend Friend
+    function (friend) return friend.ticker == symbol end,
+    Friends
+  ) or {}).denomination
+
+  -- for the local collateral
+  if symbol == CollateralTicker then
+    denomination = CollateralDenomination
+  end
+
   assert(denomination ~= nil, "No denomination provided for " .. symbol)
 
   -- the value of the quantity
@@ -118,11 +138,10 @@ function mod.withOracle(handler)
       msg,
       env,
       {
-        getValue = function (quantity, symbol, denomination)
+        getValue = function (quantity, symbol)
           return mod.calculateValue(
             quantity,
             symbol,
-            denomination,
             prices
           )
         end

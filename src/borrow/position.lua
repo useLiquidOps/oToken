@@ -1,6 +1,7 @@
 local oracleMod = require ".liquidations.oracle"
 local scheduler = require ".utils.scheduler"
 local bint = require ".utils.bint"(1024)
+local utils = require ".utils.utils"
 local json = require "json"
 
 local mod = {
@@ -71,17 +72,16 @@ end
 ---@param oracle OracleInstance A loaded oracle instance
 ---@return Position
 function mod.globalPosition(address, oracle)
-  -- generate position messages (we don't use map and utils.values for optimization,
-  -- because they create 2 loops instead of the one needed)
-  ---@type MessageParam[]
-  local positionMsgs = {}
-
-  for _, friend in pairs(Friends) do
-    table.insert(positionMsgs, { Target = friend, Action = "Position", Recipient = address })
-  end
-
   -- get local positions from friend processes
-  local positions = scheduler.schedule(table.unpack(positionMsgs))
+  local positions = scheduler.schedule(table.unpack(
+    utils.map(
+      ---@param friend Friend
+      function (friend)
+        return { Target = friend.oToken, Action = "Position", Recipient = address }
+      end,
+      Friends
+    )
+  ))
 
   -- load local position
   local localPosition = mod.position(address)
