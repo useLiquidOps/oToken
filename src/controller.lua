@@ -18,7 +18,7 @@ MaxOracleDelay = MaxOracleDelay or 1200000
 ProtocolLogo = ProtocolLogo or ""
 
 -- holds all the processes that are part of the protocol
----@type { id: string; ticker: string; oToken: string }[]
+---@type Friend[]
 Tokens = Tokens or {}
 
 -- queue for operations in oTokens that involve
@@ -218,9 +218,9 @@ Handlers.add(
       ["Cooldown-Period"] = msg.Tags["Cooldown-Period"],
       Oracle = Oracle,
       ["Oracle-Delay-Tolerance"] = tostring(MaxOracleDelay),
-      Friends = json.encode(friends),
       Logo = logo,
-      Authority = ao.authorities[1]
+      Authority = ao.authorities[1],
+      Data = { Friends = Tokens }
     }
 
     -- spawn new oToken process
@@ -233,7 +233,10 @@ Handlers.add(
         ao.send({
           Target = t.oToken,
           Action = "Add-Friend",
-          Friend = spawnedID
+          Friend = spawnedID,
+          Token = token,
+          Ticker = info.Tags.Ticker,
+          Denomination = info.Tags.Denomination
         })
       end
     end
@@ -242,7 +245,8 @@ Handlers.add(
     table.insert(Tokens, {
       id = token,
       ticker = info.Tags.Ticker,
-      oToken = spawnedID
+      oToken = spawnedID,
+      denomination = tonumber(info.Tags.Denomination) or 0
     })
 
     msg.reply({

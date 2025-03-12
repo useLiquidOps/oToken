@@ -4,68 +4,89 @@ local json = require "json"
 
 local friend = {}
 
+---@alias Friend { id: string; ticker: string; oToken: string; denomination: number; }
+
 ---@type HandlerFunction
 function friend.add(msg)
   -- validate address
   local newFriend = msg.Tags.Friend
-  local friendTicker = msg.Tags["Friend-Ticker"]
+  local friendToken = msg.Tags.Token
+  local friendTicker = msg.Tags.Ticker
+  local friendDenomination = tonumber(msg.Tags.Denomination)
 
   assert(
     assertions.isAddress(newFriend),
     "Invalid friend address " .. newFriend
   )
   assert(
+    assertions.isAddress(friendToken),
+    "Invalid token address " .. friendToken
+  )
+  assert(
     friendTicker ~= nil,
     "No ticker supplied for friend collateral"
   )
   assert(
-    not Friends[friendTicker] and not utils.includes(newFriend, utils.values(Friends)),
+    not utils.find(
+      ---@param f Friend
+      function (f)
+        return f.id == friendToken or
+          f.oToken == newFriend or
+          f.ticker == friendTicker
+      end,
+      Friends
+    ),
     "Friend already added"
   )
   assert(
-    newFriend ~= ao.id and friendTicker ~= CollateralTicker,
+    newFriend ~= ao.id and friendTicker ~= CollateralTicker and friendToken ~= CollateralID,
     "Cannot add itself as a friend"
   )
 
   -- add friend
-  Friends[friendTicker] = newFriend
+  table.insert(Friends, {
+    id = friendToken,
+    ticker = friendTicker,
+    oToken = newFriend,
+    denomination = friendDenomination
+  })
 
   -- notify the sender
   msg.reply({
     Action = "Friend-Added",
-    Friend = newFriend,
-    ["Friend-Ticker"] = friendTicker
+    Friend = newFriend
   })
 end
 
 ---@type HandlerFunction
 function friend.remove(msg)
-  -- find friend
   local target = msg.Tags.Friend
 
-  -- remove by ticker
-  if Friends[target] then
-    Friends[target] = nil
-  else
-    ---@type string|nil
-    local friendTicker = nil
+  -- remove and list the removed friends
+  ---@type Friend[]
+  local removed = {}
 
-    for ticker, oToken in pairs(Friends) do
-      if oToken == target then
-        friendTicker = ticker
+  Friends = utils.filter(
+    ---@param f Friend
+    function (f)
+      if f.id == target or f.oToken == target or f.ticker == target then
+        table.insert(removed, f)
+        return false
       end
-    end
 
-    -- check if the address provided is in the friend list
-    assert(friendTicker ~= nil, "Address is not a friend yet")
+      return true
+    end,
+    Friends
+  )
 
-    Friends[friendTicker] = nil
-  end
+  -- check if any were removed
+  assert(#removed > 0, "Friend " .. target .. " not yet added")
 
   -- notify the sender
   msg.reply({
     Action = "Friend-Removed",
-    Removed = target
+    Removed = target,
+    Data = json.encode(removed)
   })
 end
 
@@ -73,7 +94,7 @@ end
 function friend.list(msg)
   msg.reply({
     Action = "Friend-List",
-    Data = next(Friends) ~= nil and json.encode(Friends) or "{}"
+    Data = json.encode(Friends)
   })
 end
 
