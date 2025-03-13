@@ -1014,39 +1014,27 @@ describe("Token standard functionalities", () => {
     );
 
     // queue response
-    const transferRes = await handle(createMessage({
+    const oracleRes = await handle(createMessage({
       "Queued-User": testWallet,
       "X-Reference": queueResTags["Reference"]
     }));
 
-    // expect request for "AR" price only (capacity for TST/the friend is zero, so no request for that)
-    expect(transferRes.Messages).toEqual(
+    expect(oracleRes.Messages).toEqual(
       expect.arrayContaining([
-        expect.objectContaining({
-          Target: tags["Oracle"],
-          Tags: expect.arrayContaining([
-            expect.objectContaining({
-              name: "Action",
-              value: "v2.Request-Latest-Data"
-            }),
-            expect.objectContaining({
-              name: "Tickers",
-              value: expect.toBeJsonEncoded(
-                expect.arrayContaining([tags["Collateral-Ticker"]])
-              )
-            })
-          ])
-        })
+        expect.oracleRequest([tags["Collateral-Ticker"]])
       ])
     );
 
-    // send dummy oracle data
-    const capacitiesOracleInputRes = await handle(
-      generateOracleResponse({ AR: 17.96991872 }, transferRes)
+    // here we use a very large price in order to simulate
+    // an environment, where the transfer would cause
+    // the loan in the friend process to be undercollateralized.
+    // in reality, this would make the loan available for liquidation
+    const res = await handle(
+      generateOracleResponse({ AR: 8.425, TST: 22.55 }, oracleRes)
     );
 
     // expect request to the friend process for position info
-    expect(capacitiesOracleInputRes.Messages).toEqual(
+    expect(res.Messages).toEqual(
       expect.arrayContaining([
         expect.objectContaining({
           Target: friend,
@@ -1065,7 +1053,7 @@ describe("Token standard functionalities", () => {
     );
 
     const capacitiesOracleInputResTags = normalizeTags(
-      capacitiesOracleInputRes.Messages
+      res.Messages
         .find((msg) => normalizeTags(msg.Tags)["Action"] === "Position")
         ?.Tags || []
     );
@@ -1085,40 +1073,10 @@ describe("Token standard functionalities", () => {
     });
     const positionRes = await handle(positionMsg);
 
-    // expect another oracle request
-    expect(positionRes.Messages).toEqual(
-      expect.arrayContaining([
-        expect.objectContaining({
-          Target: tags["Oracle"],
-          Tags: expect.arrayContaining([
-            expect.objectContaining({
-              name: "Action",
-              value: "v2.Request-Latest-Data"
-            }),
-            expect.objectContaining({
-              name: "Tickers",
-              value: expect.toBeJsonEncoded(
-                expect.arrayContaining([friendTicker])
-              )
-            })
-          ])
-        })
-      ])
-    );
-
-    // send dummy oracle data
-    // here we use a very large price in order to simulate
-    // an environment, where the transfer would cause
-    // the loan in the friend process to be undercollateralized.
-    // in reality, this would make the loan available for liquidation
-    const usedCapacitiesOracleInputRes = await handle(
-      generateOracleResponse({ TST: 22.55, AR: 17.96991872 }, positionRes)
-    );
-
     // collateral price is already cached, so the process
     // will not ask for prices anymore
     // expect error
-    expect(usedCapacitiesOracleInputRes.Messages).toEqual(
+    expect(positionRes.Messages).toEqual(
       expect.arrayContaining([
         expect.objectContaining({
           Target: testWallet,
