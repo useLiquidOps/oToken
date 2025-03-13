@@ -6,7 +6,8 @@ import {
   normalizeTags,
   setupProcess,
   env,
-  getMessageByAction
+  getMessageByAction,
+  generateOracleResponse
 } from "./utils";
 
 describe("Borrowing", () => {
@@ -138,11 +139,21 @@ describe("Borrowing", () => {
     );
 
     // queue response
-    const res = await handle(createMessage({
+    const oracleRes = await handle(createMessage({
       "Queued-User": msg.From,
       "X-Reference": queueResTags["Reference"]
     }));
 
+    expect(oracleRes.Messages).toEqual(
+      expect.arrayContaining([
+        expect.oracleRequest(["AR"])
+      ])
+    );
+
+    const res = await handle(
+      generateOracleResponse({ AR: 8.425 }, oracleRes)
+    );
+  
     expect(res.Messages).toEqual(
       expect.arrayContaining([
         expect.objectContaining({
@@ -203,10 +214,20 @@ describe("Borrowing", () => {
     );
 
     // queue response
-    const res = await handle(createMessage({
+    const oracleRes = await handle(createMessage({
       "Queued-User": msg.From,
       "X-Reference": queueResTags["Reference"]
     }));
+
+    expect(oracleRes.Messages).toEqual(
+      expect.arrayContaining([
+        expect.oracleRequest(["AR"])
+      ])
+    );
+
+    const res = await handle(
+      generateOracleResponse({ AR: 8.425 }, oracleRes)
+    );
 
     expect(res.Messages).toEqual(
       expect.arrayContaining([
@@ -299,10 +320,20 @@ describe("Borrowing", () => {
     );
 
     // queue response
-    const res = await handle(createMessage({
+    const oracleRes = await handle(createMessage({
       "Queued-User": msg.From,
       "X-Reference": queueResTags["Reference"]
     }));
+
+    expect(oracleRes.Messages).toEqual(
+      expect.arrayContaining([
+        expect.oracleRequest(["AR"])
+      ])
+    );
+
+    const res = await handle(
+      generateOracleResponse({ AR: 8.425 }, oracleRes)
+    );
 
     // expect borrow quantity error
     expect(res.Messages).toEqual(

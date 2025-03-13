@@ -337,10 +337,20 @@ describe("Token standard functionalities", () => {
     );
 
     // queue response
-    const res = await handle(createMessage({
-      "Queued-User": testWallet,
+    const oracleRes = await handle(createMessage({
+      "Queued-User": msg.From,
       "X-Reference": queueResTags["Reference"]
     }));
+
+    expect(oracleRes.Messages).toEqual(
+      expect.arrayContaining([
+        expect.oracleRequest([tags["Collateral-Ticker"]])
+      ])
+    );
+
+    const res = await handle(
+      generateOracleResponse({ AR: 8.425 }, oracleRes)
+    );
 
     expect(res.Messages).toEqual(
       expect.arrayContaining([
@@ -407,10 +417,20 @@ describe("Token standard functionalities", () => {
     );
 
     // queue response
-    const res = await handle(createMessage({
-      "Queued-User": testWallet,
+    const oracleRes = await handle(createMessage({
+      "Queued-User": msg.From,
       "X-Reference": queueResTags["Reference"]
     }));
+
+    expect(oracleRes.Messages).toEqual(
+      expect.arrayContaining([
+        expect.oracleRequest([tags["Collateral-Ticker"]])
+      ])
+    );
+
+    const res = await handle(
+      generateOracleResponse({ AR: 8.425 }, oracleRes)
+    );
 
     expect(res.Messages).toEqual(
       expect.arrayContaining([
@@ -477,10 +497,20 @@ describe("Token standard functionalities", () => {
     );
 
     // queue response
-    const res = await handle(createMessage({
-      "Queued-User": testWallet,
+    const oracleRes = await handle(createMessage({
+      "Queued-User": msg.From,
       "X-Reference": queueResTags["Reference"]
     }));
+
+    expect(oracleRes.Messages).toEqual(
+      expect.arrayContaining([
+        expect.oracleRequest([tags["Collateral-Ticker"]])
+      ])
+    );
+
+    const res = await handle(
+      generateOracleResponse({ AR: 8.425 }, oracleRes)
+    );
 
     expect(res.Messages).toEqual(
       expect.arrayContaining([
@@ -545,10 +575,20 @@ describe("Token standard functionalities", () => {
     );
 
     // queue response
-    const res = await handle(createMessage({
+    const oracleRes = await handle(createMessage({
       "Queued-User": msg.From,
       "X-Reference": queueResTags["Reference"]
     }));
+
+    expect(oracleRes.Messages).toEqual(
+      expect.arrayContaining([
+        expect.oracleRequest([tags["Collateral-Ticker"]])
+      ])
+    );
+
+    const res = await handle(
+      generateOracleResponse({ AR: 8.425 }, oracleRes)
+    );
 
     expect(res.Messages).toEqual(
       expect.arrayContaining([
@@ -615,38 +655,22 @@ describe("Token standard functionalities", () => {
     );
 
     // queue response
-    const res = await handle(createMessage({
-      "Queued-User": testWallet,
+    const oracleRes = await handle(createMessage({
+      "Queued-User": msg.From,
       "X-Reference": queueResTags["Reference"]
     }));
 
-    // expect collateralization check oracle request
-    expect(res.Messages).toEqual(
+    expect(oracleRes.Messages).toEqual(
       expect.arrayContaining([
-        expect.objectContaining({
-          Target: tags["Oracle"],
-          Tags: expect.arrayContaining([
-            expect.objectContaining({
-              name: "Action",
-              value: "v2.Request-Latest-Data"
-            }),
-            expect.objectContaining({
-              name: "Tickers",
-              value: expect.toBeJsonEncoded(
-                expect.arrayContaining([tags["Collateral-Ticker"]])
-              )
-            })
-          ])
-        })
+        expect.oracleRequest([tags["Collateral-Ticker"]])
       ])
     );
 
-    // send dummy oracle data, but no price for the requested token
-    const oracleInputRes = await handle(
-      generateOracleResponse({ BTC: 54712.5691358 }, res)
+    const res = await handle(
+      generateOracleResponse({ BTC: 85325.425 }, oracleRes)
     );
     
-    expect(oracleInputRes.Messages).toEqual(
+    expect(res.Messages).toEqual(
       expect.arrayContaining([
         expect.objectContaining({
           Target: testWallet,
@@ -719,21 +743,7 @@ describe("Token standard functionalities", () => {
     // expect collateralization check oracle request
     expect(res.Messages).toEqual(
       expect.arrayContaining([
-        expect.objectContaining({
-          Target: tags["Oracle"],
-          Tags: expect.arrayContaining([
-            expect.objectContaining({
-              name: "Action",
-              value: "v2.Request-Latest-Data"
-            }),
-            expect.objectContaining({
-              name: "Tickers",
-              value: expect.toBeJsonEncoded(
-                expect.arrayContaining([tags["Collateral-Ticker"]])
-              )
-            })
-          ])
-        })
+        expect.oracleRequest([tags["Collateral-Ticker"]])
       ])
     );
 
@@ -819,39 +829,23 @@ describe("Token standard functionalities", () => {
     );
 
     // queue response
-    const res = await handle(createMessage({
-      "Queued-User": testWallet,
+    const oracleRes = await handle(createMessage({
+      "Queued-User": msg.From,
       "X-Reference": queueResTags["Reference"]
     }));
 
-    // expect collateralization check oracle request
-    expect(res.Messages).toEqual(
+    expect(oracleRes.Messages).toEqual(
       expect.arrayContaining([
-        expect.objectContaining({
-          Target: tags["Oracle"],
-          Tags: expect.arrayContaining([
-            expect.objectContaining({
-              name: "Action",
-              value: "v2.Request-Latest-Data"
-            }),
-            expect.objectContaining({
-              name: "Tickers",
-              value: expect.toBeJsonEncoded(
-                expect.arrayContaining([tags["Collateral-Ticker"]])
-              )
-            })
-          ])
-        })
+        expect.oracleRequest([tags["Collateral-Ticker"]])
       ])
     );
 
-    // send dummy oracle data
-    const oracleInputRes = await handle(
-      generateOracleResponse({ AR: 17.96991872 }, res)
+    const res = await handle(
+      generateOracleResponse({ AR: 8.425 }, oracleRes)
     );
 
     // expect successful transfer
-    expect(oracleInputRes.Messages).toEqual(
+    expect(res.Messages).toEqual(
       expect.arrayContaining([
         expect.objectContaining({
           Target: msg.From,
