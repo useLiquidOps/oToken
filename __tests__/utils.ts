@@ -26,7 +26,7 @@ export const env: Environment = {
       { name: "Oracle-Delay-Tolerance", value: "3600000" },
       { name: "Cooldown-Period", value: "0" }
     ],
-    Data: "[]"
+    Data: JSON.stringify({ Friends: [] })
   }
 };
 export const defaultTimestamp = "172302981";

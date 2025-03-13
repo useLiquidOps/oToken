@@ -353,7 +353,7 @@ describe("Friend tests", () => {
       Action: "Remove-Friend",
       Friend: friend.oToken
     }));
-console.log(JSON.stringify(friendRemoveRes.Messages, null, 2))
+
     expect(friendRemoveRes.Messages).toEqual(
       expect.arrayContaining([
         expect.objectContaining({

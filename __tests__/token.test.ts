@@ -933,16 +933,19 @@ describe("Token standard functionalities", () => {
 
   it("Prevents transferring when the transfer would require higher collateralization (loan is on friend process)", async () => {
     // setup env
-    const friend = generateArweaveAddress();
+    const friend = {
+      id: generateArweaveAddress(),
+      oToken: generateArweaveAddress(),
+      ticker: "TST",
+      denomination: "12"
+    };
     const friendTicker = "TST";
-    const envWithFriend = env;
-    envWithFriend.Process.Tags = envWithFriend.Process.Tags.map((tag) => {
-      if (tag.name !== "Friends") return tag;
-      return {
-        name: "Friends",
-        value: JSON.stringify([friend])
-      };
-    });
+    const envWithFriend = {
+      Process: {
+        ...env.Process,
+        Data: JSON.stringify({ Friends: [friend] })
+      }
+    };
 
     // setup process
     const handle = await setupProcess(envWithFriend);
@@ -1037,7 +1040,7 @@ describe("Token standard functionalities", () => {
     expect(res.Messages).toEqual(
       expect.arrayContaining([
         expect.objectContaining({
-          Target: friend,
+          Target: friend.oToken,
           Tags: expect.arrayContaining([
             expect.objectContaining({
               name: "Action",
@@ -1060,8 +1063,8 @@ describe("Token standard functionalities", () => {
 
     // dummy position response
     const positionMsg = createMessage({
-      Owner: friend,
-      From: friend,
+      Owner: friend.oToken,
+      From: friend.oToken,
       "X-Reference": capacitiesOracleInputResTags["Reference"],
       Action: "Collateralization-Response",
       Collateralization: "0",
