@@ -55,6 +55,9 @@ Handlers.add(
   "sync-auctions",
   { Action = "Cron" },
   function (msg)
+    -- fetch prices first, so the processing of the positions won't be delayed
+    local rawPrices = oracle.sync()
+
     -- generate position messages
     ---@type MessageParam[]
     local positionMsgs = {}
@@ -66,13 +69,6 @@ Handlers.add(
     -- get all user positions
     ---@type Message[]
     local rawPositions = scheduler.schedule(table.unpack(positionMsgs))
-
-    -- fetch prices
-    local rawPrices = oracle.getPrices(utils.map(
-      ---@param p Message
-      function (p) return p.Tags["Collateral-Ticker"] end,
-      rawPositions
-    ))
 
     -- protocol positions in USD
     ---@type table<string, { liquidationLimit: Bint, borrowBalance: Bint }>
@@ -416,6 +412,9 @@ Handlers.add(
         "Cannot liquidate for the reward token as it is not listed"
       )
 
+      -- fetch prices first so the user positions won't be outdated
+      local prices = oracle.sync()
+
       -- check user position
       ---@type Message[]
       local positions = scheduler.schedule(table.unpack(positionMsgs))
@@ -492,9 +491,6 @@ Handlers.add(
         -- error and trigger refund
         error("User does not have an active loan")
       end
-
-      -- fetch prices
-      local prices = oracle.getPrices(symbols)
 
       -- ensure "liquidation-limit / borrow-balance < 1"
       -- this means that the user is eligible for liquidation
@@ -906,10 +902,16 @@ function scheduler.schedule(...)
 end
 
 -- Get price data for an array of token symbols
----@param symbols string[] Token symbols
-function oracle.getPrices(symbols)
+function oracle.sync()
   ---@type RawPrices
   local res = {}
+
+  -- all collateral tickers
+  local symbols = utils.map(
+    ---@param f Friend
+    function (f) return f.ticker end,
+    Tokens
+  )
 
   -- no tokens to sync
   if #symbols == 0 then return res end
