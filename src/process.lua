@@ -294,7 +294,7 @@ local function setup_handlers()
   Handlers.add(
     "token-transfer",
     Handlers.utils.hasMatchingTag("Action", "Transfer"),
-    queue.useQueue(transfer)
+    queue.useQueue(oracle.withOracle(transfer))
   )
 
   HandlersAdded = true
