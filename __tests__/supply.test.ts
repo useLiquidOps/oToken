@@ -6,7 +6,8 @@ import {
   generateArweaveAddress,
   createMessage,
   normalizeTags,
-  getMessageByAction
+  getMessageByAction,
+  generateOracleResponse
 } from "./utils";
 
 describe("Minting and providing", () => {
@@ -369,10 +370,20 @@ describe("Redeeming and burning", () => {
     );
 
     // queue response
-    const res = await handle(createMessage({
+    const oracleRes = await handle(createMessage({
       "Queued-User": msg.From,
       "X-Reference": queueResTags["Reference"]
     }));
+
+    expect(oracleRes.Messages).toEqual(
+      expect.arrayContaining([
+        expect.oracleRequest([tags["Collateral-Ticker"]])
+      ])
+    );
+
+    const res = await handle(
+      generateOracleResponse({ AR: 8.425 }, oracleRes)
+    );
 
     expect(res.Messages).toEqual(
       expect.arrayContaining([
@@ -434,10 +445,20 @@ describe("Redeeming and burning", () => {
     );
 
     // queue response
-    const res = await handle(createMessage({
+    const oracleRes = await handle(createMessage({
       "Queued-User": msg.From,
       "X-Reference": queueResTags["Reference"]
     }));
+
+    expect(oracleRes.Messages).toEqual(
+      expect.arrayContaining([
+        expect.oracleRequest([tags["Collateral-Ticker"]])
+      ])
+    );
+
+    const res = await handle(
+      generateOracleResponse({ AR: 8.425 }, oracleRes)
+    );
 
     expect(res.Messages).toEqual(
       expect.arrayContaining([
@@ -527,10 +548,20 @@ describe("Redeeming and burning", () => {
     );
 
     // queue response
-    const res = await handle(createMessage({
+    const oracleRes = await handle(createMessage({
       "Queued-User": msg.From,
       "X-Reference": queueResTags["Reference"]
     }));
+
+    expect(oracleRes.Messages).toEqual(
+      expect.arrayContaining([
+        expect.oracleRequest([tags["Collateral-Ticker"]])
+      ])
+    );
+
+    const res = await handle(
+      generateOracleResponse({ AR: 8.425 }, oracleRes)
+    );
 
     expect(res.Messages).toEqual(
       expect.arrayContaining([
