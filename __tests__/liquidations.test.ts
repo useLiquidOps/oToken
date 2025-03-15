@@ -549,25 +549,33 @@ describe("Position liquidation", () => {
   let tags: Record<string, string>;
   let liquidator: string;
   let target: string;
-  let friend: string;
+  let friend: {
+    id: string;
+    oToken: string;
+    ticker: string;
+    denomination: string;
+  };
   const positionQty = 2000n;
 
   beforeAll(() => {
     tags = normalizeTags(env.Process.Tags);
     liquidator = generateArweaveAddress();
     target = generateArweaveAddress();
-    friend = generateArweaveAddress();
+    friend = {
+      id: generateArweaveAddress(),
+      oToken: generateArweaveAddress(),
+      ticker: "TST",
+      denomination: "12"
+    };
   });
 
   beforeEach(async () => {
-    const envWithFriend = env;
-    envWithFriend.Process.Tags = envWithFriend.Process.Tags.map((tag) => {
-      if (tag.name !== "Friends") return tag;
-      return {
-        name: "Friends",
-        value: JSON.stringify([friend])
-      };
-    });
+    const envWithFriend = {
+      Process: {
+        ...env.Process,
+        Data: JSON.stringify({ Friends: [friend] })
+      }
+    };
     handle = await setupProcess(envWithFriend);
 
     // make borrows
@@ -626,9 +634,9 @@ describe("Position liquidation", () => {
 
   it("Does not handle invalid quantities", async () => {
     const res = await handle(createMessage({
-      Owner: friend,
-      From: friend,
-      "From-Process": friend,
+      Owner: friend.oToken,
+      From: friend.oToken,
+      "From-Process": friend.oToken,
       Action: "Liquidate-Position",
       Quantity: "-1",
       Liquidator: liquidator,
@@ -638,7 +646,7 @@ describe("Position liquidation", () => {
     expect(res.Messages).toEqual(
       expect.arrayContaining([
         expect.objectContaining({
-          Target: friend,
+          Target: friend.oToken,
           Tags: expect.arrayContaining([
             expect.objectContaining({
               name: "Error",
@@ -654,9 +662,9 @@ describe("Position liquidation", () => {
 
   it("Rejects an invalid address for the liquidator", async () => {
     const res = await handle(createMessage({
-      Owner: friend,
-      From: friend,
-      "From-Process": friend,
+      Owner: friend.oToken,
+      From: friend.oToken,
+      "From-Process": friend.oToken,
       Action: "Liquidate-Position",
       Quantity: positionQty.toString(),
       Liquidator: "invalid",
@@ -666,7 +674,7 @@ describe("Position liquidation", () => {
     expect(res.Messages).toEqual(
       expect.arrayContaining([
         expect.objectContaining({
-          Target: friend,
+          Target: friend.oToken,
           Tags: expect.arrayContaining([
             expect.objectContaining({
               name: "Error",
@@ -682,9 +690,9 @@ describe("Position liquidation", () => {
 
   it("Rejects a liquidation if the user has no collateral", async () => {
     const res = await handle(createMessage({
-      Owner: friend,
-      From: friend,
-      "From-Process": friend,
+      Owner: friend.oToken,
+      From: friend.oToken,
+      "From-Process": friend.oToken,
       Action: "Liquidate-Position",
       Quantity: "1",
       Liquidator: liquidator,
@@ -694,7 +702,7 @@ describe("Position liquidation", () => {
     expect(res.Messages).toEqual(
       expect.arrayContaining([
         expect.objectContaining({
-          Target: friend,
+          Target: friend.oToken,
           Tags: expect.arrayContaining([
             expect.objectContaining({
               name: "Error",
@@ -710,9 +718,9 @@ describe("Position liquidation", () => {
 
   it("Rejects a liquidation without checking the user position, if the liquidation quantity is higher than the total available tokens", async () => {
     const res = await handle(createMessage({
-      Owner: friend,
-      From: friend,
-      "From-Process": friend,
+      Owner: friend.oToken,
+      From: friend.oToken,
+      "From-Process": friend.oToken,
       Action: "Liquidate-Position",
       Quantity: (positionQty * 2n + 1n).toString(),
       Liquidator: liquidator,
@@ -722,7 +730,7 @@ describe("Position liquidation", () => {
     expect(res.Messages).toEqual(
       expect.arrayContaining([
         expect.objectContaining({
-          Target: friend,
+          Target: friend.oToken,
           Tags: expect.arrayContaining([
             expect.objectContaining({
               name: "Error",
@@ -738,9 +746,9 @@ describe("Position liquidation", () => {
 
   it("Rejects a liquidation if the user does not have the expected collateral", async () => {
     const res = await handle(createMessage({
-      Owner: friend,
-      From: friend,
-      "From-Process": friend,
+      Owner: friend.oToken,
+      From: friend.oToken,
+      "From-Process": friend.oToken,
       Action: "Liquidate-Position",
       Quantity: (positionQty + 1n).toString(),
       Liquidator: liquidator,
@@ -750,7 +758,7 @@ describe("Position liquidation", () => {
     expect(res.Messages).toEqual(
       expect.arrayContaining([
         expect.objectContaining({
-          Target: friend,
+          Target: friend.oToken,
           Tags: expect.arrayContaining([
             expect.objectContaining({
               name: "Error",
@@ -767,9 +775,9 @@ describe("Position liquidation", () => {
   it("Partially liquidates a position", async () => {
     const qty = positionQty / 2n;
     const res = await handle(createMessage({
-      Owner: friend,
-      From: friend,
-      "From-Process": friend,
+      Owner: friend.oToken,
+      From: friend.oToken,
+      "From-Process": friend.oToken,
       Action: "Liquidate-Position",
       Quantity: qty.toString(),
       Liquidator: liquidator,
@@ -779,7 +787,7 @@ describe("Position liquidation", () => {
     expect(res.Messages).toEqual(
       expect.arrayContaining([
         expect.objectContaining({
-          Target: friend,
+          Target: friend.oToken,
           Tags: expect.arrayContaining([
             expect.objectContaining({
               name: "Action",
@@ -799,9 +807,9 @@ describe("Position liquidation", () => {
 
   it("Fully liquidates a position", async () => {
     const res = await handle(createMessage({
-      Owner: friend,
-      From: friend,
-      "From-Process": friend,
+      Owner: friend.oToken,
+      From: friend.oToken,
+      "From-Process": friend.oToken,
       Action: "Liquidate-Position",
       Quantity: positionQty.toString(),
       Liquidator: liquidator,
@@ -811,7 +819,7 @@ describe("Position liquidation", () => {
     expect(res.Messages).toEqual(
       expect.arrayContaining([
         expect.objectContaining({
-          Target: friend,
+          Target: friend.oToken,
           Tags: expect.arrayContaining([
             expect.objectContaining({
               name: "Action",

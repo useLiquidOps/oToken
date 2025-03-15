@@ -1,11 +1,17 @@
 local assertions = require ".utils.assertions"
-local Oracle = require ".liquidations.oracle"
 local interests = require ".borrow.interest"
 local position = require ".borrow.position"
 local bint = require ".utils.bint"(1024)
 
----@type HandlerFunction
-local function borrow(msg)
+---@type HandlerWithOracle
+local function borrow(msg, _, oracle)
+  -- the wallet that will borrow the tokens
+  local account = msg.From
+
+  -- get position data
+  local pos = position.globalPosition(account, oracle)
+
+  -- verify quantity
   assert(
     assertions.isTokenQuantity(msg.Tags.Quantity),
     "Invalid borrow quantity"
@@ -31,19 +37,10 @@ local function borrow(msg)
   -- calculate the max borrow amount (borrow capacity)
   local lent = bint(TotalBorrows)
 
-  -- the wallet that will borrow the tokens
-  local account = msg.From
-
-  -- init oracle for the collateral token
-  local oracle = Oracle:new{ [CollateralTicker] = CollateralDenomination }
-
   -- get borrow value in USD
   -- we request this after the collateralization, because
   -- in this case the oracle might not have to sync the price
-  local borrowValue = oracle:getValue(quantity, CollateralTicker)
-
-  -- get position data
-  local pos = position.globalPosition(account)
+  local borrowValue = oracle.getValue(quantity, CollateralTicker)
 
   -- make sure the user is allowed to borrow
   assert(

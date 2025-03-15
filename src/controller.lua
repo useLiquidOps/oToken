@@ -17,8 +17,8 @@ MaxOracleDelay = MaxOracleDelay or 1200000
 -- liquidops logo tx id
 ProtocolLogo = ProtocolLogo or ""
 
--- token - oToken map
----@type table<string, string>
+-- holds all the processes that are part of the protocol
+---@type Friend[]
 Tokens = Tokens or {}
 
 -- queue for operations in oTokens that involve
@@ -55,19 +55,20 @@ Handlers.add(
   "sync-auctions",
   { Action = "Cron" },
   function (msg)
+    -- fetch prices first, so the processing of the positions won't be delayed
+    local rawPrices = oracle.sync()
+
+    -- generate position messages
+    ---@type MessageParam[]
+    local positionMsgs = {}
+
+    for _, token in ipairs(Tokens) do
+      table.insert(positionMsgs, { Target = token.oToken, Action = "Positions" })
+    end
+
     -- get all user positions
     ---@type Message[]
-    local rawPositions = scheduler.schedule(table.unpack(utils.map(
-      function (id) return { Target = id, Action = "Positions" } end,
-      utils.values(Tokens)
-    )))
-
-    -- fetch prices
-    local rawPrices = oracle.getPrices(utils.map(
-      ---@param p Message
-      function (p) return p.Tags["Collateral-Ticker"] end,
-      rawPositions
-    ))
+    local rawPositions = scheduler.schedule(table.unpack(positionMsgs))
 
     -- protocol positions in USD
     ---@type table<string, { liquidationLimit: Bint, borrowBalance: Bint }>
@@ -144,7 +145,7 @@ Handlers.add(
       "Invalid token address"
     )
     assert(
-      Tokens[token] == nil,
+      utils.find(function (t) return t.id == token end, Tokens) == nil,
       "Token already listed"
     )
 
@@ -194,6 +195,10 @@ Handlers.add(
     --local logo = tokens.spawnProtocolLogo(info.Tags.Logo)
     local logo = info.Tags.Logo
 
+    -- generate friends map for this oToken
+    local friends = {}
+    for _, t in ipairs(Tokens) do friends[t.ticker] = t.oToken end
+
     -- the oToken configuration
     local config = {
       Name = "LiquidOps " .. tostring(info.Tags.Name or info.Tags.Ticker or ""),
@@ -209,9 +214,9 @@ Handlers.add(
       ["Cooldown-Period"] = msg.Tags["Cooldown-Period"],
       Oracle = Oracle,
       ["Oracle-Delay-Tolerance"] = tostring(MaxOracleDelay),
-      Friends = json.encode(utils.values(Tokens)),
       Logo = logo,
-      Authority = ao.authorities[1]
+      Authority = ao.authorities[1],
+      Data = { Friends = Tokens }
     }
 
     -- spawn new oToken process
@@ -219,18 +224,26 @@ Handlers.add(
     local spawnedID = spawnResult.Tags.Process
 
     -- notify all other tokens
-    for _, oToken in pairs(Tokens) do
-      if oToken ~= spawnedID then
+    for _, t in ipairs(Tokens) do
+      if t.oToken ~= spawnedID then
         ao.send({
-          Target = oToken,
+          Target = t.oToken,
           Action = "Add-Friend",
-          Friend = spawnedID
+          Friend = spawnedID,
+          Token = token,
+          Ticker = info.Tags.Ticker,
+          Denomination = info.Tags.Denomination
         })
       end
     end
 
     -- add token to tokens list
-    Tokens[token] = spawnedID
+    table.insert(Tokens, {
+      id = token,
+      ticker = info.Tags.Ticker,
+      oToken = spawnedID,
+      denomination = tonumber(info.Tags.Denomination) or 0
+    })
 
     msg.reply({
       Action = "Token-Listed",
@@ -252,18 +265,26 @@ Handlers.add(
       assertions.isAddress(token),
       "Invalid token address"
     )
-    assert(Tokens[token] ~= nil, "Token is not listed")
+
+    -- find token index
+    ---@type integer|nil
+    local idx = utils.find(
+      function (t) return t.id == token end,
+      Tokens
+    )
+
+    assert(type(idx) == "number", "Token is not listed")
 
     -- id of the oToken for this token
-    local oToken = Tokens[token]
+    local oToken = Tokens[idx].oToken
 
     -- unlist
-    Tokens[token] = nil
+    table.remove(Tokens, idx)
 
-    -- notify all other tokens
-    for _, friend in pairs(Tokens) do
+    -- notify all other oTokens
+    for _, t in ipairs(Tokens) do
       ao.send({
-        Target = friend,
+        Target = t.oToken,
         Action = "Remove-Friend",
         Friend = oToken
       })
@@ -284,7 +305,17 @@ Handlers.add(
     -- check if update is already in progress
     assert(not UpdateInProgress, "An update is already in progress")
 
-    local oTokens = utils.values(Tokens)
+    -- generate update msgs
+    ---@type MessageParam[]
+    local updateMsgs = {}
+
+    for _, t in ipairs(Tokens) do
+      table.insert(updateMsgs, {
+        Target = t.oToken,
+        Action = "Update",
+        Data = msg.Data
+      })
+    end
 
     -- set updating in progress. this will halt interactions
     -- by making the queue check always return true for any
@@ -293,10 +324,7 @@ Handlers.add(
 
     -- request updates
     ---@type Message[]
-    local updates = scheduler.schedule(table.unpack(utils.map(
-      function (id) return { Target = id, Action = "Update", Data = msg.Data } end,
-      oTokens
-    )))
+    local updates = scheduler.schedule(table.unpack(updateMsgs))
 
     UpdateInProgress = false
 
@@ -309,7 +337,7 @@ Handlers.add(
 
     -- reply with results
     msg.reply({
-      Updated = tostring(#oTokens - #failed),
+      Updated = tostring(#Tokens - #failed),
       Failed = tostring(#failed),
       Data = json.encode(utils.map(
         ---@param res Message
@@ -350,26 +378,46 @@ Handlers.add(
     local rewardToken = msg.Tags["X-Reward-Token"]
 
     -- prepare liquidation, check required environment
-    local success, errorMsg, expectedRewardQty, removeWhenDone = pcall(function ()
+    local success, errorMsg, expectedRewardQty, oTokensParticipating, removeWhenDone = pcall(function ()
       assert(
         assertions.isAddress(target) and target ~= liquidator,
         "Invalid liquidation target"
       )
+
+      -- try to find the liquidated token, the reward token and
+      -- generate the position messages in one loop for efficiency
+      ---@type { liquidated: string; reward: string; }
+      local oTokensParticipating = {}
+
+      ---@type MessageParam[]
+      local positionMsgs = {}
+
+      for _, t in ipairs(Tokens) do
+        if t.id == liquidatedToken then oTokensParticipating.liquidated = t.oToken
+        elseif t.id == rewardToken then oTokensParticipating.reward = t.oToken end
+
+        table.insert(positionMsgs, {
+          Target = t.oToken,
+          Action = "Position",
+          Recipient = target
+        })
+      end
+
       assert(
-        Tokens[liquidatedToken] ~= nil,
+        oTokensParticipating.liquidated ~= nil,
         "Cannot liquidate the incoming token as it is not listed"
       )
       assert(
-        Tokens[rewardToken] ~= nil,
+        oTokensParticipating.reward ~= nil,
         "Cannot liquidate for the reward token as it is not listed"
       )
 
+      -- fetch prices first so the user positions won't be outdated
+      local prices = oracle.sync()
+
       -- check user position
       ---@type Message[]
-      local positions = scheduler.schedule(table.unpack(utils.map(
-        function (id) return { Target = id, Action = "Position", Recipient = target } end,
-        utils.values(Tokens)
-      )))
+      local positions = scheduler.schedule(table.unpack(positionMsgs))
 
       -- check liquidation queue
       assert(
@@ -443,9 +491,6 @@ Handlers.add(
         -- error and trigger refund
         error("User does not have an active loan")
       end
-
-      -- fetch prices
-      local prices = oracle.getPrices(symbols)
 
       -- ensure "liquidation-limit / borrow-balance < 1"
       -- this means that the user is eligible for liquidation
@@ -560,7 +605,7 @@ Handlers.add(
         borrowBalances
       ) ~= nil
 
-      return "", expectedRewardQty, removeWhenDone
+      return "", expectedRewardQty, oTokensParticipating, removeWhenDone
     end)
 
     -- check if liquidation is possible
@@ -607,18 +652,18 @@ Handlers.add(
       Target = liquidatedToken,
       Action = "Transfer",
       Quantity = msg.Tags.Quantity,
-      Recipient = Tokens[liquidatedToken],
+      Recipient = oTokensParticipating.liquidated,
       ["X-Action"] = "Liquidate-Borrow",
       ["X-Liquidator"] = liquidator,
       ["X-Liquidation-Target"] = target,
-      ["X-Reward-Market"] = Tokens[rewardToken],
+      ["X-Reward-Market"] = oTokensParticipating.reward,
       ["X-Reward-Quantity"] = tostring(expectedRewardQty),
       ["X-Liquidation-Reference"] = liquidationReference
     })
 
     -- wait for result
     local loanLiquidationRes = Handlers.receive({
-      From = Tokens[liquidatedToken],
+      From = oTokensParticipating.liquidated,
       ["Liquidation-Reference"] = liquidationReference
     })
 
@@ -668,13 +713,10 @@ Handlers.add(
   "add-collateral-queue",
   function (msg)
     if msg.Action ~= "Add-To-Queue" then return false end
-
-    -- more efficient than using utils for this
-    for _, v in pairs(Tokens) do
-      if v == msg.From then return true end
-    end
-
-    return false
+    return utils.find(
+      function (t) return t.oToken == msg.From end,
+      Tokens
+    ) ~= nil
   end,
   function (msg)
     local user = msg.Tags.User
@@ -700,13 +742,10 @@ Handlers.add(
   "remove-collateral-queue",
   function (msg)
     if msg.Action ~= "Remove-From-Queue" then return false end
-
-    -- more efficient than using utils for this
-    for _, v in pairs(Tokens) do
-      if v == msg.From then return true end
-    end
-
-    return false
+    return utils.find(
+      function (t) return t.oToken == msg.From end,
+      Tokens
+    ) ~= nil
   end,
   function (msg)
     local user = msg.Tags.User
@@ -863,10 +902,16 @@ function scheduler.schedule(...)
 end
 
 -- Get price data for an array of token symbols
----@param symbols string[] Token symbols
-function oracle.getPrices(symbols)
+function oracle.sync()
   ---@type RawPrices
   local res = {}
+
+  -- all collateral tickers
+  local symbols = utils.map(
+    ---@param f Friend
+    function (f) return f.ticker end,
+    Tokens
+  )
 
   -- no tokens to sync
   if #symbols == 0 then return res end

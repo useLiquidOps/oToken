@@ -4,6 +4,8 @@ import { expect } from "@jest/globals";
 import fs from "fs/promises";
 import path from "path";
 
+export const defaultOracle = "0000000000000000000000000000000000000ORACLE";
+
 export const env: Environment = {
   Process: {
     Id: "0000000000000000000000000000000000000000000",
@@ -17,13 +19,14 @@ export const env: Environment = {
       { name: "Collateral-Factor", value: "50" },
       { name: "Liquidation-Threshold", value: "55" },
       { name: "Base-Rate", value: "0.5" },
-      { name: "Friends", value: "[]" },
       { name: "Init-Rate", value: "1.5" },
       { name: "Value-Limit", value: "1000000000000000" },
-      { name: "Oracle", value: "0000000000000000000000000000000000000ORACLE" },
+      { name: "Oracle", value: defaultOracle },
       { name: "Oracle-Delay-Tolerance", value: "3600000" },
       { name: "Cooldown-Period", value: "0" }
-    ]
+    ],
+    // @ts-expect-error
+    Data: JSON.stringify({ Friends: [] })
   }
 };
 export const defaultTimestamp = "172302981";
@@ -107,7 +110,7 @@ interface OracleData {
 }
 
 export function generateOracleResponse(data: OracleData, replyTo?: HandleResponse, oracle?: string): Message {
-  if (!oracle) oracle = normalizeTags(env.Process.Tags)["Oracle"];
+  if (!oracle) oracle = defaultOracle;
 
   // generate price data
   const fullOracleData: OracleData = {};
@@ -207,6 +210,31 @@ expect.extend({
       pass,
       message: () => "expected decoded JSON to match, but it didn't"
     }
+  },
+  oracleRequest(actual: string, tickers: string[], oracle?: string) {
+    const objTest = {
+      Target: oracle || defaultOracle,
+      Tags: expect.arrayContaining([
+        expect.objectContaining({
+          name: "Action",
+          value: "v2.Request-Latest-Data"
+        }),
+        expect.objectContaining({
+          name: "Tickers",
+          value: expect.toBeJsonEncoded(
+            expect.arrayContaining(tickers)
+          )
+        })
+      ])
+    };
+  
+    if (this.isNot) {
+      expect(actual).not.toEqual(expect.objectContaining(objTest));
+    } else {
+      expect(actual).toEqual(expect.objectContaining(objTest));
+    }
+
+    return { pass: true, message: () => "expected oracle request" };
   }
 });
 
@@ -216,11 +244,13 @@ declare module "expect" {
     toBeFloatStringEncoded(): void;
     toBeArweaveAddress(): void;
     toBeJsonEncoded(matcher: jest.AsymmetricMatcher): void;
+    oracleRequest(tickers: string[], oracle?: string): void;
   }
   interface Matchers<R> {
     toBeIntegerStringEncoded(): R;
     toBeFloatStringEncoded(): R;
     toBeArweaveAddress(): R;
     toBeJsonEncoded(matcher: jest.AsymmetricMatcher): R;
+    oracleRequest(tickers: string[], oracle?: string): R;
   }
 }

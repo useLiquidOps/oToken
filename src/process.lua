@@ -63,13 +63,6 @@ local function setup_handlers()
     pool.syncTimestamp
   )
 
-  -- oracle timeout sync (must be the second handler)
-  Handlers.add(
-    "oracle-timeout-sync",
-    Handlers.utils.continue({}),
-    oracle.timeoutSync
-  )
-
   -- interest payment sync (must be the third handler)
   Handlers.add(
     "borrow-loan-interest-sync-dynamic",
@@ -217,7 +210,7 @@ local function setup_handlers()
     "borrow-loan-borrow",
     Handlers.utils.hasMatchingTag("Action", "Borrow"),
     -- needs unqueueing because of coroutines
-    queue.useQueue(borrow)
+    queue.useQueue(oracle.withOracle(borrow))
   )
   Handlers.advanced({
     name = "borrow-repay",
@@ -237,7 +230,7 @@ local function setup_handlers()
   Handlers.add(
     "borrow-position-global-collateralization",
     Handlers.utils.hasMatchingTag("Action", "Global-Position"),
-    position.handlers.globalPosition
+    oracle.withOracle(position.handlers.globalPosition)
   )
   Handlers.add(
     "borrow-position-all-positions",
@@ -274,7 +267,7 @@ local function setup_handlers()
   Handlers.add(
     "supply-redeem",
     Handlers.utils.hasMatchingTag("Action", "Redeem"),
-    queue.useQueue(redeem)
+    queue.useQueue(oracle.withOracle(redeem))
   )
 
   Handlers.add(
@@ -301,7 +294,7 @@ local function setup_handlers()
   Handlers.add(
     "token-transfer",
     Handlers.utils.hasMatchingTag("Action", "Transfer"),
-    queue.useQueue(transfer)
+    queue.useQueue(oracle.withOracle(transfer))
   )
 
   HandlersAdded = true

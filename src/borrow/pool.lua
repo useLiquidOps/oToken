@@ -34,8 +34,9 @@ function mod.setup(msg)
   InitRate = InitRate or tonumber(ao.env.Process.Tags["Init-Rate"]) or 0
 
   -- other oToken processes
-  ---@type string[]
-  Friends = Friends or json.decode(ao.env.Process.Tags.Friends or "[]")
+  -- format: key - friend collateral ticker, value - friend process
+  ---@type Friend[]
+  Friends = Friends or json.decode(ao.env.Process.Data or "{}").Friends or {}
 
   -- limit the value of an interaction
   -- (in units of the collateral)

@@ -2,47 +2,22 @@ local bint = require ".utils.bint"(1024)
 local utils = require ".utils.utils"
 local json = require "json"
 
+local mod = {
+  utils = {},
+  usdDenomination = 12
+}
+
+---@alias OracleInstance { getValue: fun(quantity: Bint, symbol: string): Bint }
+---@alias HandlerWithOracle fun(msg: Message, env: Message, oracle: OracleInstance): any
 ---@alias OracleData table<string, { t: number, a: string, v: number }>
 ---@alias FetchedPrices table<string, { price: Bint, timestamp: number }>
 ---@alias RawPrices table<string, { price: number, timestamp: number }>
 
----@class Oracle
-local Oracle = {
-  ---@type string[]
-  symbols = {},
-  ---@type table<string, number>
-  denominations = {},
-  ---@type FetchedPrices
-  prices = {},
-  -- denomination for usd precision
-  usdDenomination = 12,
-  utils = {}
-}
-
--- Creates a new Oracle instance and pre-fetches 
--- the price for the given symbols
----@param data table<string, number> Symbol - denomination pairs
----@return Oracle
-function Oracle:new(data)
-  local instance = {}
-  setmetatable(instance, self)
-  self.__index = self
-
-  -- construct
-  self.symbols = utils.keys(data)
-  self.denominations = data
-
-  -- pre-fetch prices
-  self:sync()
-
-  return instance
-end
-
 -- Initializes the oracle configuration from the spawn message
 ---@type HandlerFunction
-function Oracle.setup()
+function mod.setup()
   -- oracle process id
-  OracleID = OracleID or ao.env.Process.Tags.Oracle
+  Oracle = Oracle or ao.env.Process.Tags.Oracle
 
   -- oracle delay tolerance in milliseconds
   ---@type number
@@ -54,80 +29,63 @@ function Oracle.setup()
   PriceCache = PriceCache or {}
 end
 
----@type HandlerFunction
-function Oracle.timeoutSync(msg)
-  -- filter out prices that are no longer up to date
-  for ticker, data in pairs(PriceCache) do
-    if data.timestamp + MaxOracleDelay < msg.Timestamp then
-      PriceCache[ticker] = nil
-    end
+-- Sync all known friends' collateral price
+---@return FetchedPrices
+function mod.sync()
+  -- collect tickers to fetch the price for
+  local tickers = utils.map(
+    ---@param friend Friend
+    function (friend) return friend.ticker end,
+    Friends
+  )
+
+  -- add local collateral
+  table.insert(tickers, CollateralTicker)
+
+  -- request prices from oracle
+  ---@type string|nil
+  local rawData = ao.send({
+    Target = Oracle,
+    Action = "v2.Request-Latest-Data",
+    Tickers = json.encode(tickers)
+  }).receive().Data
+
+  -- check if the oracle returned anything in the data field
+  assert(type(rawData) == "string" and rawData ~= "", "The oracle did not return any data")
+
+  -- try parsing as json
+  ---@type boolean, OracleData
+  local parsed, data = pcall(json.decode, rawData)
+
+  assert(parsed, "Could not parse oracle data")
+
+  -- result
+  ---@type FetchedPrices
+  local res = {}
+
+  -- parse prices
+  for ticker, p in pairs(data) do
+    res[ticker] = {
+      price = mod.utils.getUSDDenominated(p.v),
+      timestamp = p.t
+    }
   end
+
+  return res
 end
 
--- Sync oracle prices
-function Oracle:sync()
-  -- don't sync if no symbols are given
-  if #self.symbols < 1 then return end
-
-  -- prices to sync (that were outdated or not cached)
-  local toSync = {}
-
-  -- add cached prices or push to the toSync list if needed
-  for _, symbol in ipairs(self.symbols) do
-    local cached = PriceCache[symbol]
-
-    if cached then
-      self.prices[symbol] = {
-        price = Oracle.utils.getUSDDenominated(cached.price),
-        timestamp = cached.timestamp
-      }
-    else
-      table.insert(toSync, symbol)
-    end
-  end
-
-  -- if there are any prices left to fetch, get them
-  if #toSync > 0 then
-    -- request prices from oracle
-    ---@type string|nil
-    local rawData = ao.send({
-      Target = OracleID,
-      Action = "v2.Request-Latest-Data",
-      Tickers = json.encode(toSync)
-    }).receive().Data
-
-    -- try parsing as json
-    ---@type boolean, OracleData
-    local parsed, data = pcall(json.decode, rawData)
-
-    -- could not parse price data, don't sync
-    if not parsed then return end
-
-    -- sync price data
-    for ticker, p in pairs(data) do
-      self.prices[ticker] = {
-        price = Oracle.utils.getUSDDenominated(p.v),
-        timestamp = p.t
-      }
-      PriceCache[ticker] = {
-        price = p.v,
-        timestamp = p.t
-      }
-    end
-  end
-end
-
--- Get value in USD for a token quantity
+-- Calculate a token quantity value in USD
 ---@param quantity Bint Quantity to get the value for
 ---@param symbol string Token symbol for the quantity
+---@param data FetchedPrices Parsed price data from the oracle
 ---@return Bint
-function Oracle:getValue(quantity, symbol)
+function mod.calculateValue(quantity, symbol, data)
   -- no calculations needed for 0 quantity
   local zero = bint.zero()
   if quantity == zero then return zero end
 
   -- price per unit
-  local priceData = self.prices[symbol]
+  local priceData = data[symbol]
 
   -- check if price is fetched
   assert(priceData ~= nil, symbol .. " price has not been received from the oracle")
@@ -138,8 +96,17 @@ function Oracle:getValue(quantity, symbol)
     symbol .. " price is outdated"
   )
 
-  -- check if denomination is present
-  local denomination = self.denominations[symbol]
+  -- find denomination, error if there is none defined
+  local denomination = (utils.find(
+    ---@param friend Friend
+    function (friend) return friend.ticker == symbol end,
+    Friends
+  ) or {}).denomination
+
+  -- for the local collateral
+  if symbol == CollateralTicker then
+    denomination = CollateralDenomination
+  end
 
   assert(denomination ~= nil, "No denomination provided for " .. symbol)
 
@@ -158,21 +125,34 @@ function Oracle:getValue(quantity, symbol)
   )
 end
 
--- Scope an Oracle instance to a token
----@param symbol string Token symbol/ticker
-function Oracle:token(symbol)
-  return {
-    -- Get value in USD for a token quantity
-    ---@param quantity Bint Quantity to get the value for
-    getValue = function (quantity)
-      return self:getValue(quantity, symbol)
-    end
-  }
+-- Hook for handlers that need the oracle price feed
+---@param handler HandlerWithOracle Handler to call with oracle data
+---@return HandlerFunction
+function mod.withOracle(handler)
+  return function (msg, env)
+    -- sync prices
+    local prices = mod.sync()
+
+    -- call the handler
+    return handler(
+      msg,
+      env,
+      {
+        getValue = function (quantity, symbol)
+          return mod.calculateValue(
+            quantity,
+            symbol,
+            prices
+          )
+        end
+      }
+    )
+  end
 end
 
 -- Get the fractional part's length
 ---@param val number Full number
-function Oracle.utils.getFractionsCount(val)
+function mod.utils.getFractionsCount(val)
   -- check if there is a fractional part 
   -- by trying to find it with a pattern
   local fractionalPart = string.match(tostring(val), "%.(.*)")
@@ -186,14 +166,14 @@ end
 -- Get a USD value in a 12 denominated form
 ---@param val number USD value as a floating point number
 ---@return Bint
-function Oracle.utils.getUSDDenominated(val)
-  local denominator = Oracle.usdDenomination
+function mod.utils.getUSDDenominated(val)
+  local denominator = mod.usdDenomination
 
   -- remove decimal point
   local denominated = string.gsub(tostring(val), "%.", "")
 
   -- get the count of decimal places after the decimal point
-  local fractions = Oracle.utils.getFractionsCount(val)
+  local fractions = mod.utils.getFractionsCount(val)
 
   if fractions < denominator then
     denominated = denominated .. string.rep("0", denominator - fractions)
@@ -207,4 +187,4 @@ function Oracle.utils.getUSDDenominated(val)
   return bint(denominated)
 end
 
-return Oracle
+return mod

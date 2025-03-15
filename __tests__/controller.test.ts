@@ -14,12 +14,24 @@ import {
 describe("Friend tests", () => {
   let handle: HandleFunction;
   let controller: string;
-  let friend: string;
+  let friend: {
+    collateral: string;
+    oToken: string;
+    ticker: string;
+    denomination: string;
+  };
+  let tags: Record<string, string>;
 
   beforeAll(async () => {
+    tags = normalizeTags(env.Process.Tags);
     handle = await setupProcess(env);
     controller = env.Process.Owner;
-    friend = generateArweaveAddress();
+    friend = {
+      collateral: generateArweaveAddress(),
+      oToken: generateArweaveAddress(),
+      ticker: "TST",
+      denomination: "12"
+    };
   });
 
   it("Does not allow friend interaction from anyone other than the controller", async () => {
@@ -28,7 +40,10 @@ describe("Friend tests", () => {
     // expect error when trying to add a friend not from the controller
     const friendAddRes = await handle(createMessage({
       Action: "Add-Friend",
-      Friend: generateArweaveAddress(),
+      Friend: friend.oToken,
+      Token: friend.collateral,
+      Ticker: friend.ticker,
+      Denomination: friend.denomination,
       Owner: invalidOwner,
       From: invalidOwner
     }));
@@ -74,10 +89,13 @@ describe("Friend tests", () => {
     );
   });
 
-  it("Does not add a friend with an invalid address", async () => {
+  it("Does not add a friend with an invalid oToken address", async () => {
     const friendAddRes = await handle(createMessage({
       Action: "Add-Friend",
-      Friend: "invalid"
+      Friend: "invalid",
+      Token: friend.collateral,
+      Ticker: friend.ticker,
+      Denomination: friend.denomination,
     }));
 
     expect(friendAddRes.Messages).toEqual(
@@ -97,13 +115,115 @@ describe("Friend tests", () => {
     );
   });
 
-  it("Does not add itself as a friend", async () => {
+  it("Does not add a friend with an invalid collateral address", async () => {
     const friendAddRes = await handle(createMessage({
       Action: "Add-Friend",
-      Friend: env.Process.Id
+      Friend: friend.oToken,
+      Token: "abc",
+      Ticker: friend.ticker,
+      Denomination: friend.denomination,
     }));
 
     expect(friendAddRes.Messages).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          Target: controller,
+          Tags: expect.arrayContaining([
+            expect.objectContaining({
+              name: "Error",
+              value: expect.stringContaining(
+                "Invalid token address"
+              )
+            })
+          ])
+        })
+      ])
+    );
+  });
+
+  it("Does not add a friend without a collateral ticker", async () => {
+    const friendAddRes = await handle(createMessage({
+      Action: "Add-Friend",
+      Friend: friend.oToken,
+      Token: friend.collateral,
+      Denomination: friend.denomination,
+    }));
+
+    expect(friendAddRes.Messages).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          Target: controller,
+          Tags: expect.arrayContaining([
+            expect.objectContaining({
+              name: "Error",
+              value: expect.stringContaining(
+                "No ticker supplied for friend collateral"
+              )
+            })
+          ])
+        })
+      ])
+    );
+  });
+
+  it("Does not add itself as a friend", async () => {
+    const sameFriend = await handle(createMessage({
+      Action: "Add-Friend",
+      Friend: env.Process.Id,
+      Token: friend.collateral,
+      Denomination: friend.denomination,
+      Ticker: friend.ticker
+    }));
+
+    expect(sameFriend.Messages).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          Target: controller,
+          Tags: expect.arrayContaining([
+            expect.objectContaining({
+              name: "Error",
+              value: expect.stringContaining(
+                "Cannot add itself as a friend"
+              )
+            })
+          ])
+        })
+      ])
+    );
+
+    const sameToken = await handle(createMessage({
+      Action: "Add-Friend",
+      Friend: friend.oToken,
+      Token: tags["Collateral-Id"],
+      Denomination: friend.denomination,
+      Ticker: friend.ticker
+    }));
+
+    expect(sameToken.Messages).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          Target: controller,
+          Tags: expect.arrayContaining([
+            expect.objectContaining({
+              name: "Error",
+              value: expect.stringContaining(
+                "Cannot add itself as a friend"
+              )
+            })
+          ])
+        })
+      ])
+    );
+
+    const sameTicker = await handle(createMessage({
+      Action: "Add-Friend",
+      Friend: friend.oToken,
+      Token: friend.collateral,
+      Denomination: friend.denomination,
+      Ticker: tags["Collateral-Ticker"]
+    }));
+
+    expect(sameTicker.Messages).toEqual(
       expect.arrayContaining([
         expect.objectContaining({
           Target: controller,
@@ -123,7 +243,10 @@ describe("Friend tests", () => {
   it("Adds a new friend", async () => {
     const friendAddRes = await handle(createMessage({
       Action: "Add-Friend",
-      Friend: friend
+      Friend: friend.oToken,
+      Token: friend.collateral,
+      Denomination: friend.denomination,
+      Ticker: friend.ticker
     }));
 
     expect(friendAddRes.Messages).toEqual(
@@ -137,7 +260,7 @@ describe("Friend tests", () => {
             }),
             expect.objectContaining({
               name: "Friend",
-              value: friend
+              value: friend.oToken
             })
           ])
         })
@@ -148,7 +271,10 @@ describe("Friend tests", () => {
   it("Does not add a friend that is already added", async () => {
     const friendAddRes = await handle(createMessage({
       Action: "Add-Friend",
-      Friend: friend
+      Friend: friend.oToken,
+      Token: friend.collateral,
+      Denomination: friend.denomination,
+      Ticker: friend.ticker
     }));
 
     expect(friendAddRes.Messages).toEqual(
@@ -184,7 +310,14 @@ describe("Friend tests", () => {
             })
           ]),
           Data: expect.toBeJsonEncoded(
-            expect.arrayContaining([friend])
+            expect.arrayContaining([
+              expect.objectContaining({
+                id: friend.collateral,
+                ticker: friend.ticker,
+                oToken: friend.oToken,
+                denomination: parseInt(friend.denomination)
+              })
+            ])
           )
         })
       ])
@@ -192,9 +325,10 @@ describe("Friend tests", () => {
   });
 
   it("Errors on trying to remove an address from friends, that is not a friend", async () => {
+    const toRemove = generateArweaveAddress();
     const friendRemoveRes = await handle(createMessage({
       Action: "Remove-Friend",
-      Friend: generateArweaveAddress()
+      Friend: toRemove
     }));
 
     expect(friendRemoveRes.Messages).toEqual(
@@ -205,7 +339,7 @@ describe("Friend tests", () => {
             expect.objectContaining({
               name: "Error",
               value: expect.stringContaining(
-                "Address is not a friend yet"
+                "Friend " + toRemove + " not yet added"
               )
             })
           ])
@@ -217,7 +351,7 @@ describe("Friend tests", () => {
   it("Removes friend", async () => {
     const friendRemoveRes = await handle(createMessage({
       Action: "Remove-Friend",
-      Friend: friend
+      Friend: friend.oToken
     }));
 
     expect(friendRemoveRes.Messages).toEqual(
@@ -230,10 +364,20 @@ describe("Friend tests", () => {
               value: "Friend-Removed"
             }),
             expect.objectContaining({
-              name: "Friend",
-              value: friend
+              name: "Removed",
+              value: friend.oToken
             })
-          ])
+          ]),
+          Data: expect.toBeJsonEncoded(
+            expect.arrayContaining([
+              expect.objectContaining({
+                id: friend.collateral,
+                ticker: friend.ticker,
+                oToken: friend.oToken,
+                denomination: parseInt(friend.denomination)
+              })
+            ])
+          )
         })
       ])
     );
