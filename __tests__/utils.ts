@@ -7,7 +7,6 @@ import path from "path";
 export const defaultOracle = "0000000000000000000000000000000000000ORACLE";
 
 export const env: Environment = {
-  // @ts-expect-error
   Process: {
     Id: "0000000000000000000000000000000000000000000",
     Owner: "000000000000000000000000000000000CONTROLLER",
@@ -26,6 +25,7 @@ export const env: Environment = {
       { name: "Oracle-Delay-Tolerance", value: "3600000" },
       { name: "Cooldown-Period", value: "0" }
     ],
+    // @ts-expect-error
     Data: JSON.stringify({ Friends: [] })
   }
 };
