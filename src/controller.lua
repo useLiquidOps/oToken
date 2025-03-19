@@ -195,10 +195,6 @@ Handlers.add(
     --local logo = tokens.spawnProtocolLogo(info.Tags.Logo)
     local logo = info.Tags.Logo
 
-    -- generate friends map for this oToken
-    local friends = {}
-    for _, t in ipairs(Tokens) do friends[t.ticker] = t.oToken end
-
     -- the oToken configuration
     local config = {
       Name = "LiquidOps " .. tostring(info.Tags.Name or info.Tags.Ticker or ""),
