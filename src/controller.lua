@@ -359,6 +359,14 @@ Handlers.add(
 )
 
 Handlers.add(
+  "get-oracle",
+  { Action = "Get-Oracle" },
+  function (msg)
+    msg.reply({ Oracle = Oracle })
+  end
+)
+
+Handlers.add(
   "liquidate",
   { Action = "Credit-Notice", ["X-Action"] = "Liquidate" },
   function (msg)

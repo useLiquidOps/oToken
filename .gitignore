@@ -2,3 +2,5 @@ process.wasm
 node_modules
 upload.js
 wallet.json
+pack.js
+packed.lua
