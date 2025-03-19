@@ -212,7 +212,7 @@ Handlers.add(
       ["Oracle-Delay-Tolerance"] = tostring(MaxOracleDelay),
       Logo = logo,
       Authority = ao.authorities[1],
-      Data = { Friends = Tokens }
+      Data = json.encode({ Friends = Tokens })
     }
 
     -- spawn new oToken process
