@@ -33,7 +33,8 @@ end
 
 ---@alias InterestPerformanceHelper { zero: Bint, totalLent: Bint, totalPooled: Bint, oneYearInMs: Bint, initRate: Bint, baseRate: Bint, rateMulWithPercentage: Bint }
 
--- Updates the owned interest for a single user
+-- Updates the owned interest for a single user and adds
+-- the accrued quantity to the total borrows
 ---@param address string User to update interests for
 ---@param timestamp number Current timestamp
 ---@param helperData InterestPerformanceHelper Helper params for performance improvements in case the function is used in a loop
@@ -70,16 +71,19 @@ function mod.updateInterest(address, timestamp, helperData)
   )
 
   -- calculate interest for the delay period
-  local ownedExtraInterest = bint.udiv(
+  local interestAccrued = bint.udiv(
     ownedYearlyInterest * bint(delay),
     helperData.oneYearInMs
   )
 
   -- update interest balance for the user
   Interests[address] = {
-    value = tostring(Interests[address].value + ownedExtraInterest),
+    value = tostring(Interests[address].value + interestAccrued),
     updated = timestamp
   }
+
+  -- add the interest accrued to the total borrows
+  TotalBorrows = tostring(bint(TotalBorrows) + interestAccrued)
 end
 
 -- This function generates the interest performance helper data
