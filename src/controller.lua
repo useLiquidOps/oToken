@@ -37,7 +37,7 @@ Timestamp = Timestamp or 0
 Auctions = Auctions or {}
 
 -- maximum discount that can be applied to a loan in percentages
-MaxDiscount = MaxDiscount or 10
+MaxDiscount = MaxDiscount or 5
 
 -- the period till the auction reaches the minimum discount (market price)
 DiscountInterval = DiscountInterval or 1000 * 60 * 60 -- 1 hour
@@ -443,8 +443,8 @@ Handlers.add(
       ---@type TokenData, TokenData
       local inTokenData, outTokenData = {}, {}
 
-      -- the total collateral in the user's position
-      -- for the reward token
+      -- the total collateral of the desired reward token
+      -- in the user's position for the reward token
       local availableRewardQty = zero
 
       -- check if the user has any open positions (active loans)
@@ -535,7 +535,7 @@ Handlers.add(
         "The user does not have enough tokens in their position for this liquidation"
       )
 
-      -- apply dutch auction model
+      -- apply auction model
       -- time passed in milliseconds since the discovery of this auction
       local timePassed = msg.Timestamp - (Auctions[target] or msg.Timestamp)
 
@@ -546,7 +546,7 @@ Handlers.add(
         timePassed = DiscountInterval
       end
 
-      -- currnet discount:
+      -- currnet discount percentage:
       -- a linear function of the time passed,
       -- the discount becomes 0 when the discount
       -- interval is over
