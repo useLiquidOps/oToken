@@ -811,6 +811,14 @@ Handlers.add(
   end
 )
 
+Handlers.add(
+  "get-initial-discount",
+  { Action = "Get-Initial-Discount" },
+  function (msg)
+    msg.reply({ ["Initial-Discount"] = tostring(MaxDiscount) })
+  end
+)
+
 -- Verify if the provided value is an address
 ---@param addr any Address to verify
 ---@return boolean
