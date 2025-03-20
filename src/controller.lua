@@ -577,6 +577,16 @@ Handlers.add(
         expectedRewardQty = availableRewardQty
       end
 
+      -- the minimum quantity expected by the user
+      local minExpectedRewardQty = bint(msg.Tags["X-Min-Expected-Quantity"] or 0)
+
+      -- make sure the user is receiving at least
+      -- the minimum amount of tokens they're expecting
+      assert(
+        bint.ule(minExpectedRewardQty, expectedRewardQty),
+        "Could not meet the defined slippage"
+      )
+
       -- check liquidation queue again
       -- in case a liquidation has been queued
       -- while fetching positions
