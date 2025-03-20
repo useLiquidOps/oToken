@@ -813,9 +813,12 @@ Handlers.add(
 
 Handlers.add(
   "get-initial-discount",
-  { Action = "Get-Initial-Discount" },
+  { Action = "Get-Discount-Data" },
   function (msg)
-    msg.reply({ ["Initial-Discount"] = tostring(MaxDiscount) })
+    msg.reply({
+      ["Initial-Discount"] = tostring(MaxDiscount),
+      ["Discount-Interval"] = tostring(DiscountInterval)
+    })
   end
 )
 
