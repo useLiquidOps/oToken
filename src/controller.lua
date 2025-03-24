@@ -546,11 +546,14 @@ Handlers.add(
         timePassed = DiscountInterval
       end
 
+      -- precision factor multiplier for percentage calculations
+      local precisionFactor = 1000000
+
       -- currnet discount percentage:
       -- a linear function of the time passed,
       -- the discount becomes 0 when the discount
       -- interval is over
-      local discount = (DiscountInterval - timePassed) * MaxDiscount // DiscountInterval
+      local discount = math.max((DiscountInterval - timePassed) * MaxDiscount * precisionFactor // DiscountInterval)
 
       -- update the expected reward quantity using the discount
       local expectedRewardQty = marketValueInQty
@@ -560,8 +563,8 @@ Handlers.add(
           {
             ticker = inTokenData.ticker,
             quantity = bint.udiv(
-              inQty * bint(100 - discount),
-              bint(100)
+              inQty * bint(100 * precisionFactor - discount),
+              bint(100 * precisionFactor)
             ),
             denomination = inTokenData.denomination
           },
