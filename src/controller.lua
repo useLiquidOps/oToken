@@ -387,6 +387,10 @@ Handlers.add(
         assertions.isAddress(target) and target ~= liquidator,
         "Invalid liquidation target"
       )
+      assert(
+        liquidatedToken ~= rewardToken,
+        "Can't liquidate for the same token"
+      )
 
       -- try to find the liquidated token, the reward token and
       -- generate the position messages in one loop for efficiency
