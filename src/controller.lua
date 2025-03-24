@@ -806,18 +806,9 @@ Handlers.add(
   { Action = "Get-Auctions" },
   function (msg)
     msg.reply({
-      Data = next(Auctions) ~= nil and json.encode(Auctions) or "{}"
-    })
-  end
-)
-
-Handlers.add(
-  "get-initial-discount",
-  { Action = "Get-Discount-Data" },
-  function (msg)
-    msg.reply({
       ["Initial-Discount"] = tostring(MaxDiscount),
-      ["Discount-Interval"] = tostring(DiscountInterval)
+      ["Discount-Interval"] = tostring(DiscountInterval),
+      Data = next(Auctions) ~= nil and json.encode(Auctions) or "{}"
     })
   end
 )
