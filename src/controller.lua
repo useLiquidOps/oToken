@@ -553,7 +553,7 @@ Handlers.add(
       -- a linear function of the time passed,
       -- the discount becomes 0 when the discount
       -- interval is over
-      local discount = math.max((DiscountInterval - timePassed) * MaxDiscount * precisionFactor // DiscountInterval)
+      local discount = math.max((DiscountInterval - timePassed) * MaxDiscount * precisionFactor // DiscountInterval, 0)
 
       -- update the expected reward quantity using the discount
       local expectedRewardQty = marketValueInQty
