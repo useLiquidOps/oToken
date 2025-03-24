@@ -563,17 +563,9 @@ Handlers.add(
       local expectedRewardQty = marketValueInQty
 
       if discount > 0 then
-        expectedRewardQty = oracle.getValueInToken(
-          {
-            ticker = inTokenData.ticker,
-            quantity = bint.udiv(
-              inQty * bint(100 * precisionFactor - discount),
-              bint(100 * precisionFactor)
-            ),
-            denomination = inTokenData.denomination
-          },
-          outTokenData,
-          prices
+        expectedRewardQty = bint.udiv(
+          expectedRewardQty * bint(100 * precisionFactor + discount),
+          bint(100 * precisionFactor)
         )
       end
 
