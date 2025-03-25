@@ -943,7 +943,10 @@ describe("Token standard functionalities", () => {
     const envWithFriend = {
       Process: {
         ...env.Process,
-        Data: JSON.stringify({ Friends: [friend] })
+        Tags: env.Process.Tags.map((t) => {
+          if (t.name !== "Friends") return t;
+          return { name: t.name, value: JSON.stringify([friend]) }
+        })
       }
     };
 
