@@ -14,6 +14,9 @@ Module = Module or "C6CQfrL29jZ-LYXV2lKn09d3pBIM6adDFwWqh2ICikM"
 Oracle = Oracle or "4fVi8P-xSRWxZ0EE0EpltDe8WJJvcD9QyFXMqfk-1UQ"
 MaxOracleDelay = MaxOracleDelay or 1200000
 
+-- admin addresses
+Owners = {}
+
 -- liquidops logo tx id
 ProtocolLogo = ProtocolLogo or ""
 
@@ -135,7 +138,7 @@ Handlers.add(
 
 Handlers.add(
   "list",
-  { From = ao.env.Process.Id, Action = "List" },
+  assertions.isAdminAction("List"),
   function (msg)
     -- token to be listed
     local token = msg.Tags.Token
@@ -252,7 +255,7 @@ Handlers.add(
 
 Handlers.add(
   "unlist",
-  { From = ao.env.Process.Id, Action = "Unlist" },
+  assertions.isAdminAction("Unlist"),
   function (msg)
     -- token to be removed
     local token = msg.Tags.Token
@@ -296,7 +299,7 @@ Handlers.add(
 
 Handlers.add(
   "batch-update",
-  { From = ao.env.Process.Id, Action = "Batch-Update" },
+  assertions.isAdminAction("Batch-Update"),
   function (msg)
     -- check if update is already in progress
     assert(not UpdateInProgress, "An update is already in progress")
@@ -821,6 +824,20 @@ function assertions.isAddress(addr)
   if string.match(addr, "[A-z0-9_-]+") == nil then return false end
 
   return true
+end
+
+-- Verify if the caller of an admin function is
+-- authorized to run this action
+---@param action string Accepted action
+---@return PatternFunction
+function assertions.isAdminAction(action)
+  return function (msg)
+    if msg.From ~= ao.env.Process.Id and not utils.includes(msg.From, Owners) then
+      return false
+    end
+
+    return msg.Tags.Action == action
+  end
 end
 
 -- Check if token is supported by the protocol
