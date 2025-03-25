@@ -32,14 +32,18 @@ local function redeem(msg, _, oracle)
 
   -- total tokens pooled
   local availableTokens = bint(Cash)
-  local totalPooled = availableTokens + bint(TotalBorrows)
+  local borrowedTokens = bint(TotalBorrows)
+  local totalPooled = availableTokens + borrowedTokens
   local totalSupply = bint(TotalSupply)
 
-  -- if the total pooled and the total supply is not
-  -- the same, then the reward qty will be higher
-  -- than the burn qty, because there was already
-  -- some interest coming in
-  if not bint.eq(totalPooled, totalSupply) then
+  -- only one position locally, the user can withdraw all tokens
+  if bint.eq(walletBalance, totalSupply) and bint.eq(bint.zero(), borrowedTokens) then
+    rewardQty = availableTokens
+  elseif not bint.eq(totalPooled, totalSupply) then
+    -- if the total pooled and the total supply is not
+    -- the same, then the reward qty will be higher
+    -- than the burn qty, because there was already
+    -- some interest coming in
     rewardQty = bint.udiv(
       totalPooled * quantity,
       totalSupply
