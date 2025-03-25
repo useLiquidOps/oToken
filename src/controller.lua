@@ -476,9 +476,9 @@ Handlers.add(
         local symbol = pos.Tags["Collateral-Ticker"]
         local denomination = tonumber(pos.Tags["Collateral-Denomination"]) or 0
 
-        if pos.From == liquidatedToken then
+        if pos.From == oTokensParticipating.liquidated then
           inTokenData = { ticker = symbol, denomination = denomination }
-        elseif pos.From == rewardToken then
+        elseif pos.From == oTokensParticipating.reward then
           outTokenData = { ticker = symbol, denomination = denomination }
           availableRewardQty = bint(pos.Tags.Collateralization)
         end
