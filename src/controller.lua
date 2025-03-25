@@ -210,7 +210,7 @@ Handlers.add(
 
     -- spawn logo
     --local logo = tokens.spawnProtocolLogo(info.Tags.Logo)
-    local logo = info.Tags.Logo
+    local logo = msg.Tags.Logo or info.Tags.Logo
 
     -- the oToken configuration
     local config = {
