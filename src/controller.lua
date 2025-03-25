@@ -169,6 +169,7 @@ Handlers.add(
     -- check configuration
     local liquidationThreshold = tonumber(msg.Tags["Liquidation-Threshold"])
     local collateralFactor = tonumber(msg.Tags["Collateral-Factor"])
+    local reserveFactor = tonumber(msg.Tags["Reserve-Factor"])
 
     assert(
       collateralFactor ~= nil and type(collateralFactor) == "number",
@@ -185,6 +186,14 @@ Handlers.add(
     assert(
       liquidationThreshold // 1 == liquidationThreshold and liquidationThreshold >= 0 and liquidationThreshold <= 100,
       "Liquidation threshold has to be a whole percentage between 0 and 100"
+    )
+    assert(
+      reserveFactor ~= nil and type(reserveFactor) == "number",
+      "Invalid reserve factor"
+    )
+    assert(
+      reserveFactor // 1 == reserveFactor and reserveFactor >= 0 and reserveFactor <= 100,
+      "Reserve factor has to be a whole percentage between 0 and 100"
     )
     assert(
       tonumber(msg.Tags["Base-Rate"]) ~= nil,
@@ -221,6 +230,7 @@ Handlers.add(
       ["Collateral-Denomination"] = info.Tags.Denomination,
       ["Collateral-Factor"] = msg.Tags["Collateral-Factor"],
       ["Liquidation-Threshold"] = tostring(liquidationThreshold),
+      ["Reserve-Factor"] = tostring(reserveFactor),
       ["Base-Rate"] = msg.Tags["Base-Rate"],
       ["Init-Rate"] = msg.Tags["Init-Rate"],
       ["Value-Limit"] = msg.Tags["Value-Limit"],
