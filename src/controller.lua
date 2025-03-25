@@ -136,6 +136,20 @@ Handlers.add(
   end
 )
 
+-- Verify if the caller of an admin function is
+-- authorized to run this action
+---@param action string Accepted action
+---@return PatternFunction
+function assertions.isAdminAction(action)
+  return function (msg)
+    if msg.From ~= ao.env.Process.Id and not utils.includes(msg.From, Owners) then
+      return false
+    end
+
+    return msg.Tags.Action == action
+  end
+end
+
 Handlers.add(
   "list",
   assertions.isAdminAction("List"),
@@ -824,20 +838,6 @@ function assertions.isAddress(addr)
   if string.match(addr, "[A-z0-9_-]+") == nil then return false end
 
   return true
-end
-
--- Verify if the caller of an admin function is
--- authorized to run this action
----@param action string Accepted action
----@return PatternFunction
-function assertions.isAdminAction(action)
-  return function (msg)
-    if msg.From ~= ao.env.Process.Id and not utils.includes(msg.From, Owners) then
-      return false
-    end
-
-    return msg.Tags.Action == action
-  end
 end
 
 -- Check if token is supported by the protocol
