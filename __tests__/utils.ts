@@ -23,10 +23,9 @@ export const env: Environment = {
       { name: "Value-Limit", value: "1000000000000000" },
       { name: "Oracle", value: defaultOracle },
       { name: "Oracle-Delay-Tolerance", value: "3600000" },
-      { name: "Cooldown-Period", value: "0" }
-    ],
-    // @ts-expect-error
-    Data: JSON.stringify({ Friends: [] })
+      { name: "Cooldown-Period", value: "0" },
+      { name: "Friends", value: "[]" }
+    ]
   }
 };
 export const defaultTimestamp = "172302981";
