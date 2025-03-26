@@ -1,7 +1,17 @@
 local bint = require ".utils.bint"(1024)
 local utils = require ".utils.utils"
 
-local mod = {}
+local mod = {
+  context = {
+    zero = bint.zero(),
+    totalLent = bint.zero(),
+    totalPooled = bint.zero(),
+    oneYearInMs = bint("31560000000"),
+    initRate = bint.zero(),
+    baseRate = bint.zero(),
+    rateMulWithPercentage = bint.zero()
+  }
+}
 
 ---@type HandlerFunction
 function mod.interestRate(msg)
@@ -37,8 +47,7 @@ end
 -- the accrued quantity to the total borrows
 ---@param address string User to update interests for
 ---@param timestamp number Current timestamp
----@param helperData InterestPerformanceHelper Helper params for performance improvements in case the function is used in a loop
-function mod.updateInterest(address, timestamp, helperData)
+function mod.updateInterest(address, timestamp)
   -- no action needed if the user does not have an active loan
   -- (we only check the interests for extra security. If there is
   -- no active loan, the interest should always be 0 or nil, because
@@ -58,22 +67,22 @@ function mod.updateInterest(address, timestamp, helperData)
 
   -- loan quantity and interest quantity
   local loanQty = bint(Loans[address])
-  local interestQty = bint(Interests[address].value) or helperData.zero
+  local interestQty = bint(Interests[address].value) or mod.context.zero
   local yieldingQty = loanQty + interestQty
 
   -- calculate interest for a year
   local ownedYearlyInterest = bint.udiv(
-    yieldingQty * helperData.totalLent * helperData.baseRate,
-    helperData.totalPooled * helperData.rateMulWithPercentage
+    yieldingQty * mod.context.totalLent * mod.context.baseRate,
+    mod.context.totalPooled * mod.context.rateMulWithPercentage
   ) + bint.udiv(
-    yieldingQty * helperData.initRate,
-    helperData.rateMulWithPercentage
+    yieldingQty * mod.context.initRate,
+    mod.context.rateMulWithPercentage
   )
 
   -- calculate interest for the delay period
   local interestAccrued = bint.udiv(
     ownedYearlyInterest * bint(delay),
-    helperData.oneYearInMs
+    mod.context.oneYearInMs
   )
 
   -- only update, if there is any interest accrued since
@@ -81,7 +90,7 @@ function mod.updateInterest(address, timestamp, helperData)
   -- this is necessary for more precise interest calculation,
   -- because it doesn't reset the time passed/delay when no
   -- update is required
-  if not bint.eq(interestAccrued, helperData.zero) then
+  if not bint.eq(interestAccrued, mod.context.zero) then
     -- update interest balance for the user
     Interests[address] = {
       value = tostring(Interests[address].value + interestAccrued),
@@ -93,14 +102,14 @@ function mod.updateInterest(address, timestamp, helperData)
   end
 end
 
--- This function generates the interest performance helper data
----@returns InterestPerformanceHelper
-function mod.genHelperData()
-  -- setup the helper data
+-- Generate context data to improve the interest calculation performance
+function mod.buildContext()
+  -- setup the context data
   local totalLent = bint(TotalBorrows)
   local initRate, rateMul = utils.floatBintRepresentation(InitRate)
 
-  return {
+  -- update context
+  mod.context = {
     zero = bint.zero(),
     totalLent = totalLent,
     totalPooled = totalLent + bint(Cash),
@@ -116,8 +125,8 @@ end
 -- to ensure collateralization
 ---@type HandlerFunction
 function mod.syncInterests(msg)
-  -- set up helper data
-  local helperData = mod.genHelperData()
+  -- sync context data
+  mod.buildContext()
 
   -- if the current action is "Repay", we need to update the interest
   -- not for the message sender (that is the collateral token process),
@@ -126,20 +135,19 @@ function mod.syncInterests(msg)
   if msg.Tags.Action == "Repay" then
     mod.updateInterest(
       msg.Tags["X-On-Behalf"] or msg.Tags.Sender,
-      msg.Timestamp,
-      helperData
+      msg.Timestamp
     )
   -- if the current action is "Positions", we need to update the interest
   -- for all users. this will be a heavy process, the helperData is used
   -- to optimize the loop
   elseif msg.Tags.Action == "Positions" then
     for address, _ in pairs(Loans) do
-      mod.updateInterest(address, msg.Timestamp, helperData)
+      mod.updateInterest(address, msg.Timestamp)
     end
   -- any other action that calls the interest results in syncing the
   -- message sender's interest
   else
-    mod.updateInterest(msg.From, msg.Timestamp, helperData)
+    mod.updateInterest(msg.From, msg.Timestamp)
   end
 end
 
@@ -149,13 +157,14 @@ end
 -- no recipient is provided)
 ---@type HandlerFunction
 function mod.syncInterestForUser(msg)
-  -- sync target
+  -- target to sync
   local target = msg.Tags.Recipient or msg.From
 
-  -- set up helper data
-  local helperData = mod.genHelperData()
+  -- sync context
+  mod.buildContext()
 
-  mod.updateInterest(target, msg.Timestamp, helperData)
+  -- sync interest
+  mod.updateInterest(target, msg.Timestamp)
 
   msg.reply({
     ["Updated-For"] = target,

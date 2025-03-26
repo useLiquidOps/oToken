@@ -59,10 +59,10 @@ local function borrow(msg, _, oracle)
     -- adding the loan, to avoid overcharging for the time
     -- between the last sync (when the "Borrow" action was
     -- received by the process) and the oracle response
+    interests.buildContext()
     interests.updateInterest(
       account,
-      Timestamp,
-      interests.genHelperData()
+      Timestamp
     )
   end
 
