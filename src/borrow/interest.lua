@@ -76,14 +76,21 @@ function mod.updateInterest(address, timestamp, helperData)
     helperData.oneYearInMs
   )
 
-  -- update interest balance for the user
-  Interests[address] = {
-    value = tostring(Interests[address].value + interestAccrued),
-    updated = timestamp
-  }
+  -- only update, if there is any interest accrued since
+  -- the last sync
+  -- this is necessary for more precise interest calculation,
+  -- because it doesn't reset the time passed/delay when no
+  -- update is required
+  if not bint.eq(interestAccrued, helperData.zero) then
+    -- update interest balance for the user
+    Interests[address] = {
+      value = tostring(Interests[address].value + interestAccrued),
+      updated = timestamp
+    }
 
-  -- add the interest accrued to the total borrows
-  TotalBorrows = tostring(bint(TotalBorrows) + interestAccrued)
+    -- add the interest accrued to the total borrows
+    TotalBorrows = tostring(bint(TotalBorrows) + interestAccrued)
+  end
 end
 
 -- This function generates the interest performance helper data
