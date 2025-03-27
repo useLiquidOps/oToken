@@ -13,8 +13,7 @@ local mod = {
   }
 }
 
----@type HandlerFunction
-function mod.interestRate(msg)
+function mod.calculateBorrowRate()
   -- helper values
   local totalLent = bint(TotalBorrows)
   local totalPooled = totalLent + bint(Cash)
@@ -35,9 +34,39 @@ function mod.interestRate(msg)
   -- full interest rate
   local interestRate = weightedBase + initRateB
 
+  return interestRate, rateMul
+end
+
+---@type HandlerFunction
+function mod.interestRate(msg)
+  local interestRate, rateMul = mod.calculateBorrowRate()
+
   msg.reply({
     ["Annual-Percentage-Rate"] = tostring(interestRate),
     ["Rate-Multiplier"] = tostring(rateMul)
+  })
+end
+
+---@type HandlerFunction
+function mod.supplyRate(msg)
+  ---@type Bint, number
+  local borrowRate, rateMul = mod.calculateBorrowRate()
+
+  -- calculate supply interest rate
+  local le = math.log(bint.tonumber(borrowRate) / rateMul + 1)
+  local utilizationRate = utils.bintToFloat(
+    bint.udiv(
+      bint(TotalBorrows),
+      bint(TotalSupply)
+    ),
+    CollateralDenomination
+  )
+  local supplyRate = math.exp(
+    le * (1 - ReserveFactor / 100) * utilizationRate
+  ) - 1
+
+  msg.reply({
+    ["Supply-Rate"] = tostring(supplyRate)
   })
 end
 

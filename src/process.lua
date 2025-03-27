@@ -202,6 +202,11 @@ local function setup_handlers()
     interest.interestRate
   )
   Handlers.add(
+    "borrow-load-interest-supply-rate-get",
+    Handlers.utils.hasMatchingTag("Action", "Get-Supply-APY"),
+    interest.supplyRate
+  )
+  Handlers.add(
     "borrow-loan-interest-sync-static",
     Handlers.utils.hasMatchingTag("Action", "Sync-Interest"),
     interest.syncInterestForUser
