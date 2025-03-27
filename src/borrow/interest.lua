@@ -51,9 +51,13 @@ end
 function mod.supplyRate(msg)
   ---@type Bint, number
   local borrowRate, rateMul = mod.calculateBorrowRate()
+  local borrowRateFloat = utils.bintToFloat(
+    borrowRate,
+    math.floor(math.log(rateMul, 10))
+  )
 
   -- calculate supply interest rate
-  local le = math.log(bint.tonumber(borrowRate) / rateMul + 1)
+  local le = math.log(borrowRateFloat / rateMul + 1)
   local utilizationRate = utils.bintToFloat(
     bint.udiv(
       bint(TotalBorrows),
