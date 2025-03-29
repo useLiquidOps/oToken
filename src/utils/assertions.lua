@@ -57,7 +57,6 @@ end
 ---@param position Position User position
 ---@return boolean
 function mod.isCollateralized(qty, position)
-  if bint.eq(qty, bint.zero()) then return false end
   -- first we check if the borrow balance is less than the capacity
   --
   -- this is important and required, because in the second part of the assertion,
