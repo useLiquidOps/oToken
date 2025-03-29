@@ -53,11 +53,11 @@ function mod.isTokenQuantity(qty)
 end
 
 -- Verify that user user will have enough collateralization after
--- the specified quantity is added to their debth
----@param qty Bint Borrow quantity in USD
+-- the specified quantity is added to their debt
+---@param addedDebt Bint Added dept/ borrow quantity in USD
 ---@param position Position Current user position in USD
 ---@return boolean
-function mod.isCollateralizedWith(qty, position)
+function mod.isCollateralizedWith(addedDebt, position)
   -- first we check if the borrow balance is less than the capacity
   --
   -- this is important and required, because in the second part of the assertion,
@@ -66,18 +66,17 @@ function mod.isCollateralizedWith(qty, position)
   -- without this, the second part of the assertion could be an invalid
   -- number, if the borrow balance is higher than the capacity
   return bint.ult(position.borrowBalance, position.capacity) and
-    bint.ule(qty, position.capacity - position.borrowBalance)
+    bint.ule(addedDebt, position.capacity - position.borrowBalance)
 end
 
 -- Verify that the user will have enough collateralization after
 -- the specified quantity is removed from their collateral
----@param qty Bint Removed collateral quantity in USD
+---@param removedCapacity Bint Removed capacity quantity in USD (adjusted collateral quantity)
 ---@param position Position Current user position in USD
 ---@return boolean
-function mod.isCollateralizedWithout(qty, position)
-  -- TODO: adjust the qty for the collateral factor (can use the local collateral factor, because we are removing the local token)
+function mod.isCollateralizedWithout(removedCapacity, position)
   return bint.ult(position.borrowBalance, position.capacity) and
-    bint.ule(position.borrowBalance, position.capacity - qty)
+    bint.ule(position.borrowBalance, position.capacity - removedCapacity)
 end
 
 -- Verify that provided value is a valid integer percentage (between 0 and 100)

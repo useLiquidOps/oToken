@@ -36,6 +36,8 @@ local function redeem(msg, _, oracle)
   local totalPooled = availableTokens + borrowedTokens
   local totalSupply = bint(TotalSupply)
 
+  -- calculate how much collateral the burned tokens are worth
+  --
   -- only one position locally, the user can withdraw all tokens
   if bint.eq(walletBalance, totalSupply) and bint.eq(bint.zero(), borrowedTokens) then
     rewardQty = availableTokens
@@ -62,14 +64,20 @@ local function redeem(msg, _, oracle)
     "Not enough available tokens to redeem for"
   )
 
-  -- get the value of the tokens to be burned in
-  -- terms of the underlying asset and then get the price
-  -- of that quantity
-  local burnValue = oracle.getValue(quantity, CollateralTicker)
+  -- calculate how much capacity the removed reward tokens (collateral)
+  -- worth, then calculate the USD value of that capacity
+  local removedCapacityValue = oracle.getValue(
+    -- get the capacity that will be removed
+    bint.udiv(
+      rewardQty * bint(CollateralFactor),
+      bint(100)
+    ),
+    CollateralTicker
+  )
 
   -- do not allow reserved collateral to be burned
   assert(
-    assertions.isCollateralizedWithout(burnValue, pos),
+    assertions.isCollateralizedWithout(removedCapacityValue, pos),
     "Redeem value is too high and requires higher collateralization"
   )
 
@@ -77,6 +85,14 @@ local function redeem(msg, _, oracle)
   Balances[sender] = tostring(walletBalance - quantity)
   Cash = tostring(availableTokens - rewardQty)
   TotalSupply = tostring(totalSupply - quantity)
+
+  -- transfer
+  ao.send({
+    Target = CollateralID,
+    Action = "Transfer",
+    Quantity = tostring(rewardQty),
+    Recipient = sender
+  })
 
   msg.reply({
     Action = "Redeem-Confirmation",
