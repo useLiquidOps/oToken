@@ -15,7 +15,7 @@ Oracle = Oracle or "4fVi8P-xSRWxZ0EE0EpltDe8WJJvcD9QyFXMqfk-1UQ"
 MaxOracleDelay = MaxOracleDelay or 1200000
 
 -- admin addresses
-Owners = {}
+Owners = Owners or {}
 
 -- liquidops logo tx id
 ProtocolLogo = ProtocolLogo or ""
@@ -52,6 +52,21 @@ Handlers.add(
   "sync-timestamp",
   function () return "continue" end,
   function (msg) Timestamp = msg.Timestamp end
+)
+
+Handlers.add(
+  "info",
+  { Action = "Info" },
+  function (msg)
+    msg.reply({
+      Name = "LiquidOps Controller",
+      Module = Module,
+      Oracle = Oracle,
+      ["Max-Discount"] = tostring(MaxDiscount),
+      ["Discount-Interval"] = tostring(DiscountInterval),
+      Data = json.encode(Tokens)
+    })
+  end
 )
 
 Handlers.add(
