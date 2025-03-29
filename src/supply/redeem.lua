@@ -69,7 +69,7 @@ local function redeem(msg, _, oracle)
 
   -- do not allow reserved collateral to be burned
   assert(
-    assertions.isCollateralized(burnValue, pos),
+    assertions.isCollateralizedWithout(burnValue, pos),
     "Redeem value is too high and requires higher collateralization"
   )
 

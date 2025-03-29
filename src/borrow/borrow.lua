@@ -44,7 +44,7 @@ local function borrow(msg, _, oracle)
 
   -- make sure the user is allowed to borrow
   assert(
-    assertions.isCollateralized(borrowValue, pos),
+    assertions.isCollateralizedWith(borrowValue, pos),
     "Not enough collateral for this borrow"
   )
 

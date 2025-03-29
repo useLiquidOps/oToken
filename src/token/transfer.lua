@@ -32,7 +32,7 @@ local function transfer(msg, _, oracle)
 
   -- do not allow reserved collateral to be transferred
   assert(
-    assertions.isCollateralized(transferValue, pos),
+    assertions.isCollateralizedWithout(transferValue, pos),
     "Transfer value is too high and requires higher collateralization"
   )
 
