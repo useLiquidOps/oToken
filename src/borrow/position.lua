@@ -119,9 +119,9 @@ function mod.globalPosition(address, oracle)
     local liquidationLimit = bint(position.Tags["Liquidation-Limit"] or 0)
 
     res.collateralization = res.collateralization + oracle.getValue(collateralization, pTicker)
-    res.capacity = res.collateralization + oracle.getValue(capacity, pTicker)
-    res.borrowBalance = res.collateralization + oracle.getValue(borrowBalance, pTicker)
-    res.liquidationLimit = res.collateralization + oracle.getValue(liquidationLimit, pTicker)
+    res.capacity = res.capacity + oracle.getValue(capacity, pTicker)
+    res.borrowBalance = res.borrowBalance + oracle.getValue(borrowBalance, pTicker)
+    res.liquidationLimit = res.liquidationLimit + oracle.getValue(liquidationLimit, pTicker)
   end
 
   return res
