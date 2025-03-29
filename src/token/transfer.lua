@@ -1,6 +1,7 @@
 local assertions = require ".utils.assertions"
 local position = require ".borrow.position"
 local bint = require ".utils.bint"(1024)
+local rate = require ".supply.rate"
 
 ---@type HandlerWithOracle
 local function transfer(msg, _, oracle)
@@ -25,14 +26,23 @@ local function transfer(msg, _, oracle)
   -- check if the user has enough tokens
   assert(bint.ule(quantity, walletBalance), "Insufficient balance")
 
-  -- get the value of the tokens to be transferred in
-  -- terms of the underlying asset and then get the price
-  -- of that quantity
-  local transferValue = oracle.getValue(quantity, CollateralTicker)
+  -- calculate how much collateral the transferred tokens are worth
+  local collateralValue = rate.getUnderlyingWorth(quantity)
+
+  -- calculate how much capacity the transferred underlying tokens
+  -- (collateral) worth, then calculate the USD value of that capacity
+  local removedCapacityValue = oracle.getValue(
+    -- get the capacity that will be removed
+    bint.udiv(
+      collateralValue * bint(CollateralFactor),
+      bint(100)
+    ),
+    CollateralTicker
+  )
 
   -- do not allow reserved collateral to be transferred
   assert(
-    assertions.isCollateralizedWithout(transferValue, pos),
+    assertions.isCollateralizedWithout(removedCapacityValue, pos),
     "Transfer value is too high and requires higher collateralization"
   )
 

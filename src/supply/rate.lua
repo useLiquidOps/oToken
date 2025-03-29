@@ -1,8 +1,33 @@
 local assertions = require ".utils.assertions"
 local bint = require ".utils.bint"(1024)
 
+local mod = {}
+
+-- Calculate how much the provided oToken quantity is wroth
+-- in terms of the underlying asset (collateral)
+---@param qty Bint The quantity to get the value for
+function mod.getUnderlyingWorth(qty)
+  -- parse pool values
+  local totalPooled = bint(Cash) + bint(TotalBorrows)
+  local totalSupply = bint(TotalSupply)
+
+  -- if the amount of tokens deposited is equal to the
+  -- total supply of oTokens, than the conversion rate
+  -- is 1:1
+  if bint.eq(totalPooled, totalSupply) then return qty end
+
+  -- if the total pooled and the total supply is not
+  -- the same, then the reward qty will be higher
+  -- than the burn qty, because there was already
+  -- some interest coming in
+  return bint.udiv(
+    totalPooled * qty,
+    totalSupply
+  )
+end
+
 ---@type HandlerFunction
-local function exchangeRate(msg)
+function mod.exchangeRate(msg)
   -- default qty
   local quantity = bint.one()
 
@@ -15,21 +40,8 @@ local function exchangeRate(msg)
     quantity = bint(msg.Tags.Quantity)
   end
 
-  -- total tokens pooled
-  local totalPooled = bint(Cash) + bint(TotalBorrows)
-
   -- calculate value based on the underlying value of the total supply
-  local returnValue = quantity
-  local totalSupply = bint(TotalSupply)
-
-  -- value is one if there are no tokens supplied,
-  -- otherwise calculate it
-  if not bint.eq(totalSupply, bint.zero()) then
-    returnValue = bint.udiv(
-      totalPooled * quantity,
-      totalSupply
-    )
-  end
+  local returnValue = mod.getUnderlyingWorth(quantity)
 
   msg.reply({
     Quantity = tostring(quantity),
@@ -37,4 +49,4 @@ local function exchangeRate(msg)
   })
 end
 
-return exchangeRate
+return mod

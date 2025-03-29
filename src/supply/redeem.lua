@@ -1,6 +1,7 @@
 local assertions = require ".utils.assertions"
 local position = require ".borrow.position"
 local bint = require ".utils.bint"(1024)
+local rate = require ".supply.rate"
 
 ---@type HandlerWithOracle
 local function redeem(msg, _, oracle)
@@ -27,30 +28,12 @@ local function redeem(msg, _, oracle)
     "Not enough tokens to burn for this wallet"
   )
 
-  -- amount of tokens to be sent out
-  local rewardQty = quantity
-
   -- total tokens pooled
   local availableTokens = bint(Cash)
-  local borrowedTokens = bint(TotalBorrows)
-  local totalPooled = availableTokens + borrowedTokens
   local totalSupply = bint(TotalSupply)
 
-  -- calculate how much collateral the burned tokens are worth
-  --
-  -- only one position locally, the user can withdraw all tokens
-  if bint.eq(walletBalance, totalSupply) and bint.eq(bint.zero(), borrowedTokens) then
-    rewardQty = availableTokens
-  elseif not bint.eq(totalPooled, totalSupply) then
-    -- if the total pooled and the total supply is not
-    -- the same, then the reward qty will be higher
-    -- than the burn qty, because there was already
-    -- some interest coming in
-    rewardQty = bint.udiv(
-      totalPooled * quantity,
-      totalSupply
-    )
-  end
+  -- calculate amount of tokens to be sent out
+  local rewardQty = rate.getUnderlyingWorth(quantity)
 
   -- validate value limit
   assert(
