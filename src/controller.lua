@@ -45,8 +45,12 @@ MaxDiscount = MaxDiscount or 5
 -- the period till the auction reaches the minimum discount (market price)
 DiscountInterval = DiscountInterval or 1000 * 60 * 60 -- 1 hour
 
+PrecisionFactor = 1000000
+
 ---@alias TokenData { ticker: string, denomination: number }
 ---@alias PriceParam { ticker: string, quantity: Bint?, denomination: number }
+---@alias CollateralBorrow { token: string, ticker: string, quantity: string }
+---@alias QualifyingPosition { depts: CollateralBorrow[], collaterals: CollateralBorrow[], discount: string }
 
 Handlers.add(
   "sync-timestamp",
@@ -71,7 +75,7 @@ Handlers.add(
 
 Handlers.add(
   "sync-auctions",
-  { Action = "Cron" },
+  Handlers.utils.hasMatchingTagOf("Action", { "Cron", "Get-Liquidations" }),
   function (msg)
     -- fetch prices first, so the processing of the positions won't be delayed
     local rawPrices = oracle.sync()
@@ -89,7 +93,7 @@ Handlers.add(
     local rawPositions = scheduler.schedule(table.unpack(positionMsgs))
 
     -- protocol positions in USD
-    ---@type table<string, { liquidationLimit: Bint, borrowBalance: Bint }>
+    ---@type table<string, { liquidationLimit: Bint, borrowBalance: Bint, debts: CollateralBorrow[], collaterals: CollateralBorrow[] }>
     local allPositions = {}
     local zero = bint.zero()
 
@@ -109,7 +113,12 @@ Handlers.add(
         local hasLoan = bint.ult(zero, posBorrowBalance)
 
         if hasCollateral or hasLoan then
-          allPositions[address] = allPositions[address] or { liquidationLimit = zero, borrowBalance = zero }
+          allPositions[address] = allPositions[address] or {
+            liquidationLimit = zero,
+            borrowBalance = zero,
+            debts = {},
+            collaterals = {}
+          }
 
           -- add liquidation limit
           if hasCollateral then
@@ -119,6 +128,11 @@ Handlers.add(
               ticker,
               denomination
             )
+            table.insert(allPositions[address].collaterals, {
+              token = market.From,
+              ticker = ticker,
+              quantity = position.Collateralization
+            })
           end
 
           -- add borrow balance
@@ -129,24 +143,48 @@ Handlers.add(
               ticker,
               denomination
             )
+            table.insert(allPositions[address].debts, {
+              token = market.From,
+              ticker = ticker,
+              quantity = position["Borrow-Balance"]
+            })
           end
         end
       end
     end
+
+    ---@type QualifyingPosition[]
+    local qualifyingPositions = {}
 
     -- now find the positions that can be auctioned
     -- and update existing auctions
     for address, position in pairs(allPositions) do
       -- check if the position can be liquidated
       if bint.ult(position.liquidationLimit, position.borrowBalance) then
+        local discount = 0
+
         -- if the liquidation has just been discovered, add it to the auctions
         if Auctions[address] == nil then
           Auctions[address] = msg.Timestamp
+        elseif msg.Tags.Action == "Get-Liquidations" then
+          discount = tokens.getDiscount(address)
+        end
+
+        if msg.Tags.Action == "Get-Liquidations" then
+          table.insert(qualifyingPositions, {
+            debts = position.debts,
+            collaterals = position.collaterals,
+            discount = discount
+          })
         end
       elseif Auctions[address] ~= nil then
         -- remove auction, it is no longer necessary
         Auctions[address] = nil
       end
+    end
+
+    if msg.Tags.Action == "Get-Liquidations" then
+      msg.reply({ Data = json.encode(qualifyingPositions) })
     end
   end
 )
@@ -581,33 +619,16 @@ Handlers.add(
         "The user does not have enough tokens in their position for this liquidation"
       )
 
-      -- apply auction model
-      -- time passed in milliseconds since the discovery of this auction
-      local timePassed = msg.Timestamp - (Auctions[target] or msg.Timestamp)
-
-      -- if the time passed is higher than the discount,
-      -- we reached the minimum discount price, so we
-      -- set the time passed to the corresponding interval
-      if timePassed > DiscountInterval then
-        timePassed = DiscountInterval
-      end
-
-      -- precision factor multiplier for percentage calculations
-      local precisionFactor = 1000000
-
-      -- currnet discount percentage:
-      -- a linear function of the time passed,
-      -- the discount becomes 0 when the discount
-      -- interval is over
-      local discount = math.max((DiscountInterval - timePassed) * MaxDiscount * precisionFactor // DiscountInterval, 0)
+      -- apply auction
+      local discount = tokens.getDiscount(target)
 
       -- update the expected reward quantity using the discount
       local expectedRewardQty = marketValueInQty
 
       if discount > 0 then
         expectedRewardQty = bint.udiv(
-          expectedRewardQty * bint(100 * precisionFactor + discount),
-          bint(100 * precisionFactor)
+          expectedRewardQty * bint(100 * PrecisionFactor + discount),
+          bint(100 * PrecisionFactor)
         )
       end
 
@@ -917,6 +938,29 @@ function tokens.spawnProtocolLogo(collateralLogo)
   }).receive(ao.id)
 
   return spawnedImage.Id
+end
+
+-- Get current discount for a target
+---@param target string Target address
+function tokens.getDiscount(target)
+  -- apply auction model
+  -- time passed in milliseconds since the discovery of this auction
+  local timePassed = Timestamp - (Auctions[target] or Timestamp)
+
+  -- if the time passed is higher than the discount,
+  -- we reached the minimum discount price, so we
+  -- set the time passed to the corresponding interval
+  if timePassed > DiscountInterval then
+    timePassed = DiscountInterval
+  end
+
+  -- current discount percentage:
+  -- a linear function of the time passed,
+  -- the discount becomes 0 when the discount
+  -- interval is over
+  local discount = math.max((DiscountInterval - timePassed) * MaxDiscount * PrecisionFactor // DiscountInterval, 0)
+
+  return discount
 end
 
 function scheduler.schedule(...)
