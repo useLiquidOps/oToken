@@ -22,11 +22,6 @@ function mod.setup()
   -- oracle delay tolerance in milliseconds
   ---@type number
   MaxOracleDelay = MaxOracleDelay or tonumber(ao.env.Process.Tags["Oracle-Delay-Tolerance"]) or 0
-
-  -- cached price
-  -- this should only be used within the same request
-  ---@type RawPrices
-  PriceCache = PriceCache or {}
 end
 
 -- Sync all known friends' collateral price
