@@ -184,7 +184,15 @@ Handlers.add(
     end
 
     if msg.Tags.Action == "Get-Liquidations" then
-      msg.reply({ Data = json.encode(qualifyingPositions) })
+      msg.reply({
+        Data = json.encode({
+          liquidations = qualifyingPositions,
+          tokens = Tokens,
+          maxDiscount = MaxDiscount,
+          discountInterval = DiscountInterval,
+          prices = rawPrices
+        })
+      })
     end
   end
 )
