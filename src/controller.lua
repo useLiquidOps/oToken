@@ -782,7 +782,9 @@ Handlers.add(
       Action = "Liquidate-Confirmation",
       ["Liquidation-Target"] = target,
       ["From-Quantity"] = msg.Tags.Quantity,
-      ["To-Quantity"] = tostring(expectedRewardQty)
+      ["From-Token"] = liquidatedToken,
+      ["To-Quantity"] = tostring(expectedRewardQty),
+      ["To-Token"] = rewardToken
     })
 
     -- send notice to the target
