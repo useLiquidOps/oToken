@@ -50,7 +50,7 @@ PrecisionFactor = 1000000
 ---@alias TokenData { ticker: string, denomination: number }
 ---@alias PriceParam { ticker: string, quantity: Bint?, denomination: number }
 ---@alias CollateralBorrow { token: string, ticker: string, quantity: string }
----@alias QualifyingPosition { depts: CollateralBorrow[], collaterals: CollateralBorrow[], discount: string }
+---@alias QualifyingPosition { target: string, depts: CollateralBorrow[], collaterals: CollateralBorrow[], discount: string }
 
 Handlers.add(
   "sync-timestamp",
@@ -172,6 +172,7 @@ Handlers.add(
 
         if msg.Tags.Action == "Get-Liquidations" then
           table.insert(qualifyingPositions, {
+            target = address,
             debts = position.debts,
             collaterals = position.collaterals,
             discount = discount
@@ -190,7 +191,8 @@ Handlers.add(
           tokens = Tokens,
           maxDiscount = MaxDiscount,
           discountInterval = DiscountInterval,
-          prices = rawPrices
+          prices = rawPrices,
+          precisionFactor = PrecisionFactor
         })
       })
     end
