@@ -103,6 +103,10 @@ Handlers.add(
       local marketPositions = json.decode(market.Data)
       local ticker = market.Tags["Collateral-Ticker"]
       local denomination = tonumber(market.Tags["Collateral-Denomination"]) or 0
+      local collateral = utils.find(
+        function (t) return t.oToken == market.From end,
+        Tokens
+      )
 
       -- add each position in the market by their usd value
       for address, position in pairs(marketPositions) do
@@ -129,7 +133,7 @@ Handlers.add(
               denomination
             )
             table.insert(allPositions[address].collaterals, {
-              token = market.From,
+              token = collateral,
               ticker = ticker,
               quantity = position.Collateralization
             })
@@ -144,7 +148,7 @@ Handlers.add(
               denomination
             )
             table.insert(allPositions[address].debts, {
-              token = market.From,
+              token = collateral,
               ticker = ticker,
               quantity = position["Borrow-Balance"]
             })
