@@ -125,7 +125,7 @@ Handlers.add(
           }
 
           -- add liquidation limit
-          if hasCollateral then
+          if hasCollateral and collateral ~= nil then
             allPositions[address].liquidationLimit = allPositions[address].liquidationLimit + oracle.getValue(
               rawPrices,
               posLiquidationLimit,
@@ -133,14 +133,14 @@ Handlers.add(
               denomination
             )
             table.insert(allPositions[address].collaterals, {
-              token = collateral,
+              token = collateral.id,
               ticker = ticker,
               quantity = position.Collateralization
             })
           end
 
           -- add borrow balance
-          if hasLoan then
+          if hasLoan and collateral ~= nil  then
             allPositions[address].borrowBalance = allPositions[address].borrowBalance + oracle.getValue(
               rawPrices,
               posBorrowBalance,
@@ -148,7 +148,7 @@ Handlers.add(
               denomination
             )
             table.insert(allPositions[address].debts, {
-              token = collateral,
+              token = collateral.id,
               ticker = ticker,
               quantity = position["Borrow-Balance"]
             })
