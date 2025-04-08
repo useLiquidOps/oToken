@@ -1,3 +1,4 @@
+local assertions = require ".utils.assertions"
 local bint = require ".utils.bint"(1024)
 local utils = require ".utils.utils"
 
@@ -165,9 +166,19 @@ function mod.syncInterests(msg)
   -- not for the message sender (that is the collateral token process),
   -- but the user who initiated the transfer that resulted in the
   -- "Repay" action or the user who they are repaying on behalf of
-  if msg.Tags.Action == "Repay" then
+  if
+    msg.Tags["X-Action"] == "Repay" and
+    msg.Tags.Action == "Credit-Notice" and
+    msg.From == CollateralID and
+    assertions.isAddress(msg.Tags.Sender)
+  then
+    local onBehalf = msg.Tags["X-On-Behalf"]
+
+    -- validate on behalf
+    if onBehalf and not assertions.isAddress(onBehalf) then return end
+
     mod.updateInterest(
-      msg.Tags["X-On-Behalf"] or msg.Tags.Sender,
+      onBehalf or msg.Tags.Sender,
       msg.Timestamp
     )
   -- if the current action is "Positions", we need to update the interest
