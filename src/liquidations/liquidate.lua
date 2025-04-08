@@ -159,7 +159,7 @@ function mod.liquidatePosition(msg)
 
   -- get supplied quantity value
   -- (total supply / total pooled) * incoming
-  local qtyValueInoToken = bint.udiv(
+  local qtyValueInoToken = utils.udiv_roundup(
     totalSupply * quantity,
     totalPooled
   )

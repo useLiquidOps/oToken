@@ -376,4 +376,15 @@ function utils.bintToFloat(val, denomination)
   return tonumber(integer_part .. "." .. fractional_part)
 end
 
+-- Perform unsigned integer division, but rounding upwards
+---@param x Bint
+---@param y Bint
+---@return Bint
+function utils.udiv_roundup(x, y)
+  return bint.udiv(
+    x + y - bint.one(),
+    y
+  )
+end
+
 return utils
