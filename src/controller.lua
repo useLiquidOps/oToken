@@ -659,14 +659,6 @@ Handlers.add(
         "Could not meet the defined slippage"
       )
 
-      -- check liquidation queue again
-      -- in case a liquidation has been queued
-      -- while fetching positions
-      assert(
-        not utils.includes(target, Queue),
-        "User is queued for an operation"
-      )
-
       -- whether or not to remove the auction after
       -- this liquidation is complete
       -- (the auction needs to be removed if there
