@@ -457,6 +457,24 @@ Handlers.add(
 )
 
 Handlers.add(
+  "refund-invalid",
+  function (msg)
+    return msg.Tags.Action == "Credit-Notice" and
+      msg.Tags["X-Action"] ~= "Liquidate"
+  end,
+  function (msg)
+    ao.send({
+      Target = msg.From,
+      Action = "Transfer",
+      Quantity = msg.Tags.Quantity,
+      Recipient = msg.Tags.Sender,
+      ["X-Action"] = "Refund",
+      ["X-Refund-Reason"] = "This process does not accept the transferred token " .. msg.From
+    })
+  end
+)
+
+Handlers.add(
   "liquidate",
   { Action = "Credit-Notice", ["X-Action"] = "Liquidate" },
   function (msg)
