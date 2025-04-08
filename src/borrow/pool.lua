@@ -10,7 +10,7 @@ function mod.setup(msg)
   -- collateralization factor
   CollateralFactor = CollateralFactor or tonumber(ao.env.Process.Tags["Collateral-Factor"]) or 50
 
-  -- liquidation threshold (should be lower than the collateral factor)
+  -- liquidation threshold (should be greater than the collateral factor)
   LiquidationThreshold = LiquidationThreshold or tonumber(ao.env.Process.Tags["Liquidation-Threshold"]) or CollateralFactor + 5
 
   -- available tokens to be lent

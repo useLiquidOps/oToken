@@ -30,6 +30,10 @@ function mod.update(msg)
     not reserveFactor or assertions.isPercentage(reserveFactor),
     "Invalid reserve factor"
   )
+  assert(
+    (liquidationThreshold or LiquidationThreshold) > (collateralFactor or CollateralFactor),
+    "Liquidation threshold must be greater than the collateral factor"
+  )
 
   if valueLimit then
     assert(

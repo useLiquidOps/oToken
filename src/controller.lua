@@ -255,6 +255,10 @@ Handlers.add(
       "Liquidation threshold has to be a whole percentage between 0 and 100"
     )
     assert(
+      liquidationThreshold > collateralFactor,
+      "Liquidation threshold must be greater than the collateral factor"
+    )
+    assert(
       reserveFactor ~= nil and type(reserveFactor) == "number",
       "Invalid reserve factor"
     )
