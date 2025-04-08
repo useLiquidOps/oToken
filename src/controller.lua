@@ -859,7 +859,7 @@ Handlers.add(
     -- the user is queued if they're either in the collateral
     -- or the liquidation queues
     return msg.reply({
-      ["In-Queue"] = json.encode(utils.includes(user, Queue))
+      ["In-Queue"] = json.encode(utils.includes(user, Queue) or UpdateInProgress)
     })
   end
 )
