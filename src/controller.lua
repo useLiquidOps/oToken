@@ -24,13 +24,9 @@ ProtocolLogo = ProtocolLogo or ""
 ---@type Friend[]
 Tokens = Tokens or {}
 
--- queue for operations in oTokens that involve
--- the collateral/collateralization
+-- queue for operations that change the user's position
 ---@type string[]
-CollateralQueue = CollateralQueue or {}
-
--- queue for liquidations
-LiquidationQueue = LiquidationQueue or {}
+Queue = Queue or {}
 
 -- current timestamp
 Timestamp = Timestamp or 0
@@ -521,10 +517,10 @@ Handlers.add(
       ---@type Message[]
       local positions = scheduler.schedule(table.unpack(positionMsgs))
 
-      -- check liquidation queue
+      -- check queue
       assert(
-        not utils.includes(target, LiquidationQueue),
-        "User is already queued for liquidation"
+        not utils.includes(target, Queue),
+        "User is queued for an operation"
       )
 
       -- get tokens that need a price fetch
@@ -667,8 +663,8 @@ Handlers.add(
       -- in case a liquidation has been queued
       -- while fetching positions
       assert(
-        not utils.includes(target, LiquidationQueue),
-        "User is already queued for liquidation"
+        not utils.includes(target, Queue),
+        "User is queued for an operation"
       )
 
       -- whether or not to remove the auction after
@@ -726,7 +722,7 @@ Handlers.add(
     -- queue the liquidation at this point, because
     -- the user position has been checked, so the liquidation is valid
     -- we don't want anyone to be able to liquidate from this point
-    table.insert(LiquidationQueue, target)
+    table.insert(Queue, target)
 
     -- TODO: timeout here? (what if this doesn't return in time, the liquidation remains in a pending state)
     -- TODO: this timeout can be done with a Handler that removed this coroutine
@@ -758,9 +754,9 @@ Handlers.add(
     })
 
     -- remove from queue
-    LiquidationQueue = utils.filter(
+    Queue = utils.filter(
       function (v) return v ~= target end,
-      LiquidationQueue
+      Queue
     )
 
     -- check loan liquidation result
@@ -819,12 +815,12 @@ Handlers.add(
     end
 
     -- check if the user has already been added
-    if utils.includes(user, CollateralQueue) or utils.includes(user, LiquidationQueue) or UpdateInProgress then
+    if utils.includes(user, Queue) or UpdateInProgress then
       return msg.reply({ Error = "User already queued" })
     end
 
     -- add to queue
-    table.insert(CollateralQueue, user)
+    table.insert(Queue, user)
 
     msg.reply({ ["Queued-User"] = user })
   end
@@ -848,9 +844,9 @@ Handlers.add(
     end
 
     -- filter out user
-    CollateralQueue = utils.filter(
+    Queue = utils.filter(
       function (v) return v ~= user end,
-      CollateralQueue
+      Queue
     )
 
     msg.reply({ ["Unqueued-User"] = user })
@@ -871,10 +867,7 @@ Handlers.add(
     -- the user is queued if they're either in the collateral
     -- or the liquidation queues
     return msg.reply({
-      ["In-Queue"] = json.encode(
-        utils.includes(user, CollateralQueue) or
-        utils.includes(user, LiquidationQueue)
-      )
+      ["In-Queue"] = json.encode(utils.includes(user, Queue))
     })
   end
 )
