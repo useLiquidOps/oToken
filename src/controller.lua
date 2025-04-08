@@ -39,8 +39,9 @@ Timestamp = Timestamp or 0
 ---@type table<string, number>
 Auctions = Auctions or {}
 
--- maximum discount that can be applied to a loan in percentages
+-- maximum and minimum discount that can be applied to a loan in percentages
 MaxDiscount = MaxDiscount or 5
+MinDiscount = MinDiscount or 1
 
 -- the period till the auction reaches the minimum discount (market price)
 DiscountInterval = DiscountInterval or 1000 * 60 * 60 -- 1 hour
@@ -67,6 +68,7 @@ Handlers.add(
       Module = Module,
       Oracle = Oracle,
       ["Max-Discount"] = tostring(MaxDiscount),
+      ["Min-Discount"] = tostring(MinDiscount),
       ["Discount-Interval"] = tostring(DiscountInterval),
       Data = json.encode(Tokens)
     })
@@ -194,6 +196,7 @@ Handlers.add(
           liquidations = qualifyingPositions,
           tokens = Tokens,
           maxDiscount = MaxDiscount,
+          minDiscount = MinDiscount,
           discountInterval = DiscountInterval,
           prices = rawPrices,
           precisionFactor = PrecisionFactor
@@ -907,6 +910,7 @@ Handlers.add(
   function (msg)
     msg.reply({
       ["Initial-Discount"] = tostring(MaxDiscount),
+      ["Final-Discount"] = tostring(MinDiscount),
       ["Discount-Interval"] = tostring(DiscountInterval),
       Data = next(Auctions) ~= nil and json.encode(Auctions) or "{}"
     })
@@ -996,7 +1000,7 @@ function tokens.getDiscount(target)
   -- a linear function of the time passed,
   -- the discount becomes 0 when the discount
   -- interval is over
-  local discount = math.max((DiscountInterval - timePassed) * MaxDiscount * PrecisionFactor // DiscountInterval, 0)
+  local discount = math.max((DiscountInterval - timePassed) * MaxDiscount * PrecisionFactor // DiscountInterval, MinDiscount)
 
   return discount
 end
