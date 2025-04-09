@@ -43,6 +43,9 @@ DiscountInterval = DiscountInterval or 1000 * 60 * 60 -- 1 hour
 
 PrecisionFactor = 1000000
 
+-- minimum liquidation percentage (a liquidator is required to liquidate at least this percentage of the total loan)
+MinLiquidationThreshold = MinLiquidationThreshold or 20
+
 ---@alias TokenData { ticker: string, denomination: number }
 ---@alias PriceParam { ticker: string, quantity: Bint?, denomination: number }
 ---@alias CollateralBorrow { token: string, ticker: string, quantity: string }
@@ -541,6 +544,10 @@ Handlers.add(
       -- in the user's position for the reward token
       local availableRewardQty = zero
 
+      -- the total borrow of the liquidated token in the
+      -- user's position
+      local availableLiquidateQty = zero
+
       -- check if the user has any open positions (active loans)
       local hasOpenPosition = false
 
@@ -549,16 +556,17 @@ Handlers.add(
         local symbol = pos.Tags["Collateral-Ticker"]
         local denomination = tonumber(pos.Tags["Collateral-Denomination"]) or 0
 
+        -- convert quantities
+        local liquidationLimit = bint(pos.Tags["Liquidation-Limit"])
+        local borrowBalance = bint(pos.Tags["Borrow-Balance"])
+
         if pos.From == oTokensParticipating.liquidated then
           inTokenData = { ticker = symbol, denomination = denomination }
+          availableLiquidateQty = borrowBalance
         elseif pos.From == oTokensParticipating.reward then
           outTokenData = { ticker = symbol, denomination = denomination }
           availableRewardQty = bint(pos.Tags.Collateralization)
         end
-
-        -- convert quantities
-        local liquidationLimit = bint(pos.Tags["Liquidation-Limit"])
-        local borrowBalance = bint(pos.Tags["Borrow-Balance"])
 
         -- only sync if there is a position
         if bint.ult(zero, borrowBalance) or bint.ult(zero, liquidationLimit) then
@@ -610,6 +618,31 @@ Handlers.add(
 
       -- get token quantities
       local inQty = bint(msg.Tags.Quantity)
+
+      -- USD value of the liquidation
+      local usdValue = oracle.getValue(
+        prices,
+        inQty,
+        inTokenData.ticker,
+        inTokenData.denomination
+      )
+
+      -- ensure that at least the minimum threshold is reached
+      -- when repaying the loan or the liquidator is repaying the
+      -- full amount, in case the total value of the loan they're
+      -- repaying is under 20% of the user's loans' total value
+      assert(
+        bint.ule(availableLiquidateQty, inQty) or bint.ule(
+          bint.udiv(
+            totalBorrowBalance * bint(MinLiquidationThreshold * 100 // 1),
+            bint(100 * 100)
+          ),
+          usdValue
+        ),
+        "Liquidators are required to repay at least " ..
+        tostring(MinLiquidationThreshold) ..
+        "% of the total loan or the entire loan of a token"
+      )
 
       -- market value of the liquidation
       local marketValueInQty = oracle.getValueInToken(
