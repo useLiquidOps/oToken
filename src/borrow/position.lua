@@ -172,11 +172,6 @@ function mod.handlers.allPositions(msg)
   -- go through all users who have "Loans"
   -- because it is possible that their collateralization
   -- is not in this instance of the process
-  --
-  -- we only need to go through the "Loans" and
-  -- not the "Interests", because the interest is repaid
-  -- first, the loan is only repaid after the owned
-  -- interest is zero
   for address, _ in pairs(Loans) do
     -- do not handle positions that have
     -- already been added above

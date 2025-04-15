@@ -25,7 +25,7 @@ function mod.liquidateBorrow(msg)
 
   -- check if a loan can be repaid for the target
   assert(
-    repay.canRepay(target, msg.Timestamp),
+    repay.canRepay(target),
     "Cannot liquidate a loan for this user"
   )
 
