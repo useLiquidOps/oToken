@@ -1,5 +1,4 @@
 local assertions = require ".utils.assertions"
-local interests = require ".borrow.interest"
 local position = require ".borrow.position"
 local bint = require ".utils.bint"(1024)
 
@@ -8,7 +7,7 @@ local function borrow(msg, _, oracle)
   -- the wallet that will borrow the tokens
   local account = msg.From
 
-  -- get position data
+  -- get position data (this will also sync interests)
   local pos = position.globalPosition(account, oracle)
 
   -- verify quantity
@@ -47,24 +46,6 @@ local function borrow(msg, _, oracle)
     assertions.isCollateralizedWith(borrowValue, pos),
     "Not enough collateral for this borrow"
   )
-
-  -- add initial interest date if the user has no interest balance
-  if not Interests[account] then
-    Interests[account] = {
-      value = "0",
-      updated = Timestamp
-    }
-  else
-    -- if the user has an interest balance, we sync it before
-    -- adding the loan, to avoid overcharging for the time
-    -- between the last sync (when the "Borrow" action was
-    -- received by the process) and the oracle response
-    interests.buildContext()
-    interests.updateInterest(
-      account,
-      Timestamp
-    )
-  end
 
   -- add loan
   Loans[account] = tostring(bint(Loans[account] or 0) + quantity)

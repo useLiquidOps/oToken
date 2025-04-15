@@ -70,33 +70,6 @@ local function setup_handlers()
     interest.accrueInterest
   )
 
-  -- interest payment sync (must be the third handler)
-  Handlers.add(
-    "borrow-loan-interest-sync-dynamic",
-    function (msg)
-      if
-        utils.includes(msg.Tags.Action, {
-          "Borrow",
-          "Position",
-          "Global-Position",
-          "Positions",
-          "Redeem",
-          "Transfer"
-        })
-        or
-        utils.includes(msg.Tags["X-Action"], {
-          "Repay",
-          "Mint",
-          "Liquidate-Borrow"
-        })
-      then
-        return "continue"
-      end
-
-      return false
-    end,
-    interest.syncInterests
-  )
   -- cooldown list sync
   Handlers.add(
     "controller-cooldown-sync",
@@ -216,7 +189,12 @@ local function setup_handlers()
   Handlers.add(
     "borrow-loan-interest-sync-static",
     Handlers.utils.hasMatchingTag("Action", "Sync-Interest"),
-    interest.syncInterestForUser
+    function (msg)
+      local target = msg.Tags.Recipient or msg.From
+
+      interest.accrueInterestForUser(target)
+      msg.reply({ ["Borrow-Balance"] = Loans[target] or "0" })
+    end
   )
   Handlers.add(
     "borrow-loan-borrow",

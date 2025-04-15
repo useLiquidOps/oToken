@@ -186,28 +186,6 @@ function mod.syncInterests(msg)
   end
 end
 
--- This is an externally callable handler's function
--- that lets the caller sync the interest owned for
--- the provided user (will sync for the caller if
--- no recipient is provided)
----@type HandlerFunction
-function mod.syncInterestForUser(msg)
-  -- target to sync
-  local target = msg.Tags.Recipient or msg.From
-
-  -- sync context
-  mod.buildContext()
-
-  -- sync interest
-  mod.updateInterest(target, msg.Timestamp)
-
-  msg.reply({
-    ["Updated-For"] = target,
-    ["Owned-Interest-Quantity"] = Interests[target] and Interests[target].value or "0",
-    ["Base-Loan-Quantity"] = Loans[target] or "0"
-  })
-end
-
 -- Accrues the accumulated interest since the last update. 
 -- Syncs total borrows, total reserves and the borrow index.
 -- This should be used on all protocol that change the market state.
@@ -255,16 +233,21 @@ function mod.accrueInterest(msg)
   BorrowIndex = tostring(borrowIndex)
 end
 
--- Accrues interest for a specific user
+-- Accrues interest for a specific user and returns the updated borrow balance
 ---@param address string User address
+---@return Bint
 function mod.accrueInterestForUser(address)
   -- loan for the user
   local borrowBalance = bint(Loans[address] or 0)
-  if bint.eq(borrowBalance, bint.zero()) then return end
+  if bint.eq(borrowBalance, bint.zero()) then
+    return borrowBalance
+  end
 
   -- parse global borrow index and the user's interest index
   local borrowIndex = bint(BorrowIndex)
-  local interestIndex = bint(InterestIndices[address] or ("1" .. string.rep("0", Denomination)))
+  local interestIndex = bint(
+    InterestIndices[address] or ("1" .. string.rep("0", Denomination))
+  )
 
   -- update borrow balance and interest index for the user
   borrowBalance = bint.udiv(
@@ -276,6 +259,8 @@ function mod.accrueInterestForUser(address)
   -- update global values
   Loans[address] = tostring(borrowBalance)
   Loans[interestIndex] = tostring(interestIndex)
+
+  return borrowBalance
 end
 
 return mod

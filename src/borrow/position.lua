@@ -1,5 +1,6 @@
 local oracleMod = require ".liquidations.oracle"
 local scheduler = require ".utils.scheduler"
+local interest = require ".borrow.interest"
 local bint = require ".utils.bint"(1024)
 local utils = require ".utils.utils"
 local json = require "json"
@@ -52,17 +53,8 @@ function mod.position(address)
     )
   end
 
-  -- if the user has unpaid depth (an active loan),
-  -- that will be the borrow balance
-  if Loans[address] and Loans[address] ~= "0" then
-    res.borrowBalance = bint(Loans[address])
-  end
-
-  -- if the user has unpaid interest, that also needs
-  -- to be added to the borrow balance
-  if Interests[address] and Interests[address].value ~= "0" then
-    res.borrowBalance = res.borrowBalance + bint(Interests[address].value or 0)
-  end
+  -- sync interest for the user and get the borrow balance
+  res.borrowBalance = interest.accrueInterestForUser(address)
 
   return res
 end
