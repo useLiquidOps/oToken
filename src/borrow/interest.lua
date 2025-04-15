@@ -13,6 +13,8 @@ local mod = {
   }
 }
 
+-- Calculates the current borrow rate
+---@return Bint, number
 function mod.calculateBorrowRate()
   -- helper values
   local totalLent = bint(TotalBorrows)
@@ -204,6 +206,53 @@ function mod.syncInterestForUser(msg)
     ["Owned-Interest-Quantity"] = Interests[target] and Interests[target].value or "0",
     ["Base-Loan-Quantity"] = Loans[target] or "0"
   })
+end
+
+-- Accrues the accumulated interest since the last update. 
+-- Syncs total borrows, total reserves and the borrow index.
+-- This should be used on all protocol that change the market state.
+---@type HandlerFunction
+function mod.accrueInterest(msg)
+  -- how much time has passed since the last global borrow index update
+  local deltaT = msg.Timestamp - LastBorrowIndexUpdate
+  if deltaT <= 0 then return end
+
+  -- get current borrow rate nad index, parse global values
+  local borrowRate, rateMul = mod.calculateBorrowRate()
+  local borrowIndex = bint(BorrowIndex)
+  local totalBorrows = bint(TotalBorrows)
+  local reserves = bint(Reserves)
+
+  -- calculate interest factor (multiplied by the rateMul)
+  local interestFactor = borrowRate * bint(deltaT)
+
+  -- calculate the total interest accrued
+  -- (this needs to be divided by the rateMul)
+  local interestAccrued = bint.udiv(
+    totalBorrows * interestFactor,
+    bint(rateMul)
+  )
+
+  -- update the total borrows with the interest accrued minus the reserve fee
+  totalBorrows = totalBorrows + interestAccrued
+
+  -- update the reserves
+  reserves = reserves + bint.udiv(
+    interestAccrued * bint(ReserveFactor),
+    bint(100)
+  )
+
+  -- update global borrow index
+  borrowIndex = borrowIndex + bint.udiv(
+    borrowIndex * interestFactor,
+    bint(rateMul)
+  )
+
+  -- update global pool data
+  LastBorrowIndexUpdate = msg.Timestamp
+  TotalBorrows = tostring(totalBorrows)
+  Reserves = tostring(reserves)
+  BorrowIndex = tostring(borrowIndex)
 end
 
 return mod

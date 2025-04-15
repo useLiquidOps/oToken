@@ -46,8 +46,8 @@ local function setup_handlers()
     "setup",
     function () return "continue" end,
     function (msg, env)
-      pool.setup(msg, env)
       token.setup(msg, env)
+      pool.setup(msg, env)
       oracle.setup(msg, env)
       cooldown.setup(msg, env)
     end

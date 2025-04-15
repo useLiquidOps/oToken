@@ -23,9 +23,18 @@ function mod.setup(msg)
   ---@type table<string, string>
   Loans = Loans or {}
 
-  -- all interests accrued (values are Bint in string format)
-  ---@type table<string, { value: string, updated: number }>
-  Interests = Interests or {}
+  -- user interest indexes (in Bint string)
+  ---@type table<string, string>
+  InterestIndices = InterestIndices or {}
+
+  -- global borrow index (in Bint string)
+  -- the borrow index is always denominated in
+  -- the same unit as the oToken's denomination
+  -- (initialised as 1)
+  BorrowIndex = BorrowIndex or ("1" .. string.rep("0", Denomination))
+
+  -- last time the global borrow index was updated
+  LastBorrowIndexUpdate = msg.Timestamp
 
   -- base interest rate
   BaseRate = BaseRate or tonumber(ao.env.Process.Tags["Base-Rate"]) or 0
