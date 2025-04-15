@@ -258,7 +258,7 @@ function mod.accrueInterestForUser(address)
 
   -- update global values
   Loans[address] = tostring(borrowBalance)
-  Loans[interestIndex] = tostring(interestIndex)
+  InterestIndices[address] = tostring(interestIndex)
 
   return borrowBalance
 end
