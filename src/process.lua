@@ -63,6 +63,13 @@ local function setup_handlers()
     pool.syncTimestamp
   )
 
+  -- accrue interest globally, on all messages
+  Handlers.add(
+    "borrow-loan-accrue-interest",
+    {},
+    interest.accrueInterest
+  )
+
   -- interest payment sync (must be the third handler)
   Handlers.add(
     "borrow-loan-interest-sync-dynamic",

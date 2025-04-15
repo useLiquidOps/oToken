@@ -255,4 +255,27 @@ function mod.accrueInterest(msg)
   BorrowIndex = tostring(borrowIndex)
 end
 
+-- Accrues interest for a specific user
+---@param address string User address
+function mod.accrueInterestForUser(address)
+  -- loan for the user
+  local borrowBalance = bint(Loans[address] or 0)
+  if bint.eq(borrowBalance, bint.zero()) then return end
+
+  -- parse global borrow index and the user's interest index
+  local borrowIndex = bint(BorrowIndex)
+  local interestIndex = bint(InterestIndices[address] or ("1" .. string.rep("0", Denomination)))
+
+  -- update borrow balance and interest index for the user
+  borrowBalance = bint.udiv(
+    borrowBalance * borrowIndex,
+    interestIndex
+  )
+  interestIndex = borrowIndex
+
+  -- update global values
+  Loans[address] = tostring(borrowBalance)
+  Loans[interestIndex] = tostring(interestIndex)
+end
+
 return mod
