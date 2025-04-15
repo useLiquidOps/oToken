@@ -1,4 +1,5 @@
 local assertions = require ".utils.assertions"
+local interest = require ".borrow.interest"
 local bint = require ".utils.bint"(1024)
 local utils = require ".utils.utils"
 
@@ -25,6 +26,9 @@ function mint.handler(msg)
 
   -- amount of oTokens to be minted
   local mintQty = quantity
+
+  -- accrue interest for the user
+  interest.accrueInterestForUser(sender)
 
   -- total tokens pooled and supply
   local availableTokens = bint(Cash)
