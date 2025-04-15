@@ -66,7 +66,7 @@ local function setup_handlers()
   -- accrue interest globally, on all messages
   Handlers.add(
     "borrow-loan-accrue-interest",
-    {},
+    Handlers.utils.continue({}),
     interest.accrueInterest
   )
 
