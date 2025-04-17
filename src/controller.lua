@@ -569,6 +569,7 @@ Handlers.add(
       -- the total collateral of the desired reward token
       -- in the user's position for the reward token
       local availableRewardQty = zero
+      local availableLiquidateQty = zero
 
       -- check if the user has any open positions (active loans)
       local hasOpenPosition = false
@@ -578,16 +579,17 @@ Handlers.add(
         local symbol = pos.Tags["Collateral-Ticker"]
         local denomination = tonumber(pos.Tags["Collateral-Denomination"]) or 0
 
+        -- convert quantities
+        local liquidationLimit = bint(pos.Tags["Liquidation-Limit"])
+        local borrowBalance = bint(pos.Tags["Borrow-Balance"])
+
         if pos.From == oTokensParticipating.liquidated then
           inTokenData = { ticker = symbol, denomination = denomination }
+          availableLiquidateQty = borrowBalance
         elseif pos.From == oTokensParticipating.reward then
           outTokenData = { ticker = symbol, denomination = denomination }
           availableRewardQty = bint(pos.Tags.Collateralization)
         end
-
-        -- convert quantities
-        local liquidationLimit = bint(pos.Tags["Liquidation-Limit"])
-        local borrowBalance = bint(pos.Tags["Borrow-Balance"])
 
         -- only sync if there is a position
         if bint.ult(zero, borrowBalance) or bint.ult(zero, liquidationLimit) then
@@ -696,29 +698,12 @@ Handlers.add(
         "User is already queued for liquidation"
       )
 
-      -- whether or not to remove the auction after
-      -- this liquidation is complete
-      -- (the auction needs to be removed if there
-      -- will be no loans left when the liquidation is complete)
-      local removeWhenDone = utils.find(
-        ---@param c PriceParam
-        function (c)
-          if not c.quantity then return false end
-
-          -- the auction should not be removed, if the
-          -- liquidation does not pay for the entire
-          -- loan
-          if c.ticker == inTokenData.ticker then
-            return bint.ult(inQty, c.quantity)
-          end
-
-          -- the auction should not be removed if the
-          -- target has an active loan in another asset
-          -- besides the one that is liquidated currently
-          return bint.ult(zero, c.quantity)
-        end,
-        borrowBalances
-      ) ~= nil
+      -- whether or not to remove the auction after this liquidation is complete.
+      -- this checks if the position becomes healthy after the liquidation
+      local removeWhenDone = bint.ule(
+        totalBorrowBalance - oracle.getValue(prices, bint.min(inQty, availableLiquidateQty), inTokenData.ticker, inTokenData.denomination),
+        totalLiquidationLimit - oracle.getValue(prices, expectedRewardQty, outTokenData.ticker, outTokenData.denomination)
+      )
 
       return "", expectedRewardQty, oTokensParticipating, removeWhenDone
     end)
