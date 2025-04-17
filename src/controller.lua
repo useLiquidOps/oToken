@@ -112,8 +112,8 @@ Handlers.add(
 
       -- add each position in the market by their usd value
       for address, position in pairs(marketPositions) do
-        local posLiquidationLimit = bint(position["Liquidation-Limit"])
-        local posBorrowBalance = bint(position["Borrow-Balance"])
+        local posLiquidationLimit = bint(position["Liquidation-Limit"] or 0)
+        local posBorrowBalance = bint(position["Borrow-Balance"] or 0)
 
         local hasCollateral = bint.ult(zero, posLiquidationLimit)
         local hasLoan = bint.ult(zero, posBorrowBalance)
@@ -510,6 +510,14 @@ Handlers.add(
         liquidatedToken ~= rewardToken,
         "Can't liquidate for the same token"
       )
+      assert(
+        assertions.isTokenQuantity(msg.Tags.Quantity),
+        "Invalid transfer quantity"
+      )
+      assert(
+        assertions.isTokenQuantity(msg.Tags["X-Min-Expected-Quantity"]),
+        "Invalid minimum expected quantity"
+      )
 
       -- try to find the liquidated token, the reward token and
       -- generate the position messages in one loop for efficiency
@@ -580,15 +588,15 @@ Handlers.add(
         local denomination = tonumber(pos.Tags["Collateral-Denomination"]) or 0
 
         -- convert quantities
-        local liquidationLimit = bint(pos.Tags["Liquidation-Limit"])
-        local borrowBalance = bint(pos.Tags["Borrow-Balance"])
+        local liquidationLimit = bint(pos.Tags["Liquidation-Limit"] or 0)
+        local borrowBalance = bint(pos.Tags["Borrow-Balance"] or 0)
 
         if pos.From == oTokensParticipating.liquidated then
           inTokenData = { ticker = symbol, denomination = denomination }
           availableLiquidateQty = borrowBalance
         elseif pos.From == oTokensParticipating.reward then
           outTokenData = { ticker = symbol, denomination = denomination }
-          availableRewardQty = bint(pos.Tags.Collateralization)
+          availableRewardQty = bint(pos.Tags.Collateralization or 0)
         end
 
         -- only sync if there is a position
@@ -941,6 +949,44 @@ function tokens.isSupported(addr)
     denomination <= 18
 
   return repliesSupported and validDenomination, res
+end
+
+-- Validates if the provided value can be parsed as a Bint
+---@param val any Value to validate
+---@return boolean
+function assertions.isBintRaw(val)
+  local success, result = pcall(
+    function ()
+      -- check if the value is convertible to a Bint
+      if type(val) ~= "number" and type(val) ~= "string" and not bint.isbint(val) then
+        return false
+      end
+
+      -- check if the val is an integer and not infinity, in case if the type is number
+      if type(val) == "number" and (val ~= val or val % 1 ~= 0) then
+        return false
+      end
+
+      return true
+    end
+  )
+
+  return success and result
+end
+
+-- Verify if the provided value can be converted to a valid token quantity
+---@param qty any Raw quantity to verify
+---@return boolean
+function assertions.isTokenQuantity(qty)
+  local numVal = tonumber(qty)
+  if not numVal or numVal <= 0 then return false end
+  if not assertions.isBintRaw(qty) then return false end
+  if type(qty) == "number" and qty < 0 then return false end
+  if type(qty) == "string" and string.sub(qty, 1, 1) == "-" then
+    return false
+  end
+
+  return true
 end
 
 -- Spawn a LiquidOps themed logo for the oToken
