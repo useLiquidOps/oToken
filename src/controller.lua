@@ -240,6 +240,9 @@ Handlers.add(
     local liquidationThreshold = tonumber(msg.Tags["Liquidation-Threshold"])
     local collateralFactor = tonumber(msg.Tags["Collateral-Factor"])
     local reserveFactor = tonumber(msg.Tags["Reserve-Factor"])
+    local baseRate = tonumber(msg.Tags["Base-Rate"])
+    local initRate = tonumber(msg.Tags["Init-Rate"])
+    local cooldownPeriod = tonumber(msg.Tags["Cooldown-Period"])
 
     assert(
       collateralFactor ~= nil and type(collateralFactor) == "number",
@@ -270,19 +273,19 @@ Handlers.add(
       "Reserve factor has to be a whole percentage between 0 and 100"
     )
     assert(
-      tonumber(msg.Tags["Base-Rate"]) ~= nil,
+      baseRate ~= nil and assertions.isValidNumber(baseRate),
       "Invalid base rate"
     )
     assert(
-      tonumber(msg.Tags["Init-Rate"]) ~= nil,
+      initRate ~= nil and assertions.isValidNumber(initRate),
       "Invalid init rate"
     )
     assert(
-      tonumber(msg.Tags["Value-Limit"]) ~= nil,
+      assertions.isTokenQuantity(msg.Tags["Value-Limit"]),
       "Invalid value limit"
     )
     assert(
-      tonumber(msg.Tags["Cooldown-Period"]) ~= nil,
+      cooldownPeriod ~= nil and assertions.isValidNumber(cooldownPeriod),
       "Invalid cooldown period"
     )
 
@@ -951,6 +954,12 @@ function tokens.isSupported(addr)
   return repliesSupported and validDenomination, res
 end
 
+-- Checks if an input is not inf or nan
+---@param val number Input to check
+function assertions.isValidNumber(val)
+  return val == val and val % 1 == 0
+end
+
 -- Validates if the provided value can be parsed as a Bint
 ---@param val any Value to validate
 ---@return boolean
@@ -963,7 +972,7 @@ function assertions.isBintRaw(val)
       end
 
       -- check if the val is an integer and not infinity, in case if the type is number
-      if type(val) == "number" and (val ~= val or val % 1 ~= 0) then
+      if type(val) == "number" and not assertions.isValidNumber(val) then
         return false
       end
 

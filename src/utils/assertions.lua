@@ -14,6 +14,12 @@ function mod.isAddress(addr)
   return true
 end
 
+-- Checks if an input is not inf or nan
+---@param val number Input to check
+function mod.isValidNumber(val)
+  return val == val and val % 1 == 0
+end
+
 -- Validates if the provided value can be parsed as a Bint
 ---@param val any Value to validate
 ---@return boolean
@@ -26,7 +32,7 @@ function mod.isBintRaw(val)
       end
 
       -- check if the val is an integer and not infinity, in case if the type is number
-      if type(val) == "number" and (val ~= val or val % 1 ~= 0) then
+      if type(val) == "number" and not mod.isValidNumber(val) then
         return false
       end
 
