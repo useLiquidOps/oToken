@@ -41,13 +41,13 @@ end
 ---@param qty any Raw quantity to verify
 ---@return boolean
 function mod.isTokenQuantity(qty)
-  if type(qty) == "nil" then return false end
+  local numVal = tonumber(qty)
+  if not numVal or numVal <= 0 then return false end
   if not mod.isBintRaw(qty) then return false end
   if type(qty) == "number" and qty < 0 then return false end
   if type(qty) == "string" and string.sub(qty, 1, 1) == "-" then
     return false
   end
-  if tonumber(qty) == 0 then return false end
 
   return true
 end
