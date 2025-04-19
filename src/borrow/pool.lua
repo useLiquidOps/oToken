@@ -1,9 +1,15 @@
+local assertions = require ".utils.assertions"
 local json = require "json"
 
 local mod = {}
 
 ---@type HandlerFunction
 function mod.setup(msg)
+  assert(
+    assertions.isAddress(ao.env.Process.Tags["Collateral-Id"]),
+    "Invalid collateral id"
+  )
+
   -- token that can be lent/borrowed
   CollateralID = CollateralID or ao.env.Process.Tags["Collateral-Id"]
 
@@ -36,11 +42,11 @@ function mod.setup(msg)
   -- other oToken processes
   -- format: key - friend collateral ticker, value - friend process
   ---@type Friend[]
-  Friends = Friends or json.decode(ao.env.Process.Tags.Friends) or {}
+  Friends = Friends or json.decode(ao.env.Process.Tags.Friends or "[]") or {}
 
   -- limit the value of an interaction
   -- (in units of the collateral)
-  ValueLimit = ValueLimit or ao.env.Process.Tags["Value-Limit"]
+  ValueLimit = ValueLimit or ao.env.Process.Tags["Value-Limit"] or "0"
 
   -- global current timestamp and block for the oracle
   Timestamp = msg.Timestamp

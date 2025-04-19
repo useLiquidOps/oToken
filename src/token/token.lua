@@ -1,11 +1,18 @@
+local assertions = require ".utils.assertions"
+
 local mod = {}
 
 ---@type HandlerFunction
 function mod.setup()
+  assert(
+    ao.env.Process.Tags["Collateral-Ticker"] ~= nil,
+    "No collateral id"
+  )
+
   CollateralTicker = ao.env.Process.Tags["Collateral-Ticker"]
   Ticker = "o" .. CollateralTicker
   Name = "LiquidOps " .. (ao.env.Process.Tags["Collateral-Name"] or CollateralTicker)
-  Logo = ao.env.Process.Tags.Logo
+  Logo = ao.env.Process.Tags.Logo or nil
 
   -- the wrapped token's denomination
   CollateralDenomination = tonumber(ao.env.Process.Tags["Collateral-Denomination"] or 0) or 0

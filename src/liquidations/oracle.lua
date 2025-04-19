@@ -1,3 +1,4 @@
+local assertions = require ".utils.assertions"
 local bint = require ".utils.bint"(1024)
 local utils = require ".utils.utils"
 local json = require "json"
@@ -16,6 +17,11 @@ local mod = {
 -- Initializes the oracle configuration from the spawn message
 ---@type HandlerFunction
 function mod.setup()
+  assert(
+    assertions.isAddress(ao.env.Process.Tags.Oracle),
+    "Invalid oracle id"
+  )
+
   -- oracle process id
   Oracle = Oracle or ao.env.Process.Tags.Oracle
 
