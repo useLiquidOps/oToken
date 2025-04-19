@@ -510,8 +510,16 @@ Handlers.add(
         "Invalid liquidation target"
       )
       assert(
+        assertions.isAddress(liquidator),
+        "Invalid liquidator address"
+      )
+      assert(
         liquidatedToken ~= rewardToken,
         "Can't liquidate for the same token"
+      )
+      assert(
+        assertions.isAddress(rewardToken),
+        "Invalid reward token address"
       )
       assert(
         assertions.isTokenQuantity(msg.Tags.Quantity),
