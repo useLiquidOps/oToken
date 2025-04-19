@@ -91,26 +91,32 @@ function mod.accrueInterest(msg)
     bint(rateMul)
   )
 
-  -- update the total borrows with the interest accrued minus the reserve fee
-  totalBorrows = totalBorrows + interestAccrued
-
   -- update the reserves
-  reserves = reserves + bint.udiv(
+  local reservesUpdate = bint.udiv(
     interestAccrued * bint(ReserveFactor),
     bint(100)
   )
 
   -- update global borrow index
-  borrowIndex = borrowIndex + bint.udiv(
+  local borrowIndexUpdate = bint.udiv(
     borrowIndex * interestFactor,
     bint(rateMul)
   )
 
+  -- return early if the state doesn't change
+  local zero = bint.zero()
+
+  if
+    bint.eq(borrowIndexUpdate, zero) or
+    bint.eq(reservesUpdate, zero) or
+    bint.eq(interestAccrued, zero)
+  then return end
+
   -- update global pool data
   LastBorrowIndexUpdate = msg.Timestamp
-  TotalBorrows = tostring(totalBorrows)
-  Reserves = tostring(reserves)
-  BorrowIndex = tostring(borrowIndex)
+  TotalBorrows = tostring(totalBorrows + interestAccrued)
+  Reserves = tostring(reserves + reservesUpdate)
+  BorrowIndex = tostring(borrowIndex + borrowIndexUpdate)
 end
 
 -- Accrues interest for a specific user and returns the updated borrow balance
