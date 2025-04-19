@@ -623,6 +623,23 @@ Handlers.add(
         end
       end
 
+      assert(
+        inTokenData.ticker ~= nil and inTokenData.denomination ~= nil,
+        "Incoming token data not found"
+      )
+      assert(
+        outTokenData.ticker ~= nil and outTokenData.denomination ~= nil,
+        "Outgoing token data not found"
+      )
+      assert(
+        bint.ult(zero, availableRewardQty),
+        "No available reward quantity"
+      )
+      assert(
+        bint.ult(zero, availableLiquidateQty),
+        "No available liquidate quantity"
+      )
+
       -- check if the user has any open positions
       if not hasOpenPosition then
         -- remove from auctions if present
