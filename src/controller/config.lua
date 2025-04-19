@@ -44,8 +44,6 @@ function mod.update(msg)
       bint.ult(bint.zero(), bint(newValueLimit)),
       "Value limit must be higher than zero"
     )
-
-    ValueLimit = newValueLimit
   end
 
   if newOracleDelayTolerance then
@@ -57,14 +55,14 @@ function mod.update(msg)
       newOracleDelayTolerance // 1 == newOracleDelayTolerance,
       "Oracle delay tolerance has to be a whole number"
     )
-
-    MaxOracleDelay = newOracleDelayTolerance
   end
 
   if newOracle then Oracle = newOracle end
   if newCollateralFactor then CollateralFactor = newCollateralFactor end
   if newLiquidationThreshold then LiquidationThreshold = newLiquidationThreshold end
   if newReserveFactor then ReserveFactor = newReserveFactor end
+  if newValueLimit then ValueLimit = newValueLimit end
+  if newOracleDelayTolerance then MaxOracleDelay = newOracleDelayTolerance end
 
   msg.reply({
     Oracle = Oracle,
