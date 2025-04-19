@@ -101,12 +101,20 @@ local function setup_handlers()
   Handlers.add(
     "supply-mint-refund-foreign-token",
     function (msg)
-      if msg.Tags.Action ~= "Credit-Notice" then return false end
-      return msg.From ~= CollateralID or not utils.includes(msg.Tags["X-Action"], {
-        "Repay",
-        "Mint",
-        "Liquidate-Borrow"
-      })
+      if msg.Tags.Action ~= "Credit-Notice" then
+        return false -- not a token transfer
+      end
+      if msg.From ~= CollateralID then
+          return true -- unknown token
+      end
+      if utils.includes(msg.Tags["X-Action"], {
+          "Repay",
+          "Mint",
+          "Liquidate-Borrow"
+        }) then
+        return false -- used by other actions so keep
+      end
+      return true -- unknow tag
     end,
     mint.invalidTokenRefund
   )
