@@ -191,9 +191,9 @@ local function setup_handlers()
     Handlers.utils.hasMatchingTag("Action", "Sync-Interest"),
     function (msg)
       local target = msg.Tags.Recipient or msg.From
+      local borrowBalance = interest.accrueInterestForUser(target)
 
-      interest.accrueInterestForUser(target)
-      msg.reply({ ["Borrow-Balance"] = Loans[target] or "0" })
+      msg.reply({ ["Borrow-Balance"] = tostring(borrowBalance) })
     end
   )
   Handlers.add(
