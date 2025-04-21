@@ -100,7 +100,7 @@ function mod.accrueInterest(msg)
   -- update global borrow index
   local borrowIndexUpdate = bint.udiv(
     borrowIndex * interestFactor,
-    bint(rateMul)
+    bint(rateMul) * bint("31560000000")
   )
 
   -- return early if the state doesn't change
