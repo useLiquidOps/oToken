@@ -80,6 +80,7 @@ function mod.accrueInterest(msg)
   local borrowIndex = bint(BorrowIndex)
   local totalBorrows = bint(TotalBorrows)
   local reserves = bint(Reserves)
+  local oneYearInMs = bint("31560000000")
 
   -- calculate interest factor (multiplied by the rateMul)
   local interestFactor = borrowRate * bint(deltaT)
@@ -88,7 +89,7 @@ function mod.accrueInterest(msg)
   -- (this needs to be divided by the rateMul)
   local interestAccrued = bint.udiv(
     totalBorrows * interestFactor,
-    bint(rateMul)
+    bint(rateMul) * oneYearInMs
   )
 
   -- the remainder of the reserves division for precision
@@ -106,7 +107,7 @@ function mod.accrueInterest(msg)
   -- update global borrow index
   local borrowIndexUpdate = bint.udiv(
     borrowIndex * interestFactor,
-    bint(rateMul) * bint("31560000000")
+    bint(rateMul) * oneYearInMs
   )
 
   -- return early if the state doesn't change
