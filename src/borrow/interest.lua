@@ -91,11 +91,17 @@ function mod.accrueInterest(msg)
     bint(rateMul)
   )
 
+  -- the remainder of the reserves division for precision
+  ReservesRemainder = ReservesRemainder or "0"
+
   -- update the reserves
-  local reservesUpdate = bint.udiv(
-    interestAccrued * bint(ReserveFactor),
+  local reservesUpdate, remainder = bint.udiv(
+    interestAccrued * bint(ReserveFactor) + bint(ReservesRemainder),
     bint(100)
   )
+
+  -- update the reserves remainder value
+  ReservesRemainder = tostring(remainder)
 
   -- update global borrow index
   local borrowIndexUpdate = bint.udiv(
