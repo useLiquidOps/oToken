@@ -1,4 +1,5 @@
 local assertions = require ".utils.assertions"
+local interest = require ".borrow.interest"
 local bint = require ".utils.bint"(1024)
 local repay = require ".borrow.repay"
 local utils = require ".utils.utils"
@@ -22,6 +23,9 @@ function mod.liquidateBorrow(msg)
 
   -- liquidation tartget
   local target = msg.Tags["X-Liquidation-Target"]
+
+  -- update owned interest
+  interest.accrueInterestForUser(target)
 
   -- check if a loan can be repaid for the target
   assert(
