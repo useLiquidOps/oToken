@@ -133,17 +133,17 @@ local function setup_handlers()
   -- communication with the controller
   Handlers.add(
     "controller-updater",
-    { From = ao.env.Process.Owner, Action = "Update" },
+    { From = Controller, Action = "Update" },
     updater
   )
   Handlers.add(
     "controller-friend-add",
-    { From = ao.env.Process.Owner, Action = "Add-Friend" },
+    { From = Controller, Action = "Add-Friend" },
     friend.add
   )
   Handlers.add(
     "controller-friend-remove",
-    { From = ao.env.Process.Owner, Action = "Remove-Friend" },
+    { From = Controller, Action = "Remove-Friend" },
     friend.remove
   )
   Handlers.add(
@@ -158,7 +158,7 @@ local function setup_handlers()
   )
   Handlers.add(
     "controller-config-update",
-    { From = ao.env.Process.Owner, Action = "Update-Config" },
+    { From = Controller, Action = "Update-Config" },
     config.update
   )
 
@@ -167,7 +167,7 @@ local function setup_handlers()
     pattern = {
       From = CollateralID,
       Action = "Credit-Notice",
-      Sender = ao.env.Process.Owner,
+      Sender = Controller,
       ["X-Action"] = "Liquidate-Borrow"
     },
     handle = liquidate.liquidateBorrow,
@@ -181,12 +181,12 @@ local function setup_handlers()
 
   Handlers.add(
     "controller-reserves-withdraw",
-    { From = ao.env.Process.Owner, Action = "Withdraw-From-Reserves" },
+    { From = Controller, Action = "Withdraw-From-Reserves" },
     reserves.withdraw
   )
   Handlers.add(
     "controller-reserves-deploy",
-    { From = ao.env.Process.Owner, Action = "Deploy-From-Reserves" },
+    { From = Controller, Action = "Deploy-From-Reserves" },
     reserves.deploy
   )
 
@@ -328,6 +328,9 @@ function process.handle(msg, env)
 
     return ao.result()
   end
+
+  -- the controller is the process spawner
+  Controller = Controller or ao.env.Process.Owner
 
   -- add handlers
   setup_handlers()
