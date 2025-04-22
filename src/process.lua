@@ -345,11 +345,12 @@ function process.handle(msg, env)
   local _, status, result = coroutine.resume(co)
 
   table.insert(Handlers.coroutines, co)
-  for i, x in ipairs(Handlers.coroutines) do
-    if coroutine.status(x) == "dead" then
-      table.remove(Handlers.coroutines, i)
-    end
-  end
+  Handlers.coroutines = utils.filter(
+    function (x)
+      return coroutine.status(x) ~= "dead"
+    end,
+    Handlers.coroutines
+  )
 
   if not status then
     -- call default error handler
