@@ -1303,14 +1303,9 @@ function oracle.getUSDDenominated(val)
   -- get the count of decimal places after the decimal point
   local fractions = oracle.getFractionsCount(val)
 
-  if fractions < denominator then
-    denominated = denominated .. string.rep("0", denominator - fractions)
-  elseif fractions > denominator then
-    -- get the count of the integer part's digits
-    local wholeDigits = string.len(denominated) - fractions
-
-    denominated = string.sub(denominated, 1, wholeDigits + denominator)
-  end
+  local wholeDigits = string.len(denominated) - fractions
+  denominated = denominated .. string.rep("0", denominator)
+  denominated = string.sub(denominated, 1, wholeDigits + denominator)
 
   return bint(denominated)
 end
