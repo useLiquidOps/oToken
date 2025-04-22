@@ -23,6 +23,11 @@ Owners = Owners or {}
 ProtocolLogo = ProtocolLogo or ""
 
 -- holds all the processes that are part of the protocol
+-- a member consists of the following fields:
+-- - id: string (this is the address of the collateral supported by LiquidOps)
+-- - ticker: string (the ticker of the collateral)
+-- - oToken: string (the address of the oToken process for the collateral)
+-- - denomination: integer (the denomination of the collateral)
 ---@type Friend[]
 Tokens = Tokens or {}
 
