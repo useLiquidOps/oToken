@@ -326,7 +326,7 @@ function process.handle(msg, env)
     if msg.From ~= ao.id then
       msg.reply({
         Target = msg.From,
-        Action = (msg.Action and msg.Action or "Unknown") .. "-Error",
+        Action = (msg.Action or "Unknown") .. "-Error",
         Error = "Message or assignment not trusted"
       })
     end
