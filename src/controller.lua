@@ -2,6 +2,8 @@ local coroutine = require "coroutine"
 local bint = require ".bint"(1024)
 local utils = require ".utils"
 local json = require "json"
+
+local liquidations = {}
 local assertions = {}
 local scheduler = {}
 local oracle = {}
@@ -167,14 +169,11 @@ Handlers.add(
     for address, position in pairs(allPositions) do
       -- check if the position can be liquidated
       if bint.ult(position.liquidationLimit, position.borrowBalance) then
-        local discount = 0
+        -- add auction
+        liquidations.addAuction(address, msg.Timestamp)
 
-        -- if the liquidation has just been discovered, add it to the auctions
-        if Auctions[address] == nil then
-          Auctions[address] = msg.Timestamp
-        elseif msg.Tags.Action == "Get-Liquidations" then
-          discount = tokens.getDiscount(address)
-        end
+        -- calculate discount
+        local discount = tokens.getDiscount(address)
 
         if msg.Tags.Action == "Get-Liquidations" then
           table.insert(qualifyingPositions, {
@@ -184,9 +183,9 @@ Handlers.add(
             discount = discount
           })
         end
-      elseif Auctions[address] ~= nil then
+      else
         -- remove auction, it is no longer necessary
-        Auctions[address] = nil
+        liquidations.removeAuction(address)
       end
     end
 
@@ -651,7 +650,7 @@ Handlers.add(
       -- check if the user has any open positions
       if not hasOpenPosition then
         -- remove from auctions if present
-        Auctions[target] = nil
+        liquidations.removeAuction(target)
 
         -- error and trigger refund
         error("User does not have an active loan")
@@ -764,10 +763,7 @@ Handlers.add(
 
     -- since a liquidation is possible for the target
     -- we add it to the list of discovered auctions
-    -- (if not already present)
-    if not Auctions[target] then
-      Auctions[target] = msg.Timestamp
-    end
+    liquidations.addAuction(target, msg.Timestamp)
 
     -- queue the liquidation at this point, because
     -- the user position has been checked, so the liquidation is valid
@@ -823,7 +819,7 @@ Handlers.add(
     -- if the auction is done (no more loans to liquidate)
     -- we need to remove it from the discovered auctions
     if removeWhenDone then
-      Auctions[target] = nil
+      liquidations.removeAuction(target)
     end
 
     -- send confirmation to the liquidator
@@ -937,6 +933,40 @@ Handlers.add(
     })
   end
 )
+
+-- Removes an auction with a cooldown
+---@param target string Auction target address
+function liquidations.removeAuction(target)
+  if Auctions[target] == nil then return end
+
+  local removeAuctionAfter = Timestamp + 1000 * 60 * 60 * 3 -- in 3 hours
+  local handlerName = "auctions-remove-" .. target
+
+  Handlers.remove(handlerName)
+  Handlers.once(
+    handlerName,
+    function (msg)
+      if msg.Timestamp > removeAuctionAfter then
+        return "continue"
+      end
+      return false
+    end,
+    function () Auctions[target] = nil end
+  )
+end
+
+-- Adds a newly discovered auction
+---@param target string Auction target address
+---@param discovered number Discovery timestamp
+function liquidations.addAuction(target, discovered)
+  -- delete handler that would remove the auction and add auction
+  Handlers.remove("auctions-remove-" .. target)
+
+  -- add discovery date if the user isn't already in auctions
+  if Auctions[target] == nil then
+    Auctions[target] = discovered
+  end
+end
 
 -- Verify if the provided value is an address
 ---@param addr any Address to verify
