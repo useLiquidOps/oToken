@@ -570,12 +570,6 @@ Handlers.add(
       ---@type Message[]
       local positions = scheduler.schedule(table.unpack(positionMsgs))
 
-      -- check liquidation queue
-      assert(
-        not utils.includes(target, LiquidationQueue),
-        "User is already queued for liquidation"
-      )
-
       -- get tokens that need a price fetch
       local zero = bint.zero()
 
@@ -731,9 +725,7 @@ Handlers.add(
         "Could not meet the defined slippage"
       )
 
-      -- check liquidation queue again
-      -- in case a liquidation has been queued
-      -- while fetching positions
+      -- check liquidation queue
       assert(
         not utils.includes(target, LiquidationQueue),
         "User is already queued for liquidation"
