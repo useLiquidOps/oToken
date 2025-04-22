@@ -158,12 +158,14 @@ function repay.repayToPool(target, quantity, reserve)
     -- quantity after paying the interests, we need to reset
     -- the quantity owned by the target and refund the remainder
     if bint.ult(borrowBalance, remainingQty) then
-      Loans[target] = "0"
+      Loans[target] = nil
       refundQty = remainingQty - borrowBalance
     else
       -- the outstanding loan is more than or equal to the
       -- remaining repay quantity, so we just deduct it
-      Loans[target] = tostring(borrowBalance - remainingQty)
+      local newBorrowBalance = borrowBalance - remainingQty
+
+      Loans[target] = bint.ult(zero, newBorrowBalance) and tostring(newBorrowBalance) or nil
     end
   end
 
