@@ -58,11 +58,8 @@ function mod.supplyRate(msg)
 
   -- calculate supply interest rate
   local le = math.log(borrowRateFloat + 1)
-  local totalBorrows = bint(TotalBorrows)
-  local utilizationRate = bint.udiv(
-    totalBorrows,
-    bint(Cash) + totalBorrows
-  )
+  local totalBorrows = tonumber(TotalBorrows)
+  local utilizationRate = totalBorrows / (tonumber(Cash) + totalBorrows)
   local supplyRate = math.exp(
     le * (1 - ReserveFactor / 100) * utilizationRate
   ) - 1
