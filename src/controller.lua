@@ -1164,7 +1164,7 @@ function oracle.getUSDDenomination() return 12 end
 function oracle.getFractionsCount(val)
   -- check if there is a fractional part 
   -- by trying to find it with a pattern
-  local fractionalPart = string.match(tostring(val), "%.(.*)")
+  local fractionalPart = string.match(oracle.floatToString(val), "%.(.*)")
 
   if not fractionalPart then return 0 end
 
@@ -1179,7 +1179,7 @@ function oracle.getUSDDenominated(val)
   local denominator = oracle.getUSDDenomination()
 
   -- remove decimal point
-  local denominated = string.gsub(tostring(val), "%.", "")
+  local denominated = string.gsub(oracle.floatToString(val), "%.", "")
 
   -- get the count of decimal places after the decimal point
   local fractions = oracle.getFractionsCount(val)
@@ -1194,4 +1194,10 @@ function oracle.getUSDDenominated(val)
   end
 
   return bint(denominated)
+end
+
+-- Convert a lua number to a string
+---@param val number The value to convert
+function oracle.floatToString(val)
+  return string.format("%.17g", val)
 end

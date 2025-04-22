@@ -150,7 +150,7 @@ end
 function mod.utils.getFractionsCount(val)
   -- check if there is a fractional part 
   -- by trying to find it with a pattern
-  local fractionalPart = string.match(tostring(val), "%.(.*)")
+  local fractionalPart = string.match(utils.floatToString(val), "%.(.*)")
 
   if not fractionalPart then return 0 end
 
@@ -165,7 +165,7 @@ function mod.utils.getUSDDenominated(val)
   local denominator = mod.usdDenomination
 
   -- remove decimal point
-  local denominated = string.gsub(tostring(val), "%.", "")
+  local denominated = string.gsub(utils.floatToString(val), "%.", "")
 
   -- get the count of decimal places after the decimal point
   local fractions = mod.utils.getFractionsCount(val)
