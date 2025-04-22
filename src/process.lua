@@ -156,6 +156,8 @@ local function setup_handlers()
     Handlers.utils.hasMatchingTag("Action", "Total-Reserves"),
     function (msg) msg.reply({ ["Total-Reserves"] = Reserves }) end
   )
+
+  -- Reserved for future use in a governance model
   Handlers.add(
     "controller-config-update",
     { From = Controller, Action = "Update-Config" },
@@ -179,11 +181,14 @@ local function setup_handlers()
     liquidate.liquidatePosition
   )
 
+  -- Reserved for future use in a governance model
   Handlers.add(
     "controller-reserves-withdraw",
     { From = Controller, Action = "Withdraw-From-Reserves" },
     reserves.withdraw
   )
+
+  -- Reserved for future use in a governance model
   Handlers.add(
     "controller-reserves-deploy",
     { From = Controller, Action = "Deploy-From-Reserves" },

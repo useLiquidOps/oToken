@@ -3,6 +3,8 @@ local bint = require ".utils.bint"(1024)
 
 local mod = {}
 
+-- This handler can be called from the controller to update the oToken configuration
+-- Note: reserved for future use in a governance model
 ---@type HandlerFunction
 function mod.update(msg)
   -- get and parse incoming config updates
