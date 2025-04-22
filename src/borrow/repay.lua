@@ -33,7 +33,7 @@ function repay.handler(msg)
   -- refund the sender, if necessary
   if not bint.eq(refundQty, bint.zero()) then
     ao.send({
-      Target = msg.From,
+      Target = CollateralID,
       Action = "Transfer",
       Quantity = tostring(refundQty),
       Recipient = msg.Tags.Sender
@@ -68,7 +68,7 @@ function repay.error(msg, _, err)
   local sender = msg.Tags.Sender
 
   ao.send({
-    Target = msg.From,
+    Target = CollateralID,
     Action = "Transfer",
     Quantity = msg.Tags.Quantity,
     Recipient = sender

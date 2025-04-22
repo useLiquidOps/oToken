@@ -92,7 +92,7 @@ function mod.liquidateBorrow(msg)
   -- the exact quantity to be repaid)
   if not bint.eq(refundQty, bint.zero()) then
     ao.send({
-      Target = msg.From,
+      Target = CollateralID,
       Action = "Transfer",
       Quantity = tostring(refundQty),
       Recipient = liquidator
@@ -122,7 +122,7 @@ function mod.refund(msg, _, err)
   -- refund
   if assertions.isTokenQuantity(msg.Tags.Quantity) then
     ao.send({
-      Target = msg.From,
+      Target = CollateralID,
       Action = "Transfer",
       Quantity = msg.Tags.Quantity,
       Recipient = liquidator
