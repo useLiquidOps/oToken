@@ -103,8 +103,10 @@ Handlers.add(
 
     -- add positions
     for _, market in ipairs(rawPositions) do
-      ---@type table<string, { Capacity: string, ["Borrow-Balance"]: string, Collateralization: string, ["Liquidation-Limit"]: string }>
-      local marketPositions = json.decode(market.Data)
+      ---@type boolean, table<string, { Capacity: string, ["Borrow-Balance"]: string, Collateralization: string, ["Liquidation-Limit"]: string }>
+      local parsed, marketPositions = pcall(json.decode, market.Data)
+      assert(parsed, "Could not parse market data for " .. market.From)
+
       local ticker = market.Tags["Collateral-Ticker"]
       local denomination = tonumber(market.Tags["Collateral-Denomination"]) or 0
       local collateral = utils.find(
@@ -1164,8 +1166,10 @@ function oracle.sync()
   -- no price data returned
   if not rawData or rawData == "" then return res end
 
-  ---@type OracleData
-  local data = json.decode(rawData)
+  ---@type boolean, OracleData
+  local parsed, data = pcall(json.decode, rawData)
+
+  assert(parsed, "Could not parse oracle data")
 
   for ticker, p in pairs(data) do
     -- only add data if the timestamp is up to date
