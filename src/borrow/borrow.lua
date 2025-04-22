@@ -8,14 +8,14 @@ local function borrow(msg, _, oracle)
   -- the wallet that will borrow the tokens
   local account = msg.From
 
-  -- get position data
-  local pos = position.globalPosition(account, oracle)
-
   -- verify quantity
   assert(
     assertions.isTokenQuantity(msg.Tags.Quantity),
     "Invalid borrow quantity"
   )
+
+  -- get position data
+  local pos = position.globalPosition(account, oracle)
 
   -- amount of tokens to borrow
   local quantity = bint(msg.Tags.Quantity)
