@@ -62,7 +62,7 @@ function mod.setup(msg)
   Reserves = Reserves or "0"
 end
 
--- This syncs the global timestamp anc block using the current message
+-- This syncs the global timestamp and block using the current message
 ---@type HandlerFunction
 function mod.syncTimestamp(msg)
   Timestamp = msg.Timestamp

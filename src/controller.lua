@@ -506,7 +506,7 @@ Handlers.add(
 
     -- the token that the liquidator will earn for
     -- paying off the loan
-    -- the user has to have a posisition in this token
+    -- the user has to have a position in this token
     local rewardToken = msg.Tags["X-Reward-Token"]
 
     -- prepare liquidation, check required environment
@@ -1091,7 +1091,7 @@ function tokens.getDiscount(target)
   -- time passed in milliseconds since the discovery of this auction
   local timePassed = Timestamp - (Auctions[target] or Timestamp)
 
-  -- if the time passed is higher than the discount,
+  -- if the time passed is higher than the discount interval
   -- we reached the minimum discount price, so we
   -- set the time passed to the corresponding interval
   if timePassed > DiscountInterval then
@@ -1268,7 +1268,7 @@ function oracle.getValueInToken(from, to, rawPrices)
   )
 
   -- convert usd value to the token quantity
-  -- accouting for the denomination
+  -- accounting for the denomination
   return bint.udiv(
     usdValue * bint("1" .. string.rep("0", to.denomination)),
     toPrice

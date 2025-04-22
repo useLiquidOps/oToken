@@ -25,7 +25,7 @@ function mod.liquidateBorrow(msg)
     "Invalid liquidator address"
   )
 
-  -- liquidation tartget
+  -- liquidation target
   local target = msg.Tags["X-Liquidation-Target"]
 
   assert(
