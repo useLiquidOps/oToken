@@ -17,7 +17,12 @@ function mod.setup()
   -- the wrapped token's denomination
   CollateralDenomination = tonumber(ao.env.Process.Tags["Collateral-Denomination"] or 0) or 0
 
-  Denomination = CollateralDenomination or 12
+  if CollateralDenomination == 0 then
+    Denomination = 12
+  else
+    Denomination = CollateralDenomination
+  end
+
   Balances = Balances or {}
   TotalSupply = TotalSupply or "0"
 end
