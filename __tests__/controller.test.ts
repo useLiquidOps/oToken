@@ -747,7 +747,7 @@ describe("Config tests", () => {
             expect.objectContaining({
               name: "Error",
               value: expect.stringContaining(
-                invalidVal + " cannot be represented by a bint"
+                "Invalid value limit"
               )
             })
           ])

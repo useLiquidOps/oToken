@@ -33,7 +33,7 @@ function repay.handler(msg)
   -- refund the sender, if necessary
   if not bint.eq(refundQty, bint.zero()) then
     ao.send({
-      Target = msg.From,
+      Target = CollateralID,
       Action = "Transfer",
       Quantity = tostring(refundQty),
       Recipient = msg.Tags.Sender
@@ -65,20 +65,24 @@ end
 ---@param err unknown
 function repay.error(msg, _, err)
   local prettyError, rawError = utils.prettyError(err)
+  local sender = msg.Tags.Sender
 
   ao.send({
-    Target = msg.From,
+    Target = CollateralID,
     Action = "Transfer",
     Quantity = msg.Tags.Quantity,
-    Recipient = msg.Tags.Sender
+    Recipient = sender
   })
-  ao.send({
-    Target = msg.Tags.Sender,
-    Action = "Repay-Error",
-    Error = prettyError,
-    ["Raw-Error"] = rawError,
-    ["Refund-Quantity"] = msg.Tags.Quantity
-  })
+
+  if assertions.isAddress(sender) then
+    ao.send({
+      Target = sender,
+      Action = "Repay-Error",
+      Error = prettyError,
+      ["Raw-Error"] = rawError,
+      ["Refund-Quantity"] = msg.Tags.Quantity
+    })
+  end
 end
 
 -- Check if a repay can be executed with the given params.

@@ -54,7 +54,7 @@ function utils.matchesPattern(pattern, value, msg)
   return false
 end
 
--- Given a message and a spec, returns whetehr there is a spec match
+-- Given a message and a spec, returns whether there is a spec match
 ---@param msg Message The message to check for in the spec
 ---@param spec Spec The spec to check for in the message
 ---@return boolean
@@ -330,7 +330,7 @@ function utils.values(t)
   return values
 end
 
--- Turn a floating point number
+-- Turn a floating point number into a bigint, scaled by an optional multiplier (default 100000)
 ---@param raw number Value to represent as a bigint
 ---@param floatMul number? Optional multiplier
 function utils.floatBintRepresentation(raw, floatMul)

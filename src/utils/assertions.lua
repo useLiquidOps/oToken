@@ -14,6 +14,12 @@ function mod.isAddress(addr)
   return true
 end
 
+-- Checks if an input is not inf or nan
+---@param val number Input to check
+function mod.isValidNumber(val)
+  return val == val and val % 1 == 0
+end
+
 -- Validates if the provided value can be parsed as a Bint
 ---@param val any Value to validate
 ---@return boolean
@@ -26,7 +32,7 @@ function mod.isBintRaw(val)
       end
 
       -- check if the val is an integer and not infinity, in case if the type is number
-      if type(val) == "number" and (val ~= val or val % 1 ~= 0) then
+      if type(val) == "number" and not mod.isValidNumber(val) then
         return false
       end
 
@@ -41,13 +47,13 @@ end
 ---@param qty any Raw quantity to verify
 ---@return boolean
 function mod.isTokenQuantity(qty)
-  if type(qty) == "nil" then return false end
+  local numVal = tonumber(qty)
+  if not numVal or numVal <= 0 then return false end
   if not mod.isBintRaw(qty) then return false end
   if type(qty) == "number" and qty < 0 then return false end
   if type(qty) == "string" and string.sub(qty, 1, 1) == "-" then
     return false
   end
-  if tonumber(qty) == 0 then return false end
 
   return true
 end
@@ -75,7 +81,7 @@ end
 ---@param position Position Current user position in USD
 ---@return boolean
 function mod.isCollateralizedWithout(removedCapacity, position)
-  return bint.ult(position.borrowBalance, position.capacity) and
+  return bint.ult(removedCapacity, position.capacity) and
     bint.ule(position.borrowBalance, position.capacity - removedCapacity)
 end
 

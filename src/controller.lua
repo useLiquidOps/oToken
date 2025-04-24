@@ -2,6 +2,8 @@ local coroutine = require "coroutine"
 local bint = require ".bint"(1024)
 local utils = require ".utils"
 local json = require "json"
+
+local liquidations = {}
 local assertions = {}
 local scheduler = {}
 local oracle = {}
@@ -21,6 +23,11 @@ Owners = Owners or {}
 ProtocolLogo = ProtocolLogo or ""
 
 -- holds all the processes that are part of the protocol
+-- a member consists of the following fields:
+-- - id: string (this is the address of the collateral supported by LiquidOps)
+-- - ticker: string (the ticker of the collateral)
+-- - oToken: string (the address of the oToken process for the collateral)
+-- - denomination: integer (the denomination of the collateral)
 ---@type Friend[]
 Tokens = Tokens or {}
 
@@ -101,8 +108,10 @@ Handlers.add(
 
     -- add positions
     for _, market in ipairs(rawPositions) do
-      ---@type table<string, { Capacity: string, ["Borrow-Balance"]: string, Collateralization: string, ["Liquidation-Limit"]: string }>
-      local marketPositions = json.decode(market.Data)
+      ---@type boolean, table<string, { Capacity: string, ["Borrow-Balance"]: string, Collateralization: string, ["Liquidation-Limit"]: string }>
+      local parsed, marketPositions = pcall(json.decode, market.Data)
+      assert(parsed, "Could not parse market data for " .. market.From)
+
       local ticker = market.Tags["Collateral-Ticker"]
       local denomination = tonumber(market.Tags["Collateral-Denomination"]) or 0
       local collateral = utils.find(
@@ -112,8 +121,8 @@ Handlers.add(
 
       -- add each position in the market by their usd value
       for address, position in pairs(marketPositions) do
-        local posLiquidationLimit = bint(position["Liquidation-Limit"])
-        local posBorrowBalance = bint(position["Borrow-Balance"])
+        local posLiquidationLimit = bint(position["Liquidation-Limit"] or 0)
+        local posBorrowBalance = bint(position["Borrow-Balance"] or 0)
 
         local hasCollateral = bint.ult(zero, posLiquidationLimit)
         local hasLoan = bint.ult(zero, posBorrowBalance)
@@ -167,14 +176,11 @@ Handlers.add(
     for address, position in pairs(allPositions) do
       -- check if the position can be liquidated
       if bint.ult(position.liquidationLimit, position.borrowBalance) then
-        local discount = 0
+        -- add auction
+        liquidations.addAuction(address, msg.Timestamp)
 
-        -- if the liquidation has just been discovered, add it to the auctions
-        if Auctions[address] == nil then
-          Auctions[address] = msg.Timestamp
-        elseif msg.Tags.Action == "Get-Liquidations" then
-          discount = tokens.getDiscount(address)
-        end
+        -- calculate discount
+        local discount = tokens.getDiscount(address)
 
         if msg.Tags.Action == "Get-Liquidations" then
           table.insert(qualifyingPositions, {
@@ -184,9 +190,9 @@ Handlers.add(
             discount = discount
           })
         end
-      elseif Auctions[address] ~= nil then
+      else
         -- remove auction, it is no longer necessary
-        Auctions[address] = nil
+        liquidations.removeAuction(address)
       end
     end
 
@@ -240,6 +246,9 @@ Handlers.add(
     local liquidationThreshold = tonumber(msg.Tags["Liquidation-Threshold"])
     local collateralFactor = tonumber(msg.Tags["Collateral-Factor"])
     local reserveFactor = tonumber(msg.Tags["Reserve-Factor"])
+    local baseRate = tonumber(msg.Tags["Base-Rate"])
+    local initRate = tonumber(msg.Tags["Init-Rate"])
+    local cooldownPeriod = tonumber(msg.Tags["Cooldown-Period"])
 
     assert(
       collateralFactor ~= nil and type(collateralFactor) == "number",
@@ -270,19 +279,19 @@ Handlers.add(
       "Reserve factor has to be a whole percentage between 0 and 100"
     )
     assert(
-      tonumber(msg.Tags["Base-Rate"]) ~= nil,
+      baseRate ~= nil and assertions.isValidNumber(baseRate),
       "Invalid base rate"
     )
     assert(
-      tonumber(msg.Tags["Init-Rate"]) ~= nil,
+      initRate ~= nil and assertions.isValidNumber(initRate),
       "Invalid init rate"
     )
     assert(
-      tonumber(msg.Tags["Value-Limit"]) ~= nil,
+      assertions.isTokenQuantity(msg.Tags["Value-Limit"]),
       "Invalid value limit"
     )
     assert(
-      tonumber(msg.Tags["Cooldown-Period"]) ~= nil,
+      cooldownPeriod ~= nil and assertions.isValidNumber(cooldownPeriod),
       "Invalid cooldown period"
     )
 
@@ -292,7 +301,6 @@ Handlers.add(
     assert(supported, "Token not supported by the protocol")
 
     -- spawn logo
-    --local logo = tokens.spawnProtocolLogo(info.Tags.Logo)
     local logo = msg.Tags.Logo or info.Tags.Logo
 
     -- the oToken configuration
@@ -497,7 +505,7 @@ Handlers.add(
 
     -- the token that the liquidator will earn for
     -- paying off the loan
-    -- the user has to have a posisition in this token
+    -- the user has to have a position in this token
     local rewardToken = msg.Tags["X-Reward-Token"]
 
     -- prepare liquidation, check required environment
@@ -507,8 +515,24 @@ Handlers.add(
         "Invalid liquidation target"
       )
       assert(
+        assertions.isAddress(liquidator),
+        "Invalid liquidator address"
+      )
+      assert(
         liquidatedToken ~= rewardToken,
         "Can't liquidate for the same token"
+      )
+      assert(
+        assertions.isAddress(rewardToken),
+        "Invalid reward token address"
+      )
+      assert(
+        assertions.isTokenQuantity(msg.Tags.Quantity),
+        "Invalid transfer quantity"
+      )
+      assert(
+        assertions.isTokenQuantity(msg.Tags["X-Min-Expected-Quantity"]),
+        "Invalid minimum expected quantity"
       )
 
       -- try to find the liquidated token, the reward token and
@@ -546,12 +570,6 @@ Handlers.add(
       ---@type Message[]
       local positions = scheduler.schedule(table.unpack(positionMsgs))
 
-      -- check liquidation queue
-      assert(
-        not utils.includes(target, LiquidationQueue),
-        "User is already queued for liquidation"
-      )
-
       -- get tokens that need a price fetch
       local zero = bint.zero()
 
@@ -580,15 +598,15 @@ Handlers.add(
         local denomination = tonumber(pos.Tags["Collateral-Denomination"]) or 0
 
         -- convert quantities
-        local liquidationLimit = bint(pos.Tags["Liquidation-Limit"])
-        local borrowBalance = bint(pos.Tags["Borrow-Balance"])
+        local liquidationLimit = bint(pos.Tags["Liquidation-Limit"] or 0)
+        local borrowBalance = bint(pos.Tags["Borrow-Balance"] or 0)
 
         if pos.From == oTokensParticipating.liquidated then
           inTokenData = { ticker = symbol, denomination = denomination }
           availableLiquidateQty = borrowBalance
         elseif pos.From == oTokensParticipating.reward then
           outTokenData = { ticker = symbol, denomination = denomination }
-          availableRewardQty = bint(pos.Tags.Collateralization)
+          availableRewardQty = bint(pos.Tags.Collateralization or 0)
         end
 
         -- only sync if there is a position
@@ -612,10 +630,27 @@ Handlers.add(
         end
       end
 
+      assert(
+        inTokenData.ticker ~= nil and inTokenData.denomination ~= nil,
+        "Incoming token data not found"
+      )
+      assert(
+        outTokenData.ticker ~= nil and outTokenData.denomination ~= nil,
+        "Outgoing token data not found"
+      )
+      assert(
+        bint.ult(zero, availableRewardQty),
+        "No available reward quantity"
+      )
+      assert(
+        bint.ult(zero, availableLiquidateQty),
+        "No available liquidate quantity"
+      )
+
       -- check if the user has any open positions
       if not hasOpenPosition then
         -- remove from auctions if present
-        Auctions[target] = nil
+        liquidations.removeAuction(target)
 
         -- error and trigger refund
         error("User does not have an active loan")
@@ -690,9 +725,7 @@ Handlers.add(
         "Could not meet the defined slippage"
       )
 
-      -- check liquidation queue again
-      -- in case a liquidation has been queued
-      -- while fetching positions
+      -- check liquidation queue
       assert(
         not utils.includes(target, LiquidationQueue),
         "User is already queued for liquidation"
@@ -728,10 +761,7 @@ Handlers.add(
 
     -- since a liquidation is possible for the target
     -- we add it to the list of discovered auctions
-    -- (if not already present)
-    if not Auctions[target] then
-      Auctions[target] = msg.Timestamp
-    end
+    liquidations.addAuction(target, msg.Timestamp)
 
     -- queue the liquidation at this point, because
     -- the user position has been checked, so the liquidation is valid
@@ -787,7 +817,7 @@ Handlers.add(
     -- if the auction is done (no more loans to liquidate)
     -- we need to remove it from the discovered auctions
     if removeWhenDone then
-      Auctions[target] = nil
+      liquidations.removeAuction(target)
     end
 
     -- send confirmation to the liquidator
@@ -902,6 +932,40 @@ Handlers.add(
   end
 )
 
+-- Removes an auction with a cooldown
+---@param target string Auction target address
+function liquidations.removeAuction(target)
+  if Auctions[target] == nil then return end
+
+  local removeAuctionAfter = Timestamp + 1000 * 60 * 60 * 3 -- in 3 hours
+  local handlerName = "auctions-remove-" .. target
+
+  Handlers.remove(handlerName)
+  Handlers.once(
+    handlerName,
+    function (msg)
+      if msg.Timestamp > removeAuctionAfter then
+        return "continue"
+      end
+      return false
+    end,
+    function () Auctions[target] = nil end
+  )
+end
+
+-- Adds a newly discovered auction
+---@param target string Auction target address
+---@param discovered number Discovery timestamp
+function liquidations.addAuction(target, discovered)
+  -- delete handler that would remove the auction and add auction
+  Handlers.remove("auctions-remove-" .. target)
+
+  -- add discovery date if the user isn't already in auctions
+  if Auctions[target] == nil then
+    Auctions[target] = discovered
+  end
+end
+
 -- Verify if the provided value is an address
 ---@param addr any Address to verify
 ---@return boolean
@@ -943,28 +1007,48 @@ function tokens.isSupported(addr)
   return repliesSupported and validDenomination, res
 end
 
--- Spawn a LiquidOps themed logo for the oToken
--- (if the collateral doesn't have a logo, the protocol
--- will use the liquidops logo by default)
----@param collateralLogo string? The logo of the collateral token
-function tokens.spawnProtocolLogo(collateralLogo)
-  if not collateralLogo then return ProtocolLogo end
+-- Checks if an input is not inf or nan
+---@param val number Input to check
+function assertions.isValidNumber(val)
+  return val == val and val % 1 == 0
+end
 
-  -- the base logo on two parts
-  local logoPart1 = '<svg width="209" height="209" viewBox="0 0 209 209" fill="none" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink"><path fill-rule="evenodd" clip-rule="evenodd" d="M104.338 167.45C69.4822 167.45 41.2261 139.194 41.2261 104.338C41.2261 69.4822 69.4822 41.2261 104.338 41.2261C139.194 41.2261 167.45 69.4822 167.45 104.338C167.45 139.194 139.194 167.45 104.338 167.45Z" fill="white"/><path fill-rule="evenodd" clip-rule="evenodd" d="M0.0258105 104.338C0.025808 161.948 46.7279 208.65 104.338 208.65C161.948 208.65 208.65 161.948 208.65 104.338C208.65 46.728 161.948 0.0258769 104.338 0.0258743C46.7279 0.0258718 0.025813 46.728 0.0258105 104.338Z" fill="url(#paint0_radial_1139_423)"/><path fill-rule="evenodd" clip-rule="evenodd" d="M8.14144 144.709C26.0007 187.415 70.2136 213.262 116.097 207.999C101.792 198.058 31.5666 127.163 98.1277 96.6245C170.951 63.2132 166.399 24.8374 149.014 10.0751C127.427 -0.168817 102.228 -3.08861 77.34 3.58023C57.2243 8.97022 40.0649 19.8861 27.0574 34.257C14.6366 48.2947 5.9814 65.395 2.1366 83.3465C-0.233773 94.8415 -0.68376 106.868 1.04746 118.976C1.64542 122.737 2.47999 126.472 3.56051 130.162C4.69973 135.191 6.24463 140.047 8.14144 144.709Z" fill="url(#paint1_linear_1139_423)"/><path fill-rule="evenodd" clip-rule="evenodd" d="M147.996 9.59888C163.381 20.0038 201.307 50.7506 136.617 87.8522C65.7443 128.5 125.078 191.493 164.844 189.344C199.306 164.807 216.688 120.605 205.096 77.3404C196.749 46.1915 175.153 22.1313 147.996 9.59888Z" fill="url(#paint2_linear_1139_423)"/><path d="M103.955 166.453C138.12 166.453 165.816 138.757 165.816 104.592C165.816 70.4275 138.12 42.7314 103.955 42.7314C69.7903 42.7314 42.0941 70.4275 42.0941 104.592C42.0941 138.757 69.7903 166.453 103.955 166.453Z" fill="white"/><path d="M103.955 166.453C138.12 166.453 165.816 138.757 165.816 104.592C165.816 70.4275 138.12 42.7314 103.955 42.7314C69.7903 42.7314 42.0941 70.4275 42.0941 104.592C42.0941 138.757 69.7903 166.453 103.955 166.453Z" fill="url(#pattern0_1139_423)"/><defs><pattern id="pattern0_1139_423" patternContentUnits="objectBoundingBox" width="1" height="1"><use xlink:href="#image0_1139_423" transform="scale(0.0025)"/></pattern><radialGradient id="paint0_radial_1139_423" cx="0" cy="0" r="1" gradientUnits="userSpaceOnUse" gradientTransform="translate(104.338 104.338) rotate(-29.6192) scale(135.925 130.152)"><stop offset="0.5" stop-color="#B8B8FF"/><stop offset="1" stop-color="#DCDCFF"/></radialGradient><linearGradient id="paint1_linear_1139_423" x1="79.895" y1="265.291" x2="79.895" y2="0" gradientUnits="userSpaceOnUse"><stop stop-color="#4844EC"/><stop offset="1" stop-color="#766AFF"/></linearGradient><linearGradient id="paint2_linear_1139_423" x1="267.473" y1="120.937" x2="44.7973" y2="120.937" gradientUnits="userSpaceOnUse"><stop stop-color="#4844EC"/><stop offset="1" stop-color="#766AFF"/></linearGradient><image id="image0_1139_423" width="400" height="400" xlink:href="'
-  local logoPart2 = '" preserveAspectRatio="xMidYMid slice"/></defs></svg>'
+-- Validates if the provided value can be parsed as a Bint
+---@param val any Value to validate
+---@return boolean
+function assertions.isBintRaw(val)
+  local success, result = pcall(
+    function ()
+      -- check if the value is convertible to a Bint
+      if type(val) ~= "number" and type(val) ~= "string" and not bint.isbint(val) then
+        return false
+      end
 
-  -- message that spawns the logo
-  -- we're sending this to ourselves
-  ---@type Message
-  local spawnedImage = ao.send({
-    Target = ao.id,
-    Action = "Spawn-Logo",
-    ["Content-Type"] = "image/svg+xml",
-    Data = logoPart1 .. "/" .. collateralLogo .. logoPart2
-  }).receive(ao.id)
+      -- check if the val is an integer and not infinity, in case if the type is number
+      if type(val) == "number" and not assertions.isValidNumber(val) then
+        return false
+      end
 
-  return spawnedImage.Id
+      return true
+    end
+  )
+
+  return success and result
+end
+
+-- Verify if the provided value can be converted to a valid token quantity
+---@param qty any Raw quantity to verify
+---@return boolean
+function assertions.isTokenQuantity(qty)
+  local numVal = tonumber(qty)
+  if not numVal or numVal <= 0 then return false end
+  if not assertions.isBintRaw(qty) then return false end
+  if type(qty) == "number" and qty < 0 then return false end
+  if type(qty) == "string" and string.sub(qty, 1, 1) == "-" then
+    return false
+  end
+
+  return true
 end
 
 -- Get current discount for a target
@@ -974,7 +1058,7 @@ function tokens.getDiscount(target)
   -- time passed in milliseconds since the discovery of this auction
   local timePassed = Timestamp - (Auctions[target] or Timestamp)
 
-  -- if the time passed is higher than the discount,
+  -- if the time passed is higher than the discount interval
   -- we reached the minimum discount price, so we
   -- set the time passed to the corresponding interval
   if timePassed > DiscountInterval then
@@ -1054,8 +1138,10 @@ function oracle.sync()
   -- no price data returned
   if not rawData or rawData == "" then return res end
 
-  ---@type OracleData
-  local data = json.decode(rawData)
+  ---@type boolean, OracleData
+  local parsed, data = pcall(json.decode, rawData)
+
+  assert(parsed, "Could not parse oracle data")
 
   for ticker, p in pairs(data) do
     -- only add data if the timestamp is up to date
@@ -1149,7 +1235,7 @@ function oracle.getValueInToken(from, to, rawPrices)
   )
 
   -- convert usd value to the token quantity
-  -- accouting for the denomination
+  -- accounting for the denomination
   return bint.udiv(
     usdValue * bint("1" .. string.rep("0", to.denomination)),
     toPrice
@@ -1184,14 +1270,9 @@ function oracle.getUSDDenominated(val)
   -- get the count of decimal places after the decimal point
   local fractions = oracle.getFractionsCount(val)
 
-  if fractions < denominator then
-    denominated = denominated .. string.rep("0", denominator - fractions)
-  elseif fractions > denominator then
-    -- get the count of the integer part's digits
-    local wholeDigits = string.len(denominated) - fractions
-
-    denominated = string.sub(denominated, 1, wholeDigits + denominator)
-  end
+  local wholeDigits = string.len(denominated) - fractions
+  denominated = denominated .. string.rep("0", denominator)
+  denominated = string.sub(denominated, 1, wholeDigits + denominator)
 
   return bint(denominated)
 end
