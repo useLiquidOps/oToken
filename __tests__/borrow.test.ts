@@ -266,7 +266,7 @@ describe("Borrowing", () => {
 
     // deposit two times (to not trigger the allowed limit error on minting)
     for (let i = 0; i < 2; i++) {
-      await handle(createMessage({
+     const queueRes = await handle(createMessage({
         Action: "Credit-Notice",
         "X-Action": "Mint",
         Owner: tags["Collateral-Id"],
@@ -275,6 +275,14 @@ describe("Borrowing", () => {
         Quantity: tags["Value-Limit"],
         Recipient: env.Process.Id,
         Sender: testWallet
+      }));
+  
+      // queue response
+      await handle(createMessage({
+        "Queued-User": testWallet,
+        "X-Reference": normalizeTags(
+          getMessageByAction("Add-To-Queue", queueRes.Messages)?.Tags || []
+        )["Reference"]
       }));
     }
 

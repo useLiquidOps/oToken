@@ -1654,6 +1654,12 @@ describe("Reserves tests", () => {
       Recipient: env.Process.Id,
       Sender: wallet
     }));
+    await handle(createMessage({
+      "Queued-User": wallet,
+      "X-Reference": normalizeTags(
+        getMessageByAction("Add-To-Queue", mintRes.Messages)?.Tags || []
+      )["Reference"]
+    }));
 
     // now borrow
     const borrowQty = 40000n;
@@ -1705,6 +1711,13 @@ describe("Reserves tests", () => {
       Quantity: owned.toString(),
       Recipient: env.Process.Id,
       Sender: wallet
+    }));
+
+    await handle(createMessage({
+      "Queued-User": wallet,
+      "X-Reference": normalizeTags(
+        getMessageByAction("Add-To-Queue", repayRes.Messages)?.Tags || []
+      )["Reference"]
     }));
 
     // expect the reserves to contain some the amount the reserve factor dictates

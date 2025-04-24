@@ -30,7 +30,7 @@ describe("Token standard functionalities", () => {
     handle = await setupProcess(env);
 
     // mint some tokens for transfer and balance tests
-    await handle(createMessage({
+    const mintRes = await handle(createMessage({
       Action: "Credit-Notice",
       "X-Action": "Mint",
       Owner: tags["Collateral-Id"],
@@ -39,6 +39,12 @@ describe("Token standard functionalities", () => {
       Quantity: testQty,
       Recipient: env.Process.Id,
       Sender: testWallet
+    }));
+    await handle(createMessage({
+      "Queued-User": testWallet,
+      "X-Reference": normalizeTags(
+        getMessageByAction("Add-To-Queue", mintRes.Messages)?.Tags || []
+      )["Reference"]
     }));
   });
 
@@ -195,7 +201,7 @@ describe("Token standard functionalities", () => {
   it("Returns all wallet balances", async () => {
     // mint some tokens for the other wallet
     const otherWalletBal = "475387"
-    await handle(createMessage({
+    const mintRes = await handle(createMessage({
       Action: "Credit-Notice",
       "X-Action": "Mint",
       Owner: tags["Collateral-Id"],
@@ -204,6 +210,12 @@ describe("Token standard functionalities", () => {
       Quantity: otherWalletBal,
       Recipient: env.Process.Id,
       Sender: recipientWallet
+    }));
+    await handle(createMessage({
+      "Queued-User": recipientWallet,
+      "X-Reference": normalizeTags(
+        getMessageByAction("Add-To-Queue", mintRes.Messages)?.Tags || []
+      )["Reference"]
     }));
 
     const msg = createMessage({ Action: "Balances" });
@@ -975,7 +987,7 @@ describe("Token standard functionalities", () => {
     );
 
     // mint tokens
-    await handle(createMessage({
+    const mintRes = await handle(createMessage({
       Action: "Credit-Notice",
       "X-Action": "Mint",
       Owner: tags["Collateral-Id"],
@@ -984,6 +996,12 @@ describe("Token standard functionalities", () => {
       Quantity: testQty,
       Recipient: env.Process.Id,
       Sender: testWallet
+    }));
+    await handle(createMessage({
+      "Queued-User": testWallet,
+      "X-Reference": normalizeTags(
+        getMessageByAction("Add-To-Queue", mintRes.Messages)?.Tags || []
+      )["Reference"]
     }));
 
     // initiate transfer
