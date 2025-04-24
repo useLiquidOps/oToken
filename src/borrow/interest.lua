@@ -139,7 +139,7 @@ function mod.accrueInterestForUser(address)
   -- parse global borrow index and the user's interest index
   local borrowIndex = bint(BorrowIndex)
   local interestIndex = bint(
-    InterestIndices[address] or ("1" .. string.rep("0", Denomination))
+    InterestIndices[address] or ("1" .. string.rep("0", BorrowIndexDenomination))
   )
 
   -- update borrow balance and interest index for the user

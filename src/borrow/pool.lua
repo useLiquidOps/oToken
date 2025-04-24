@@ -23,15 +23,19 @@ function mod.setup(msg)
   ---@type table<string, string>
   Loans = Loans or {}
 
-  -- user interest indexes (in Bint string)
+  -- borrow index denomination for more precision
+  BorrowIndexDenomination = BorrowIndexDenomination or 18
+
+  -- user interest indexes (in Bint string), denominated
+  -- in the borrow index denomination
   ---@type table<string, string>
   InterestIndices = InterestIndices or {}
 
   -- global borrow index (in Bint string)
   -- the borrow index is always denominated in
-  -- the same unit as the oToken's denomination
+  -- the borrow index denomination
   -- (initialised as 1)
-  BorrowIndex = BorrowIndex or ("1" .. string.rep("0", Denomination))
+  BorrowIndex = BorrowIndex or ("1" .. string.rep("0", BorrowIndexDenomination))
 
   -- last time the global borrow index was updated
   LastBorrowIndexUpdate = msg.Timestamp
