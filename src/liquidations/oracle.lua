@@ -1,3 +1,4 @@
+local assertions = require ".utils.assertions"
 local bint = require ".utils.bint"(1024)
 local utils = require ".utils.utils"
 local json = require "json"
@@ -16,6 +17,11 @@ local mod = {
 -- Initializes the oracle configuration from the spawn message
 ---@type HandlerFunction
 function mod.setup()
+  assert(
+    assertions.isAddress(ao.env.Process.Tags.Oracle),
+    "Invalid oracle id"
+  )
+
   -- oracle process id
   Oracle = Oracle or ao.env.Process.Tags.Oracle
 
@@ -150,7 +156,7 @@ end
 function mod.utils.getFractionsCount(val)
   -- check if there is a fractional part 
   -- by trying to find it with a pattern
-  local fractionalPart = string.match(tostring(val), "%.(.*)")
+  local fractionalPart = string.match(utils.floatToString(val), "%.(.*)")
 
   if not fractionalPart then return 0 end
 
@@ -165,19 +171,14 @@ function mod.utils.getUSDDenominated(val)
   local denominator = mod.usdDenomination
 
   -- remove decimal point
-  local denominated = string.gsub(tostring(val), "%.", "")
+  local denominated = string.gsub(utils.floatToString(val), "%.", "")
 
   -- get the count of decimal places after the decimal point
   local fractions = mod.utils.getFractionsCount(val)
 
-  if fractions < denominator then
-    denominated = denominated .. string.rep("0", denominator - fractions)
-  elseif fractions > denominator then
-    -- get the count of the integer part's digits
-    local wholeDigits = string.len(denominated) - fractions
-
-    denominated = string.sub(denominated, 1, wholeDigits + denominator)
-  end
+  local wholeDigits = string.len(denominated) - fractions
+  denominated = denominated .. string.rep("0", denominator)
+  denominated = string.sub(denominated, 1, wholeDigits + denominator)
 
   return bint(denominated)
 end

@@ -33,7 +33,7 @@ describe("Loan liquidation", () => {
     handle = await setupProcess(env);
 
     // make a borrow
-    await handle(createMessage({
+    const mintRes = await handle(createMessage({
       Action: "Credit-Notice",
       "X-Action": "Mint",
       Owner: tags["Collateral-Id"],
@@ -42,6 +42,12 @@ describe("Loan liquidation", () => {
       Quantity: (loanQty * 2n).toString(),
       Recipient: env.Process.Id,
       Sender: target
+    }));
+    await handle(createMessage({
+      "Queued-User": target,
+      "X-Reference": normalizeTags(
+        getMessageByAction("Add-To-Queue", mintRes.Messages)?.Tags || []
+      )["Reference"]
     }));
     const queueRes = await handle(createMessage({
       Owner: target,
@@ -582,7 +588,7 @@ describe("Position liquidation", () => {
     handle = await setupProcess(envWithFriend);
 
     // make borrows
-    await handle(createMessage({
+    const mintRes = await handle(createMessage({
       Action: "Credit-Notice",
       "X-Action": "Mint",
       Owner: tags["Collateral-Id"],
@@ -592,9 +598,15 @@ describe("Position liquidation", () => {
       Recipient: env.Process.Id,
       Sender: target
     }));
+    await handle(createMessage({
+      "Queued-User": target,
+      "X-Reference": normalizeTags(
+        getMessageByAction("Add-To-Queue", mintRes.Messages)?.Tags || []
+      )["Reference"]
+    }));
 
     const otherLender = generateArweaveAddress();
-    await handle(createMessage({
+    const otherMintRes = await handle(createMessage({
       Action: "Credit-Notice",
       "X-Action": "Mint",
       Owner: tags["Collateral-Id"],
@@ -604,6 +616,12 @@ describe("Position liquidation", () => {
       Recipient: env.Process.Id,
       Sender: otherLender
     }))
+    await handle(createMessage({
+      "Queued-User": otherLender,
+      "X-Reference": normalizeTags(
+        getMessageByAction("Add-To-Queue", otherMintRes.Messages)?.Tags || []
+      )["Reference"]
+    }));
   });
 
   it("Only handles position liquidation from a friend process", async () => {

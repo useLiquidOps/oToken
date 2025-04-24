@@ -3,64 +3,68 @@ local bint = require ".utils.bint"(1024)
 
 local mod = {}
 
+-- This handler can be called from the controller to update the oToken configuration
+-- Note: reserved for future use in a governance model
 ---@type HandlerFunction
 function mod.update(msg)
   -- get and parse incoming config updates
-  local oracle = msg.Tags.Oracle
-  local collateralFactor = tonumber(msg.Tags["Collateral-Factor"])
-  local liquidationThreshold = tonumber(msg.Tags["Liquidation-Threshold"])
-  local valueLimit = msg.Tags["Value-Limit"]
-  local oracleDelayTolerance = tonumber(msg.Tags["Oracle-Delay-Tolerance"])
-  local reserveFactor = tonumber(msg.Tags["Reserve-Factor"])
+  local newOracle = msg.Tags.Oracle
+  local newCollateralFactor = tonumber(msg.Tags["Collateral-Factor"])
+  local newLiquidationThreshold = tonumber(msg.Tags["Liquidation-Threshold"])
+  local newValueLimit = msg.Tags["Value-Limit"]
+  local newOracleDelayTolerance = tonumber(msg.Tags["Oracle-Delay-Tolerance"])
+  local newReserveFactor = tonumber(msg.Tags["Reserve-Factor"])
 
   -- validate new config values, update
   assert(
-    not oracle or assertions.isAddress(oracle),
+    not newOracle or assertions.isAddress(newOracle),
     "Invalid oracle ID"
   )
   assert(
-    not collateralFactor or assertions.isPercentage(collateralFactor),
+    not newCollateralFactor or assertions.isPercentage(newCollateralFactor),
     "Invalid collateral factor"
   )
   assert(
-    not liquidationThreshold or assertions.isPercentage(liquidationThreshold),
+    not newLiquidationThreshold or assertions.isPercentage(newLiquidationThreshold),
     "Invalid liquidation threshold"
   )
   assert(
-    not reserveFactor or assertions.isPercentage(reserveFactor),
+    not newReserveFactor or assertions.isPercentage(newReserveFactor),
     "Invalid reserve factor"
   )
+  assert(
+    (newLiquidationThreshold or LiquidationThreshold) > (newCollateralFactor or CollateralFactor),
+    "Liquidation threshold must be greater than the collateral factor"
+  )
 
-  if valueLimit then
+  if newValueLimit then
     assert(
-      assertions.isTokenQuantity(valueLimit),
+      assertions.isTokenQuantity(newValueLimit),
       "Invalid value limit"
     )
     assert(
-      bint.ult(bint.zero(), bint(valueLimit)),
+      bint.ult(bint.zero(), bint(newValueLimit)),
       "Value limit must be higher than zero"
     )
-
-    ValueLimit = valueLimit
   end
 
-  if oracleDelayTolerance then
+  if newOracleDelayTolerance then
     assert(
-      oracleDelayTolerance >= 0,
+      newOracleDelayTolerance >= 0,
       "Oracle delay tolerance has to be >= 0"
     )
     assert(
-      oracleDelayTolerance // 1 == oracleDelayTolerance,
+      newOracleDelayTolerance // 1 == newOracleDelayTolerance,
       "Oracle delay tolerance has to be a whole number"
     )
-
-    MaxOracleDelay = oracleDelayTolerance
   end
 
-  if oracle then Oracle = oracle end
-  if collateralFactor then CollateralFactor = collateralFactor end
-  if liquidationThreshold then LiquidationThreshold = liquidationThreshold end
-  if reserveFactor then ReserveFactor = reserveFactor end
+  if newOracle then Oracle = newOracle end
+  if newCollateralFactor then CollateralFactor = newCollateralFactor end
+  if newLiquidationThreshold then LiquidationThreshold = newLiquidationThreshold end
+  if newReserveFactor then ReserveFactor = newReserveFactor end
+  if newValueLimit then ValueLimit = newValueLimit end
+  if newOracleDelayTolerance then MaxOracleDelay = newOracleDelayTolerance end
 
   msg.reply({
     Oracle = Oracle,
@@ -68,7 +72,7 @@ function mod.update(msg)
     ["Liquidation-Threshold"] = tostring(LiquidationThreshold),
     ["Value-Limit"] = ValueLimit,
     ["Oracle-Delay-Tolerance"] = tostring(MaxOracleDelay),
-    ["Reserve-Factor"] = tostring(reserveFactor)
+    ["Reserve-Factor"] = tostring(ReserveFactor)
   })
 end
 

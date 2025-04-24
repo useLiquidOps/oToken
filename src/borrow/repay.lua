@@ -33,7 +33,7 @@ function repay.handler(msg)
   -- refund the sender, if necessary
   if not bint.eq(refundQty, bint.zero()) then
     ao.send({
-      Target = msg.From,
+      Target = CollateralID,
       Action = "Transfer",
       Quantity = tostring(refundQty),
       Recipient = msg.Tags.Sender
@@ -65,20 +65,24 @@ end
 ---@param err unknown
 function repay.error(msg, _, err)
   local prettyError, rawError = utils.prettyError(err)
+  local sender = msg.Tags.Sender
 
   ao.send({
-    Target = msg.From,
+    Target = CollateralID,
     Action = "Transfer",
     Quantity = msg.Tags.Quantity,
-    Recipient = msg.Tags.Sender
+    Recipient = sender
   })
-  ao.send({
-    Target = msg.Tags.Sender,
-    Action = "Repay-Error",
-    Error = prettyError,
-    ["Raw-Error"] = rawError,
-    ["Refund-Quantity"] = msg.Tags.Quantity
-  })
+
+  if assertions.isAddress(sender) then
+    ao.send({
+      Target = sender,
+      Action = "Repay-Error",
+      Error = prettyError,
+      ["Raw-Error"] = rawError,
+      ["Refund-Quantity"] = msg.Tags.Quantity
+    })
+  end
 end
 
 -- Check if a repay can be executed with the given params.
@@ -158,12 +162,14 @@ function repay.repayToPool(target, quantity, reserve)
     -- quantity after paying the interests, we need to reset
     -- the quantity owned by the target and refund the remainder
     if bint.ult(borrowBalance, remainingQty) then
-      Loans[target] = "0"
+      Loans[target] = nil
       refundQty = remainingQty - borrowBalance
     else
       -- the outstanding loan is more than or equal to the
       -- remaining repay quantity, so we just deduct it
-      Loans[target] = tostring(borrowBalance - remainingQty)
+      local newBorrowBalance = borrowBalance - remainingQty
+
+      Loans[target] = bint.ult(zero, newBorrowBalance) and tostring(newBorrowBalance) or nil
     end
   end
 

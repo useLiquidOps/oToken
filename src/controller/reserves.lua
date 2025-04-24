@@ -3,6 +3,8 @@ local bint = require ".utils.bint"(1024)
 
 local mod = {}
 
+-- Allows withdrawing the tokens in the reserves from the controller
+-- Note: reserved for future use in a governance model
 ---@type HandlerFunction
 function mod.withdraw(msg)
   assert(
@@ -35,6 +37,8 @@ function mod.withdraw(msg)
   msg.reply({ ["Total-Reserves"] = Reserves })
 end
 
+-- Allows deploying the tokens from the reserves into the pool by the controller
+-- Note: reserved for future use in a governance model
 ---@type HandlerFunction
 function mod.deploy(msg)
   assert(

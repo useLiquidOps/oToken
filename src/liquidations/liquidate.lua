@@ -20,8 +20,18 @@ function mod.liquidateBorrow(msg)
   -- the liquidator
   local liquidator = msg.Tags["X-Liquidator"]
 
-  -- liquidation tartget
+  assert(
+    assertions.isAddress(liquidator),
+    "Invalid liquidator address"
+  )
+
+  -- liquidation target
   local target = msg.Tags["X-Liquidation-Target"]
+
+  assert(
+    assertions.isAddress(target),
+    "Invalid liquidation target address"
+  )
 
   -- check if a loan can be repaid for the target
   assert(
@@ -35,9 +45,29 @@ function mod.liquidateBorrow(msg)
     "The user has less tokens loaned than repaid"
   )
 
+  -- validate reward market
+  local rewardMarket = msg.Tags["X-Reward-Market"]
+
+  assert(
+    assertions.isAddress(rewardMarket),
+    "Invalid reward market"
+  )
+
+  -- validate sender
+  local sender = msg.Tags.Sender
+
+  assert(
+    assertions.isAddress(sender),
+    "Invalid liquidation sender"
+  )
+  assert(
+    assertions.isTokenQuantity(msg.Tags["X-Reward-Quantity"]),
+    "Invalid reward quantity"
+  )
+
   -- call the collateral process to transfer out the reward
   local liquidatePos = ao.send({
-    Target = msg.Tags["X-Reward-Market"],
+    Target = rewardMarket,
     Action = "Liquidate-Position",
     Quantity = msg.Tags["X-Reward-Quantity"],
     Liquidator = liquidator,
@@ -62,7 +92,7 @@ function mod.liquidateBorrow(msg)
   -- the exact quantity to be repaid)
   if not bint.eq(refundQty, bint.zero()) then
     ao.send({
-      Target = msg.From,
+      Target = CollateralID,
       Action = "Transfer",
       Quantity = tostring(refundQty),
       Recipient = liquidator
@@ -71,7 +101,7 @@ function mod.liquidateBorrow(msg)
 
   -- reply to the controller
   ao.send({
-    Target = msg.Tags.Sender,
+    Target = sender,
     Action = "Liquidate-Borrow-Confirmation",
     ["Liquidated-Quantity"] = tostring(actualRepaidQty),
     Liquidator = liquidator,
@@ -87,23 +117,28 @@ end
 function mod.refund(msg, _, err)
   local prettyError, rawError = utils.prettyError(err)
   local liquidator = msg.Tags["X-Liquidator"]
+  local sender = msg.Tags.Sender
 
   -- refund
-  ao.send({
-    Target = msg.From,
-    Action = "Transfer",
-    Quantity = msg.Tags.Quantity,
-    Recipient = liquidator
-  })
+  if assertions.isTokenQuantity(msg.Tags.Quantity) then
+    ao.send({
+      Target = CollateralID,
+      Action = "Transfer",
+      Quantity = msg.Tags.Quantity,
+      Recipient = liquidator
+    })
+  end
 
   -- reply to the controller with an error
-  ao.send({
-    Target = msg.Tags.Sender,
-    Action = "Liquidate-Borrow-Error",
-    Error = prettyError,
-    ["Raw-Error"] = rawError,
-    ["Liquidation-Reference"] = msg.Tags["X-Liquidation-Reference"]
-  })
+  if assertions.isAddress(sender) then
+    ao.send({
+      Target = sender,
+      Action = "Liquidate-Borrow-Error",
+      Error = prettyError,
+      ["Raw-Error"] = rawError,
+      ["Liquidation-Reference"] = msg.Tags["X-Liquidation-Reference"]
+    })
+  end
 end
 
 -- Transfers out the position to the liquidator
@@ -135,6 +170,11 @@ function mod.liquidatePosition(msg)
   -- liquidation target
   local target = msg.Tags["Liquidation-Target"]
 
+  assert(
+    assertions.isAddress(target),
+    "Invalid liquidation target address"
+  )
+
   -- check if the user owns enough tokens for this transfer
   -- by checking the if the value of the supplied quantity
   -- in terms of the oToken is less than or equal to the
@@ -159,7 +199,7 @@ function mod.liquidatePosition(msg)
 
   -- get supplied quantity value
   -- (total supply / total pooled) * incoming
-  local qtyValueInoToken = bint.udiv(
+  local qtyValueInoToken = utils.udiv_roundup(
     totalSupply * quantity,
     totalPooled
   )

@@ -39,11 +39,6 @@ function mod.gate(msg)
   -- user interacting with the protocol
   local sender = msg.From
 
-  -- if this was a transfer, the sender needs to be updated
-  if msg.Tags.Action == "Credit-Notice" then
-    sender = msg.Tags.Sender
-  end
-
   -- validate that the user cooldown is over
   assert(
     (Cooldowns[sender] or 0) <= msg["Block-Height"],
@@ -58,31 +53,11 @@ end
 -- if the user is on cooldown
 ---@param msg Message
 function mod.refund(msg)
-  -- if this was a transfer, we refund it and send the error to the sender
-  if msg.Tags.Action == "Credit-Notice" then
-    local sender = msg.Tags.Sender
-
-    -- refund
-    ao.send({
-      Target = msg.From,
-      Action = "Transfer",
-      Quantity = msg.Tags.Quantity,
-      Recipient = sender
-    })
-
-    -- send error
-    ao.send({
-      Target = sender,
-      Action = (msg.Tags["X-Action"] or "Unknown") .. "-Error",
-      Error = "Sender is on cooldown for " .. (Cooldowns[sender] - msg["Block-Height"]) .. " more block(s)"
-    })
-  else
-    -- just reply to the message with an error
-    msg.reply({
-      Action = (msg.Tags.Action or "Unknown") .. "-Error",
-      Error = "Sender is on cooldown for " .. (Cooldowns[msg.From] - msg["Block-Height"]) .. " more block(s)"
-    })
-  end
+  -- reply with the cooldown error
+  msg.reply({
+    Action = (msg.Tags.Action or "Unknown") .. "-Error",
+    Error = "Sender is on cooldown for " .. (Cooldowns[msg.From] - msg["Block-Height"]) .. " more block(s)"
+  })
 
   -- stop execution
   return "break"
