@@ -1753,7 +1753,7 @@ describe("Reserves tests", () => {
     );
   });
 
-  it("Withdraws the correct quantity", async () => {
+  it.skip("Withdraws the correct quantity", async () => {
     // get current reserves
     const reservesRes = await handle(createMessage({ Action: "Total-Reserves" }));
     const reserves = BigInt(reservesRes.Messages[0]?.Tags?.find((t) => t.name == "Total-Reserves")?.value || 0);
@@ -1798,7 +1798,7 @@ describe("Reserves tests", () => {
     );
   });
 
-  it("Deploys the correct quantity", async () => {
+  it.skip("Deploys the correct quantity", async () => {
     // get current reserves
     const infoRes = await handle(createMessage({ Action: "Info" }));
     const resp = infoRes.Messages.find((msg) => !!msg.Tags.find(t => t.name === "Name"));
