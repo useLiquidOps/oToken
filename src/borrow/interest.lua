@@ -96,7 +96,7 @@ function mod.accrueInterest(msg)
   ReservesRemainder = ReservesRemainder or "0"
 
   -- update the reserves
-  local reservesUpdate, remainder = bint.udiv(
+  local reservesUpdate, remainder = bint.udivmod(
     interestAccrued * bint(ReserveFactor) + bint(ReservesRemainder),
     bint(100)
   )
