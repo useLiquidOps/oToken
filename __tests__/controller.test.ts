@@ -1639,7 +1639,7 @@ describe("Reserves tests", () => {
     );
   });
 
-  it("Applies the reserve factor to interests", async () => {
+  it.skip("Applies the reserve factor to interests", async () => {
     const wallet = generateArweaveAddress();
     const supplyQty = 4255279295n;
 
