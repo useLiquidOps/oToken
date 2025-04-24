@@ -11,12 +11,13 @@ function mod.getUnderlyingWorth(qty)
   local totalPooled = bint(Cash) + bint(TotalBorrows)
   local totalSupply = bint(TotalSupply)
 
-  if bint.eq(totalSupply, bint.zero()) then return bint.one() end
-
   -- if the amount of tokens deposited is equal to the
   -- total supply of oTokens, then the conversion rate
   -- is 1:1
-  if bint.eq(totalPooled, totalSupply) then return qty end
+  if
+    bint.eq(totalPooled, totalSupply) or
+    bint.eq(totalSupply, bint.zero())
+  then return qty end
 
   -- if the total pooled and the total supply is not
   -- the same, then the reward qty will be higher
