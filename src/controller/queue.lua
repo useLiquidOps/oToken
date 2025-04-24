@@ -9,7 +9,7 @@ local mod = {}
 function mod.setQueued(address, queued)
   -- try to update the queue
   local msg = ao.send({
-    Target = ao.env.Process.Owner,
+    Target = Controller,
     Action = queued and "Add-To-Queue" or "Remove-From-Queue",
     User = address
   })

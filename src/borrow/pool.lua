@@ -40,7 +40,12 @@ function mod.setup(msg)
   InitRate = InitRate or tonumber(ao.env.Process.Tags["Init-Rate"]) or 0
 
   -- other oToken processes
-  -- format: key - friend collateral ticker, value - friend process
+  -- a friend consists of the following fields:
+  -- - id: string (this is the address of the collateral supported by LiquidOps)
+  -- - ticker: string (the ticker of the collateral)
+  -- - oToken: string (the address of the oToken process for the collateral)
+  -- - denomination: integer (the denomination of the collateral)
+  -- this corresponds with the tokens list in the controller (minus the current oToken instance)
   ---@type Friend[]
   Friends = Friends or json.decode(ao.env.Process.Tags.Friends or "[]") or {}
 
@@ -57,7 +62,7 @@ function mod.setup(msg)
   Reserves = Reserves or "0"
 end
 
--- This syncs the global timestamp anc block using the current message
+-- This syncs the global timestamp and block using the current message
 ---@type HandlerFunction
 function mod.syncTimestamp(msg)
   Timestamp = msg.Timestamp
