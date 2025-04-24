@@ -1,16 +1,22 @@
+local assertions = require ".utils.assertions"
 local json = require "json"
 
 local mod = {}
 
 ---@type HandlerFunction
 function mod.setup(msg)
+  assert(
+    assertions.isAddress(ao.env.Process.Tags["Collateral-Id"]),
+    "Invalid collateral id"
+  )
+
   -- token that can be lent/borrowed
   CollateralID = CollateralID or ao.env.Process.Tags["Collateral-Id"]
 
   -- collateralization factor
   CollateralFactor = CollateralFactor or tonumber(ao.env.Process.Tags["Collateral-Factor"]) or 50
 
-  -- liquidation threshold (should be lower than the collateral factor)
+  -- liquidation threshold (should be greater than the collateral factor)
   LiquidationThreshold = LiquidationThreshold or tonumber(ao.env.Process.Tags["Liquidation-Threshold"]) or CollateralFactor + 5
 
   -- available tokens to be lent
@@ -47,13 +53,18 @@ function mod.setup(msg)
   InitRate = InitRate or tonumber(ao.env.Process.Tags["Init-Rate"]) or 0
 
   -- other oToken processes
-  -- format: key - friend collateral ticker, value - friend process
+  -- a friend consists of the following fields:
+  -- - id: string (this is the address of the collateral supported by LiquidOps)
+  -- - ticker: string (the ticker of the collateral)
+  -- - oToken: string (the address of the oToken process for the collateral)
+  -- - denomination: integer (the denomination of the collateral)
+  -- this corresponds with the tokens list in the controller (minus the current oToken instance)
   ---@type Friend[]
-  Friends = Friends or json.decode(ao.env.Process.Tags.Friends) or {}
+  Friends = Friends or json.decode(ao.env.Process.Tags.Friends or "[]") or {}
 
   -- limit the value of an interaction
   -- (in units of the collateral)
-  ValueLimit = ValueLimit or ao.env.Process.Tags["Value-Limit"]
+  ValueLimit = ValueLimit or ao.env.Process.Tags["Value-Limit"] or "0"
 
   -- global current timestamp and block for the oracle
   Timestamp = msg.Timestamp
@@ -64,7 +75,7 @@ function mod.setup(msg)
   Reserves = Reserves or "0"
 end
 
--- This syncs the global timestamp anc block using the current message
+-- This syncs the global timestamp and block using the current message
 ---@type HandlerFunction
 function mod.syncTimestamp(msg)
   Timestamp = msg.Timestamp

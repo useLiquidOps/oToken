@@ -32,13 +32,14 @@ function mod.position(address)
     -- base data for calculations
     local balance = bint(Balances[address])
     local totalPooled = bint(Cash) + bint(TotalBorrows)
+    local totalSupply = bint(TotalSupply)
 
     -- the value of the balance in terms of the underlying asset
     -- (the total collateral for the user, represented by the oToken)
-    res.collateralization = bint.udiv(
+    res.collateralization = not bint.eq(totalSupply, zero) and bint.udiv(
       totalPooled * balance,
-      bint(TotalSupply)
-    )
+      totalSupply
+    ) or zero
 
     -- local borrow capacity in units of the underlying asset
     res.capacity = bint.udiv(

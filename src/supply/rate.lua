@@ -3,7 +3,7 @@ local bint = require ".utils.bint"(1024)
 
 local mod = {}
 
--- Calculate how much the provided oToken quantity is wroth
+-- Calculate how much the provided oToken quantity is worth
 -- in terms of the underlying asset (collateral)
 ---@param qty Bint The quantity to get the value for
 function mod.getUnderlyingWorth(qty)
@@ -12,9 +12,12 @@ function mod.getUnderlyingWorth(qty)
   local totalSupply = bint(TotalSupply)
 
   -- if the amount of tokens deposited is equal to the
-  -- total supply of oTokens, than the conversion rate
+  -- total supply of oTokens, then the conversion rate
   -- is 1:1
-  if bint.eq(totalPooled, totalSupply) then return qty end
+  if
+    bint.eq(totalPooled, totalSupply) or
+    bint.eq(totalSupply, bint.zero())
+  then return qty end
 
   -- if the total pooled and the total supply is not
   -- the same, then the reward qty will be higher

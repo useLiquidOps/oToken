@@ -49,21 +49,14 @@ function mod.supplyRate(msg)
   )
 
   -- calculate supply interest rate
-  local le = math.log(borrowRateFloat / rateMul + 1)
-  local utilizationRate = utils.bintToFloat(
-    bint.udiv(
-      bint(TotalBorrows),
-      bint(TotalSupply)
-    ),
-    CollateralDenomination
-  )
+  local le = math.log(borrowRateFloat + 1)
+  local totalBorrows = tonumber(TotalBorrows)
+  local utilizationRate = totalBorrows / (tonumber(Cash) + totalBorrows)
   local supplyRate = math.exp(
     le * (1 - ReserveFactor / 100) * utilizationRate
   ) - 1
 
-  msg.reply({
-    ["Supply-Rate"] = tostring(supplyRate)
-  })
+  msg.reply({ ["Supply-Rate"] = tostring(supplyRate) })
 end
 
 -- Accrues the accumulated interest since the last update. 

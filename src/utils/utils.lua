@@ -54,7 +54,7 @@ function utils.matchesPattern(pattern, value, msg)
   return false
 end
 
--- Given a message and a spec, returns whetehr there is a spec match
+-- Given a message and a spec, returns whether there is a spec match
 ---@param msg Message The message to check for in the spec
 ---@param spec Spec The spec to check for in the message
 ---@return boolean
@@ -330,7 +330,7 @@ function utils.values(t)
   return values
 end
 
--- Turn a floating point number
+-- Turn a floating point number into a bigint, scaled by an optional multiplier (default 100000)
 ---@param raw number Value to represent as a bigint
 ---@param floatMul number? Optional multiplier
 function utils.floatBintRepresentation(raw, floatMul)
@@ -355,6 +355,12 @@ function utils.prettyError(err)
   return string.gsub(rawError, "%[[%w_.\" ]*%]:%d*: ", ""), rawError
 end
 
+-- Convert a lua number to a string
+---@param val number The value to convert
+function utils.floatToString(val)
+  return string.format("%.17f", val):gsub("0+$", ""):gsub("%.$", "")
+end
+
 -- Convert a biginteger with a denomination to a float
 ---@param val Bint Bigint value
 ---@param denomination number Denomination
@@ -374,6 +380,17 @@ function utils.bintToFloat(val, denomination)
   local fractional_part = string.sub(stringVal, len - denomination + 1)
 
   return tonumber(integer_part .. "." .. fractional_part)
+end
+
+-- Perform unsigned integer division, but rounding upwards
+---@param x Bint
+---@param y Bint
+---@return Bint
+function utils.udiv_roundup(x, y)
+  return bint.udiv(
+    x + y - bint.one(),
+    y
+  )
 end
 
 return utils

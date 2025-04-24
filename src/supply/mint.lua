@@ -71,7 +71,7 @@ function mint.error(msg, _, err)
   local prettyError, rawError = utils.prettyError(err)
 
   ao.send({
-    Target = msg.From,
+    Target = CollateralID,
     Action = "Transfer",
     Quantity = msg.Tags.Quantity,
     Recipient = msg.Tags.Sender

@@ -89,7 +89,7 @@ describe("Minting and providing", () => {
 
   it("Does not handle invalid token quantities", async () => {
     const invalidQty = "-10000000";
-    const res = await handle(createMessage({
+    const queueRes = await handle(createMessage({
       Action: "Credit-Notice",
       "X-Action": "Mint",
       Owner: tags["Collateral-Id"],
@@ -98,6 +98,31 @@ describe("Minting and providing", () => {
       Quantity: invalidQty,
       Recipient: env.Process.Id,
       Sender: testWallet
+    }));
+
+    expect(queueRes.Messages).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          Target: env.Process.Owner,
+          Tags: expect.arrayContaining([
+            expect.objectContaining({
+              name: "Action",
+              value: "Add-To-Queue"
+            }),
+            expect.objectContaining({
+              name: "User",
+              value: testWallet
+            })
+          ])
+        })
+      ])
+    );
+
+    const res = await handle(createMessage({
+      "Queued-User": testWallet,
+      "X-Reference": normalizeTags(
+        getMessageByAction("Add-To-Queue", queueRes.Messages)?.Tags || []
+      )["Reference"]
     }));
 
     expect(res.Messages).toEqual(
@@ -137,6 +162,19 @@ describe("Minting and providing", () => {
               value: invalidQty
             })
           ])
+        }),
+        expect.objectContaining({
+          Target: env.Process.Owner,
+          Tags: expect.arrayContaining([
+            expect.objectContaining({
+              name: "Action",
+              value: "Remove-From-Queue"
+            }),
+            expect.objectContaining({
+              name: "User",
+              value: testWallet
+            })
+          ])
         })
       ])
     );
@@ -144,7 +182,7 @@ describe("Minting and providing", () => {
 
   it("Does not handle mint quantity above the value limit", async () => {
     const depositQty = (BigInt(tags["Value-Limit"]) + 1n).toString();
-    const res = await handle(createMessage({
+    const queueRes = await handle(createMessage({
       Action: "Credit-Notice",
       "X-Action": "Mint",
       Owner: tags["Collateral-Id"],
@@ -153,6 +191,31 @@ describe("Minting and providing", () => {
       Quantity: depositQty,
       Recipient: env.Process.Id,
       Sender: testWallet
+    }));
+
+    expect(queueRes.Messages).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          Target: env.Process.Owner,
+          Tags: expect.arrayContaining([
+            expect.objectContaining({
+              name: "Action",
+              value: "Add-To-Queue"
+            }),
+            expect.objectContaining({
+              name: "User",
+              value: testWallet
+            })
+          ])
+        })
+      ])
+    );
+
+    const res = await handle(createMessage({
+      "Queued-User": testWallet,
+      "X-Reference": normalizeTags(
+        getMessageByAction("Add-To-Queue", queueRes.Messages)?.Tags || []
+      )["Reference"]
     }));
 
     expect(res.Messages).toEqual(
@@ -192,13 +255,26 @@ describe("Minting and providing", () => {
               value: depositQty
             })
           ])
+        }),
+        expect.objectContaining({
+          Target: env.Process.Owner,
+          Tags: expect.arrayContaining([
+            expect.objectContaining({
+              name: "Action",
+              value: "Remove-From-Queue"
+            }),
+            expect.objectContaining({
+              name: "User",
+              value: testWallet
+            })
+          ])
         })
       ])
     );
   });
 
   it("Mints the correct quantity on initial supply", async () => {
-    const res = await handle(createMessage({
+    const queueRes = await handle(createMessage({
       Action: "Credit-Notice",
       "X-Action": "Mint",
       Owner: tags["Collateral-Id"],
@@ -207,6 +283,31 @@ describe("Minting and providing", () => {
       Quantity: testQty,
       Recipient: env.Process.Id,
       Sender: testWallet
+    }));
+
+    expect(queueRes.Messages).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          Target: env.Process.Owner,
+          Tags: expect.arrayContaining([
+            expect.objectContaining({
+              name: "Action",
+              value: "Add-To-Queue"
+            }),
+            expect.objectContaining({
+              name: "User",
+              value: testWallet
+            })
+          ])
+        })
+      ])
+    );
+
+    const res = await handle(createMessage({
+      "Queued-User": testWallet,
+      "X-Reference": normalizeTags(
+        getMessageByAction("Add-To-Queue", queueRes.Messages)?.Tags || []
+      )["Reference"]
     }));
 
     expect(res.Messages).toEqual(
@@ -225,6 +326,19 @@ describe("Minting and providing", () => {
             expect.objectContaining({
               name: "Supplied-Quantity",
               value: testQty
+            })
+          ])
+        }),
+        expect.objectContaining({
+          Target: env.Process.Owner,
+          Tags: expect.arrayContaining([
+            expect.objectContaining({
+              name: "Action",
+              value: "Remove-From-Queue"
+            }),
+            expect.objectContaining({
+              name: "User",
+              value: testWallet
             })
           ])
         })
@@ -254,7 +368,7 @@ describe("Redeeming and burning", () => {
 
   beforeEach(async () => {
     handle = await setupProcess(env);
-    await handle(createMessage({
+    const queueRes = await handle(createMessage({
       Action: "Credit-Notice",
       "X-Action": "Mint",
       Owner: tags["Collateral-Id"],
@@ -263,6 +377,12 @@ describe("Redeeming and burning", () => {
       Quantity: testQty,
       Recipient: env.Process.Id,
       Sender: testWallet
+    }));
+    await handle(createMessage({
+      "Queued-User": testWallet,
+      "X-Reference": normalizeTags(
+        getMessageByAction("Add-To-Queue", queueRes.Messages)?.Tags || []
+      )["Reference"]
     }));
   });
 
@@ -494,7 +614,7 @@ describe("Redeeming and burning", () => {
     const valueLimit = BigInt(tags["Value-Limit"]);
 
     for (let i = 0; i < 2; i++) {
-      await handle(createMessage({
+      const queueRes = await handle(createMessage({
         Action: "Credit-Notice",
         "X-Action": "Mint",
         Owner: tags["Collateral-Id"],
@@ -503,6 +623,12 @@ describe("Redeeming and burning", () => {
         Quantity: tags["Value-Limit"],
         Recipient: env.Process.Id,
         Sender: env.Process.Owner
+      }));
+      await handle(createMessage({
+        "Queued-User": env.Process.Owner,
+        "X-Reference": normalizeTags(
+          getMessageByAction("Add-To-Queue", queueRes.Messages)?.Tags || []
+        )["Reference"]
       }));
     }
 
@@ -703,7 +829,7 @@ describe("Price and underlying asset value, supplies after initial provide", () 
 
   beforeEach(async () => {
     handle = await setupProcess(env);
-    await handle(createMessage({
+    const queueRes = await handle(createMessage({
       Action: "Credit-Notice",
       "X-Action": "Mint",
       Owner: tags["Collateral-Id"],
@@ -712,6 +838,12 @@ describe("Price and underlying asset value, supplies after initial provide", () 
       Quantity: testQty,
       Recipient: env.Process.Id,
       Sender: testWallet
+    }));
+    await handle(createMessage({
+      "Queued-User": testWallet,
+      "X-Reference": normalizeTags(
+        getMessageByAction("Add-To-Queue", queueRes.Messages)?.Tags || []
+      )["Reference"]
     }));
   });
 

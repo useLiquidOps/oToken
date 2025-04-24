@@ -81,7 +81,20 @@ local function setup_handlers()
   Handlers.add(
     "supply-mint-refund-foreign-token",
     function (msg)
-      return msg.Tags.Action == "Credit-Notice" and msg.From ~= CollateralID
+      if msg.Tags.Action ~= "Credit-Notice" then
+        return false -- not a token transfer
+      end
+      if msg.From ~= CollateralID then
+          return true -- unknown token
+      end
+      if utils.includes(msg.Tags["X-Action"], {
+          "Repay",
+          "Mint",
+          "Liquidate-Borrow"
+        }) then
+        return false -- used by other actions so keep
+      end
+      return true -- unknow tag
     end,
     mint.invalidTokenRefund
   )
@@ -108,17 +121,17 @@ local function setup_handlers()
   -- communication with the controller
   Handlers.add(
     "controller-updater",
-    { From = ao.env.Process.Owner, Action = "Update" },
+    { From = Controller, Action = "Update" },
     updater
   )
   Handlers.add(
     "controller-friend-add",
-    { From = ao.env.Process.Owner, Action = "Add-Friend" },
+    { From = Controller, Action = "Add-Friend" },
     friend.add
   )
   Handlers.add(
     "controller-friend-remove",
-    { From = ao.env.Process.Owner, Action = "Remove-Friend" },
+    { From = Controller, Action = "Remove-Friend" },
     friend.remove
   )
   Handlers.add(
@@ -131,9 +144,11 @@ local function setup_handlers()
     Handlers.utils.hasMatchingTag("Action", "Total-Reserves"),
     function (msg) msg.reply({ ["Total-Reserves"] = Reserves }) end
   )
+
+  -- Reserved for future use in a governance model
   Handlers.add(
     "controller-config-update",
-    { From = ao.env.Process.Owner, Action = "Update-Config" },
+    { From = Controller, Action = "Update-Config" },
     config.update
   )
 
@@ -142,7 +157,7 @@ local function setup_handlers()
     pattern = {
       From = CollateralID,
       Action = "Credit-Notice",
-      Sender = ao.env.Process.Owner,
+      Sender = Controller,
       ["X-Action"] = "Liquidate-Borrow"
     },
     handle = liquidate.liquidateBorrow,
@@ -154,14 +169,17 @@ local function setup_handlers()
     liquidate.liquidatePosition
   )
 
+  -- Reserved for future use in a governance model
   Handlers.add(
     "controller-reserves-withdraw",
-    { From = ao.env.Process.Owner, Action = "Withdraw-From-Reserves" },
+    { From = Controller, Action = "Withdraw-From-Reserves" },
     reserves.withdraw
   )
+
+  -- Reserved for future use in a governance model
   Handlers.add(
     "controller-reserves-deploy",
-    { From = ao.env.Process.Owner, Action = "Deploy-From-Reserves" },
+    { From = Controller, Action = "Deploy-From-Reserves" },
     reserves.deploy
   )
 
@@ -209,7 +227,7 @@ local function setup_handlers()
       Action = "Credit-Notice",
       ["X-Action"] = "Repay"
     },
-    handle = repay.handler,
+    handle = queue.useQueue(repay.handler),
     errorHandler = repay.error
   })
   Handlers.add(
@@ -235,7 +253,7 @@ local function setup_handlers()
       Action = "Credit-Notice",
       ["X-Action"] = "Mint"
     },
-    handle = mint.handler,
+    handle = queue.useQueue(mint.handler),
     errorHandler = mint.error
   })
   Handlers.add(
@@ -301,13 +319,16 @@ function process.handle(msg, env)
     if msg.From ~= ao.id then
       msg.reply({
         Target = msg.From,
-        Action = (msg.Action and msg.Action or "Unknown") .. "-Error",
+        Action = (msg.Action or "Unknown") .. "-Error",
         Error = "Message or assignment not trusted"
       })
     end
 
     return ao.result()
   end
+
+  -- the controller is the process spawner
+  Controller = Controller or ao.env.Process.Owner
 
   -- add handlers
   setup_handlers()
@@ -317,11 +338,12 @@ function process.handle(msg, env)
   local _, status, result = coroutine.resume(co)
 
   table.insert(Handlers.coroutines, co)
-  for i, x in ipairs(Handlers.coroutines) do
-    if coroutine.status(x) == "dead" then
-      table.remove(Handlers.coroutines, i)
-    end
-  end
+  Handlers.coroutines = utils.filter(
+    function (x)
+      return coroutine.status(x) ~= "dead"
+    end,
+    Handlers.coroutines
+  )
 
   if not status then
     -- call default error handler
