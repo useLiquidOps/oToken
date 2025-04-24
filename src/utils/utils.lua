@@ -358,7 +358,7 @@ end
 -- Convert a lua number to a string
 ---@param val number The value to convert
 function utils.floatToString(val)
-  return string.format("%.17g", val)
+  return string.format("%.17f", val):gsub("0+$", ""):gsub("%.$", "")
 end
 
 -- Convert a biginteger with a denomination to a float

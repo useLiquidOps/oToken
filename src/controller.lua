@@ -1199,5 +1199,5 @@ end
 -- Convert a lua number to a string
 ---@param val number The value to convert
 function oracle.floatToString(val)
-  return string.format("%.17g", val)
+  return string.format("%.17f", val):gsub("0+$", ""):gsub("%.$", "")
 end
