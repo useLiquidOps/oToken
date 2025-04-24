@@ -242,7 +242,7 @@ local function setup_handlers()
       Action = "Credit-Notice",
       ["X-Action"] = "Repay"
     },
-    handle = repay.handler,
+    handle = queue.useQueue(repay.handler),
     errorHandler = repay.error
   })
   Handlers.add(
@@ -268,7 +268,7 @@ local function setup_handlers()
       Action = "Credit-Notice",
       ["X-Action"] = "Mint"
     },
-    handle = mint.handler,
+    handle = queue.useQueue(mint.handler),
     errorHandler = mint.error
   })
   Handlers.add(

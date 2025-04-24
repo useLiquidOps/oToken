@@ -31,13 +31,9 @@ ProtocolLogo = ProtocolLogo or ""
 ---@type Friend[]
 Tokens = Tokens or {}
 
--- queue for operations in oTokens that involve
--- the collateral/collateralization
+-- queue for operations that change the user's position
 ---@type string[]
-CollateralQueue = CollateralQueue or {}
-
--- queue for liquidations
-LiquidationQueue = LiquidationQueue or {}
+Queue = Queue or {}
 
 -- current timestamp
 Timestamp = Timestamp or 0
@@ -54,6 +50,9 @@ MinDiscount = MinDiscount or 1
 DiscountInterval = DiscountInterval or 1000 * 60 * 60 -- 1 hour
 
 PrecisionFactor = 1000000
+
+-- minimum liquidation percentage (a liquidator is required to liquidate at least this percentage of the total loan)
+MinLiquidationThreshold = MinLiquidationThreshold or 20
 
 ---@alias TokenData { ticker: string, denomination: number }
 ---@alias PriceParam { ticker: string, quantity: Bint?, denomination: number }
@@ -570,6 +569,12 @@ Handlers.add(
       ---@type Message[]
       local positions = scheduler.schedule(table.unpack(positionMsgs))
 
+      -- check queue
+      assert(
+        not utils.includes(target, Queue),
+        "User is queued for an operation"
+      )
+
       -- get tokens that need a price fetch
       local zero = bint.zero()
 
@@ -587,6 +592,10 @@ Handlers.add(
       -- the total collateral of the desired reward token
       -- in the user's position for the reward token
       local availableRewardQty = zero
+      local availableLiquidateQty = zero
+
+      -- the total borrow of the liquidated token in the
+      -- user's position
       local availableLiquidateQty = zero
 
       -- check if the user has any open positions (active loans)
@@ -677,6 +686,31 @@ Handlers.add(
       -- get token quantities
       local inQty = bint(msg.Tags.Quantity)
 
+      -- USD value of the liquidation
+      local usdValue = oracle.getValue(
+        prices,
+        inQty,
+        inTokenData.ticker,
+        inTokenData.denomination
+      )
+
+      -- ensure that at least the minimum threshold is reached
+      -- when repaying the loan or the liquidator is repaying the
+      -- full amount, in case the total value of the loan they're
+      -- repaying is under 20% of the user's loans' total value
+      assert(
+        bint.ule(availableLiquidateQty, inQty) or bint.ule(
+          bint.udiv(
+            totalBorrowBalance * bint(MinLiquidationThreshold * 100 // 1),
+            bint(100 * 100)
+          ),
+          usdValue
+        ),
+        "Liquidators are required to repay at least " ..
+        tostring(MinLiquidationThreshold) ..
+        "% of the total loan or the entire loan of a token"
+      )
+
       -- market value of the liquidation
       local marketValueInQty = oracle.getValueInToken(
         {
@@ -727,7 +761,7 @@ Handlers.add(
 
       -- check liquidation queue
       assert(
-        not utils.includes(target, LiquidationQueue),
+        not utils.includes(target, Queue),
         "User is already queued for liquidation"
       )
 
@@ -766,7 +800,7 @@ Handlers.add(
     -- queue the liquidation at this point, because
     -- the user position has been checked, so the liquidation is valid
     -- we don't want anyone to be able to liquidate from this point
-    table.insert(LiquidationQueue, target)
+    table.insert(Queue, target)
 
     -- TODO: timeout here? (what if this doesn't return in time, the liquidation remains in a pending state)
     -- TODO: this timeout can be done with a Handler that removed this coroutine
@@ -798,9 +832,9 @@ Handlers.add(
     })
 
     -- remove from queue
-    LiquidationQueue = utils.filter(
+    Queue = utils.filter(
       function (v) return v ~= target end,
-      LiquidationQueue
+      Queue
     )
 
     -- check loan liquidation result
@@ -842,7 +876,7 @@ Handlers.add(
 )
 
 Handlers.add(
-  "add-collateral-queue",
+  "add-queue",
   function (msg)
     if msg.Action ~= "Add-To-Queue" then return false end
     return utils.find(
@@ -859,19 +893,19 @@ Handlers.add(
     end
 
     -- check if the user has already been added
-    if utils.includes(user, CollateralQueue) or utils.includes(user, LiquidationQueue) or UpdateInProgress then
+    if utils.includes(user, Queue) or UpdateInProgress then
       return msg.reply({ Error = "User already queued" })
     end
 
     -- add to queue
-    table.insert(CollateralQueue, user)
+    table.insert(Queue, user)
 
     msg.reply({ ["Queued-User"] = user })
   end
 )
 
 Handlers.add(
-  "remove-collateral-queue",
+  "remove-queue",
   function (msg)
     if msg.Action ~= "Remove-From-Queue" then return false end
     return utils.find(
@@ -888,9 +922,9 @@ Handlers.add(
     end
 
     -- filter out user
-    CollateralQueue = utils.filter(
+    Queue = utils.filter(
       function (v) return v ~= user end,
-      CollateralQueue
+      Queue
     )
 
     msg.reply({ ["Unqueued-User"] = user })
@@ -911,10 +945,7 @@ Handlers.add(
     -- the user is queued if they're either in the collateral
     -- or the liquidation queues
     return msg.reply({
-      ["In-Queue"] = json.encode(
-        utils.includes(user, CollateralQueue) or
-        utils.includes(user, LiquidationQueue)
-      )
+      ["In-Queue"] = json.encode(utils.includes(user, Queue) or UpdateInProgress)
     })
   end
 )
