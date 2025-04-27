@@ -1,10 +1,13 @@
 local assertions = require ".utils.assertions"
+local precision = require ".utils.precision"
 local bint = require ".utils.bint"(1024)
 
 local mod = {}
 
 -- Calculate how much the provided oToken quantity is worth
--- in terms of the underlying asset (collateral)
+-- in terms of the underlying asset (collateral). 
+-- Important: The returned value uses the internal
+-- collateral precision
 ---@param qty Bint The quantity to get the value for
 function mod.getUnderlyingWorth(qty)
   -- parse pool values
@@ -44,7 +47,10 @@ function mod.exchangeRate(msg)
   end
 
   -- calculate value based on the underlying value of the total supply
-  local returnValue = mod.getUnderlyingWorth(quantity)
+  local returnValue = precision.toNativePrecision(
+    mod.getUnderlyingWorth(quantity),
+    "rounddown"
+  )
 
   msg.reply({
     Quantity = tostring(quantity),
