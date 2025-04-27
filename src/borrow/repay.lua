@@ -1,4 +1,5 @@
 local assertions = require ".utils.assertions"
+local precision = require ".utils.precision"
 local interest = require ".borrow.interest"
 local bint = require ".utils.bint"(1024)
 local utils = require ".utils.utils"
@@ -95,8 +96,12 @@ end
 ---@param target string Target to repay the loan for
 ---@param quantity Bint Amount of tokens to be repaid
 function repay.canRepayExact(target, quantity)
-  -- borrow & interest balances for the target
-  local borrowBalance = bint(Loans[target] or "0")
+  -- accrue interest for the user and get the borrow balance
+  -- in native precision, rounded upwards
+  local borrowBalance = precision.toNativePrecision(
+    interest.accrueInterestForUser(target),
+    "roundup"
+  )
   return bint.ule(quantity, borrowBalance)
 end
 
@@ -112,7 +117,9 @@ end
 ---@return Bint, Bint
 function repay.repayToPool(target, quantity)
   -- accrue interest for the user and get the borrow balance
-  local borrowBalance = interest.accrueInterestForUser(target)
+  -- in native precision, rounded upwards
+  local internalBorrowBalance = interest.accrueInterestForUser(target)
+  local borrowBalance = precision.toNativePrecision(internalBorrowBalance, "roundup")
   local zero = bint.zero()
 
   -- refund quantity, in case the user overpaid
@@ -127,7 +134,9 @@ function repay.repayToPool(target, quantity)
   else
     -- the outstanding loan is more than or equal to the
     -- remaining repay quantity, so we just deduct it
-    local newBorrowBalance = borrowBalance - quantity
+    --
+    -- this has to be done in the internal precision
+    local newBorrowBalance = internalBorrowBalance - precision.toInternalPrecision(quantity)
 
     Loans[target] = bint.ult(zero, newBorrowBalance) and tostring(newBorrowBalance) or nil
   end
@@ -136,8 +145,8 @@ function repay.repayToPool(target, quantity)
   local actualRepaidQty = quantity - refundQty
 
   -- finally, we add the repaid amount back to the pool (minus the reserve amount if needed)
-  Cash = tostring(bint(Cash) + actualRepaidQty)
-  TotalBorrows = tostring(bint(TotalBorrows) - actualRepaidQty)
+  Cash = tostring(bint(Cash) + precision.toInternalPrecision(actualRepaidQty))
+  TotalBorrows = tostring(bint(TotalBorrows) - precision.toInternalPrecision(actualRepaidQty))
 
   return refundQty, actualRepaidQty
 end

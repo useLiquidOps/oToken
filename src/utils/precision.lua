@@ -50,7 +50,7 @@ end
 -- is precise enough, it just returns the quantity
 -- By default the division rounds down, this can be configured with the "rounding" param
 ---@param internalAmount Bint The internal precise quantity to scale down
----@param rouding "roundup"|"rounddown"? Customize rounding direction
+---@param rouding "roundup"|"rounddown" Customize rounding direction
 ---@return Bint
 function mod.toNativePrecision(internalAmount, rouding)
   -- no need to transform if the collateral's denomination is precise enough
@@ -94,7 +94,7 @@ end
 -- By default the division rounds down, this can be configured with the "rounding" param
 ---@see precision.toNativePrecision
 ---@param internalAmount string The internal precise quantity to scale down
----@param rouding "roundup"|"rounddown"? Customize rounding direction
+---@param rouding "roundup"|"rounddown" Customize rounding direction
 ---@return string
 function mod.formatInternalAsNative(internalAmount, rouding)
   if internalAmount == "0" then return "0" end
