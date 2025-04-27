@@ -1,9 +1,8 @@
+local precision = require ".utils.precision"
 local bint = require ".utils.bint"(1024)
 local utils = require ".utils.utils"
 
 local mod = {}
-
-local defaultCollateralPrecision = 18
 
 ---@type HandlerFunction
 function mod.setup()
@@ -25,10 +24,6 @@ function mod.setup()
   else
     Denomination = CollateralDenomination
   end
-
-  -- the local quantities of the collateral are stored with extra precision for
-  -- tokens with a denomination below 18
-  CollateralPrecision = CollateralDenomination > defaultCollateralPrecision and CollateralDenomination or defaultCollateralPrecision
 
   Balances = Balances or {}
   TotalSupply = TotalSupply or "0"
@@ -63,47 +58,6 @@ function mod.total_supply(msg)
     Ticker = Ticker,
     Data = TotalSupply
   })
-end
-
--- Transform a collateral quantity to conform to the internal
--- storage precision
----@param qty Bint The quantity to transform in the collateral's native denomination
-function mod.toLocalPrecision(qty)
-  -- no need to transform if the collateral's denomination is precise enough
-  if CollateralDenomination >= defaultCollateralPrecision then
-    return qty
-  end
-
-  -- difference between the collateral's denomination and the local precision
-  local precisionDiff = CollateralPrecision - CollateralDenomination
-
-  return qty * bint("1" .. string.rep("0", precisionDiff))
-end
-
--- Transform a quantity with the internal storage precision
--- to conform to the collateral's denomination
----@param qty Bint The quantity to transform with the internal storage precision
----@param roundUp boolean? Optionally round up the result
-function mod.toNativeDenomination(qty, roundUp)
-  -- no need to transform if the collateral's denomination is precise enough
-  if CollateralDenomination >= defaultCollateralPrecision then
-    return qty
-  end
-
-  -- difference between the collateral's denomination and the local precision
-  local precisionDiff = CollateralPrecision - CollateralDenomination
-
-  if roundUp then
-    return utils.udiv_roundup(
-      qty,
-      bint("1" .. string.rep("0", precisionDiff))
-    )
-  end
-
-  return bint.udiv(
-    qty,
-    bint("1" .. string.rep("0", precisionDiff))
-  )
 end
 
 return mod

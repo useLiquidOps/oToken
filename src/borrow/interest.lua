@@ -1,3 +1,4 @@
+local precision = require ".utils.precision"
 local bint = require ".utils.bint"(1024)
 local utils = require ".utils.utils"
 
@@ -132,7 +133,7 @@ function mod.accrueInterestForUser(address)
   -- parse global borrow index and the user's interest index
   local borrowIndex = bint(BorrowIndex)
   local interestIndex = bint(
-    InterestIndices[address] or ("1" .. string.rep("0", BorrowIndexDenomination))
+    InterestIndices[address] or ("1" .. string.rep("0", precision.getPrecision()))
   )
 
   -- update borrow balance and interest index for the user
