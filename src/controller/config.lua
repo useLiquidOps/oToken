@@ -71,7 +71,7 @@ function mod.update(msg)
     Oracle = Oracle,
     ["Collateral-Factor"] = tostring(CollateralFactor),
     ["Liquidation-Threshold"] = tostring(LiquidationThreshold),
-    ["Value-Limit"] = ValueLimit,
+    ["Value-Limit"] = precision.formatInternalAsNative(ValueLimit, "rounddown"),
     ["Oracle-Delay-Tolerance"] = tostring(MaxOracleDelay),
     ["Reserve-Factor"] = tostring(ReserveFactor)
   })
