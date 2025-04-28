@@ -125,10 +125,10 @@ function repay.repayToPool(target, quantity)
   -- refund quantity, in case the user overpaid
   local refundQty = zero
 
-  -- if the outstanding loan is less than the remaining
-  -- quantity after paying the interests, we need to reset
-  -- the quantity owned by the target and refund the remainder
-  if bint.ult(borrowBalance, quantity) then
+  -- if the outstanding loan is less than the repaid
+  -- quantity, the loan is reset and the user is
+  -- refunded the remainder
+  if bint.ule(borrowBalance, quantity) then
     Loans[target] = nil
     refundQty = quantity - borrowBalance
   else
@@ -136,9 +136,7 @@ function repay.repayToPool(target, quantity)
     -- remaining repay quantity, so we just deduct it
     --
     -- this has to be done in the internal precision
-    local newBorrowBalance = internalBorrowBalance - precision.toInternalPrecision(quantity)
-
-    Loans[target] = bint.ult(zero, newBorrowBalance) and tostring(newBorrowBalance) or nil
+    Loans[target] = tostring(internalBorrowBalance - precision.toInternalPrecision(quantity))
   end
 
   -- the actual quantity repaid (needed in case we need to refund the user)
