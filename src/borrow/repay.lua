@@ -130,6 +130,7 @@ function repay.repayToPool(target, quantity)
   -- refunded the remainder
   if bint.ule(borrowBalance, quantity) then
     Loans[target] = nil
+    InterestIndices[target] = nil
     refundQty = quantity - borrowBalance
   else
     -- the outstanding loan is more than or equal to the
