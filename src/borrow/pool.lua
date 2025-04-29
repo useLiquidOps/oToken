@@ -39,6 +39,11 @@ function mod.setup(msg)
   ---@type table<string, string>
   InterestIndices = InterestIndices or {}
 
+  -- accrued interest for users
+  ---@type table<string, string>
+  Interests = Interests or {}
+  TotalInterests = TotalInterests or "0"
+
   -- global borrow index (in Bint string)
   -- the borrow index is always denominated in
   -- the borrow index denomination

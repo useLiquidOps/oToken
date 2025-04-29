@@ -141,15 +141,24 @@ function mod.accrueInterestForUser(address)
   )
 
   -- update borrow balance and interest index for the user
-  borrowBalance = bint.udiv(
+  local newBorrowBalance = bint.udiv(
     borrowBalance * borrowIndex,
     interestIndex
   )
   interestIndex = borrowIndex
 
   -- update global values
-  Loans[address] = tostring(borrowBalance)
+  Loans[address] = tostring(newBorrowBalance)
   InterestIndices[address] = tostring(interestIndex)
+
+  local interestPaid = newBorrowBalance - borrowBalance
+
+  Interests[address] = tostring(
+    (bint(Interests[address] or bint.zero())) + interestPaid
+  )
+  TotalInterests = tostring(
+    bint(TotalInterests) + interestPaid
+  )
 
   return borrowBalance
 end

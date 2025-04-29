@@ -142,10 +142,41 @@ function repay.repayToPool(target, quantity)
 
   -- the actual quantity repaid (needed in case we need to refund the user)
   local actualRepaidQty = quantity - refundQty
+  local preciseRepaidQty = precision.toInternalPrecision(actualRepaidQty)
+
+  -- the pending reserves
+  local reserves = bint(Reserves)
+
+  -- user accrued interest and total accrued interest
+  local interestAccrued = bint(Interests[target] or 0)
+  local totalAccruedInterest = bint(TotalInterests)
+
+  -- calculate the amount that goes to the protocol treasury
+  -- this qty is proportional to 
+  -- the formula for this:
+  -- (repaidPortion / borrowBalance) * (userAccruedInterest / totalAccruedInterest) * Reserves
+  -- simplified:
+  -- (repaidPortion * userAccruedInterest * Reserves) / (borrowBalance * totalAccruedInterest)
+  local reservesPortion = bint.udiv(
+    preciseRepaidQty * interestAccrued * reserves,
+    borrowBalance * totalAccruedInterest
+  )
+
+  -- the amount of interest repaid is proportional to the
+  -- user's borrow balance and the quantity repaid
+  local repaidInterest = bint.udiv(
+    preciseRepaidQty * interestAccrued,
+    borrowBalance
+  )
 
   -- finally, we add the repaid amount back to the pool (minus the reserve amount if needed)
-  Cash = tostring(bint(Cash) + precision.toInternalPrecision(actualRepaidQty))
-  TotalBorrows = tostring(bint(TotalBorrows) - precision.toInternalPrecision(actualRepaidQty))
+  Cash = tostring(bint(Cash) + preciseRepaidQty)
+  TotalBorrows = tostring(bint(TotalBorrows) - preciseRepaidQty)
+
+  -- update interests and reserves
+  TotalInterests = tostring(totalAccruedInterest - repaidInterest)
+  Interests[target] = tostring(interestAccrued - repaidInterest)
+  Reserves = tostring(reserves - reservesPortion)
 
   return refundQty, actualRepaidQty
 end
