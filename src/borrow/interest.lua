@@ -8,7 +8,7 @@ local mod = {}
 ---@return Bint, number
 function mod.calculateBorrowRate()
   -- helper values
-  local totalLent = bint(TotalBorrows) - bint(Reserves)
+  local totalLent = bint(TotalBorrows)
   local totalPooled = totalLent + bint(Cash)
   local baseRateB, rateMul = utils.floatBintRepresentation(BaseRate)
   local initRateB = utils.floatBintRepresentation(InitRate, rateMul)
@@ -52,8 +52,8 @@ function mod.supplyRate(msg)
   )
 
   -- calculate supply interest rate
-  local totalBorrows = bint(TotalBorrows) - bint(Reserves)
-  local totalPooled = bint(Cash) + totalBorrows
+  local totalBorrows = bint(TotalBorrows)
+  local totalPooled = bint(Cash) + totalBorrows - bint(Reserves)
 
   local le = math.log(borrowRateFloat + 1)
   local utilizationRate = bint.tonumber(totalBorrows) / bint.tonumber(totalPooled)
