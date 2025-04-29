@@ -192,6 +192,14 @@ function repay.repayToPool(target, quantity)
   Interests[target] = tostring(interestAccrued - interestRepaid)
   Reserves = tostring(reserves - reservesPortion)
 
+  -- transfer out the repaid reserves to the treasury
+  ao.send({
+    Target = CollateralID,
+    Action = "Transfer",
+    Recipient = Treasury,
+    Quantity = tostring(precision.toNativePrecision(reservesPortion, "rounddown"))
+  })
+
   return refundQty, actualRepaidQty
 end
 
