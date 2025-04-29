@@ -34,7 +34,7 @@ function mint.handler(msg)
 
   -- total tokens pooled and supply
   local availableTokens = bint(Cash)
-  local totalPooled = availableTokens + bint(TotalBorrows)
+  local totalPooled = availableTokens + bint(TotalBorrows) - bint(Reserves)
   local totalSupply = bint(TotalSupply)
 
   if not bint.eq(totalPooled, bint.zero()) then

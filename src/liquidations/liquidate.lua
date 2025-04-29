@@ -195,7 +195,7 @@ function mod.liquidatePosition(msg)
   -- helpers
   local totalSupply = bint(TotalSupply)
   local availableTokens = bint(Cash)
-  local totalPooled = availableTokens + bint(TotalBorrows)
+  local totalPooled = availableTokens + bint(TotalBorrows) - bint(Reserves)
 
   -- validate if there are enough available tokens
   assert(
