@@ -122,28 +122,6 @@ function repay.repayToPool(target, quantity)
   local borrowBalance = precision.toNativePrecision(internalBorrowBalance, "roundup")
   local zero = bint.zero()
 
-  -- refund quantity, in case the user overpaid
-  local refundQty = zero
-
-  -- if the outstanding loan is less than the repaid
-  -- quantity, the loan is reset and the user is
-  -- refunded the remainder
-  if bint.ule(borrowBalance, quantity) then
-    Loans[target] = nil
-    InterestIndices[target] = nil
-    refundQty = quantity - borrowBalance
-  else
-    -- the outstanding loan is more than or equal to the
-    -- remaining repay quantity, so we just deduct it
-    --
-    -- this has to be done in the internal precision
-    Loans[target] = tostring(internalBorrowBalance - precision.toInternalPrecision(quantity))
-  end
-
-  -- the actual quantity repaid (needed in case we need to refund the user)
-  local actualRepaidQty = quantity - refundQty
-  local preciseRepaidQty = precision.toInternalPrecision(actualRepaidQty)
-
   -- the pending reserves
   local reserves = bint(Reserves)
 
@@ -151,31 +129,67 @@ function repay.repayToPool(target, quantity)
   local interestAccrued = bint(Interests[target] or 0)
   local totalAccruedInterest = bint(TotalInterests)
 
-  -- calculate the amount that goes to the protocol treasury
-  -- this qty is proportional to 
-  -- the formula for this:
-  -- (repaidPortion / borrowBalance) * (userAccruedInterest / totalAccruedInterest) * Reserves
-  -- simplified:
-  -- (repaidPortion * userAccruedInterest * Reserves) / (borrowBalance * totalAccruedInterest)
-  local reservesPortion = bint.udiv(
-    preciseRepaidQty * interestAccrued * reserves,
-    borrowBalance * totalAccruedInterest
-  )
+  -- refund quantity, in case the user overpaid
+  local refundQty = zero
 
-  -- the amount of interest repaid is proportional to the
-  -- user's borrow balance and the quantity repaid
-  local repaidInterest = bint.udiv(
-    preciseRepaidQty * interestAccrued,
-    borrowBalance
-  )
+  -- the amount of interest and pending reserves repaid
+  local interestRepaid = zero
+  local reservesPortion = zero
+
+  -- if the outstanding loan is less than the repaid
+  -- quantity, the loan is reset and the user is
+  -- refunded the remainder
+  if bint.ule(borrowBalance, quantity) then
+    Loans[target] = nil
+    InterestIndices[target] = nil
+    Interests[target] = nil
+
+    refundQty = quantity - borrowBalance
+    interestRepaid = interestAccrued
+
+    -- calculate the portion of interest that goes to the reserves
+    reservesPortion = bint.udiv(
+      interestAccrued * reserves,
+      totalAccruedInterest
+    )
+  else
+    local preciseQuantity = precision.toInternalPrecision(quantity)
+
+    -- the outstanding loan is more than the remaining
+    -- repay quantity, so we just deduct it
+    --
+    -- this has to be done in the internal precision
+    Loans[target] = tostring(internalBorrowBalance - preciseQuantity)
+
+    -- calculate the amount of interest that was repaid
+    interestRepaid = bint.udiv(
+      preciseQuantity * interestAccrued,
+      borrowBalance
+    )
+
+    -- calculate the portion of interest that goes to the reserves
+    -- this is proportional to the amount repaid from the borrow balance
+    -- the formula for this:
+    -- (repaidPortion / borrowBalance) * (userAccruedInterest / totalAccruedInterest) * Reserves
+    -- simplified:
+    -- (repaidPortion * userAccruedInterest * Reserves) / (borrowBalance * totalAccruedInterest)
+    reservesPortion = bint.udiv(
+      preciseQuantity * interestAccrued * reserves,
+      borrowBalance * totalAccruedInterest
+    )
+  end
+
+  -- the actual quantity repaid (needed in case we need to refund the user)
+  local actualRepaidQty = quantity - refundQty
+  local preciseRepaidQty = precision.toInternalPrecision(actualRepaidQty)
 
   -- finally, we add the repaid amount back to the pool (minus the reserve amount if needed)
   Cash = tostring(bint(Cash) + preciseRepaidQty)
   TotalBorrows = tostring(bint(TotalBorrows) - preciseRepaidQty)
 
   -- update interests and reserves
-  TotalInterests = tostring(totalAccruedInterest - repaidInterest)
-  Interests[target] = tostring(interestAccrued - repaidInterest)
+  TotalInterests = tostring(totalAccruedInterest - interestRepaid)
+  Interests[target] = tostring(interestAccrued - interestRepaid)
   Reserves = tostring(reserves - reservesPortion)
 
   return refundQty, actualRepaidQty
