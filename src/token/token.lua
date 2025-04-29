@@ -43,7 +43,7 @@ function mod.info(msg)
     Oracle = Oracle,
     ["Oracle-Delay-Tolerance"] = tostring(MaxOracleDelay),
     ["Total-Borrows"] = precision.formatInternalAsNative(TotalBorrows, "roundup"),
-    Cash = precision.formatInternalAsNative(Cash, "roundup"),
+    Cash = precision.formatInternalAsNative(Cash, "rounddown"),
     ["Reserve-Factor"] = tostring(ReserveFactor),
     ["Total-Reserves"] = precision.formatInternalAsNative(Reserves, "roundup")
   })
