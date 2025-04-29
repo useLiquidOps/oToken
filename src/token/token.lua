@@ -45,7 +45,7 @@ function mod.info(msg)
     ["Total-Borrows"] = precision.formatInternalAsNative(TotalBorrows, "roundup"),
     Cash = precision.formatInternalAsNative(Cash, "rounddown"),
     ["Reserve-Factor"] = tostring(ReserveFactor),
-    ["Total-Reserves"] = precision.formatInternalAsNative(Reserves, "roundup"),
+    ["Pending-Reserves"] = precision.formatInternalAsNative(Reserves, "roundup"),
     Treasury = Treasury
   })
 end

@@ -146,10 +146,10 @@ local function setup_handlers()
   )
   Handlers.add(
     "controller-reserves-total",
-    Handlers.utils.hasMatchingTag("Action", "Total-Reserves"),
+    Handlers.utils.hasMatchingTag("Action", "Pending-Reserves"),
     function (msg)
       msg.reply({
-        ["Total-Reserves"] = precision.formatInternalAsNative(Reserves, "roundup")
+        ["Pending-Reserves"] = precision.formatInternalAsNative(Reserves, "roundup")
       })
     end
   )
