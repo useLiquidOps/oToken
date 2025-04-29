@@ -11,7 +11,7 @@ local mod = {}
 ---@param qty Bint The quantity to get the value for
 function mod.getUnderlyingWorth(qty)
   -- parse pool values
-  local totalPooled = bint(Cash) + bint(TotalBorrows)
+  local totalPooled = bint(Cash) + bint(TotalBorrows) - bint(Reserves)
   local totalSupply = bint(TotalSupply)
 
   -- if the amount of tokens deposited is equal to the
