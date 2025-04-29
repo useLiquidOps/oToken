@@ -16,6 +16,9 @@ Module = Module or "C6CQfrL29jZ-LYXV2lKn09d3pBIM6adDFwWqh2ICikM"
 Oracle = Oracle or "4fVi8P-xSRWxZ0EE0EpltDe8WJJvcD9QyFXMqfk-1UQ"
 MaxOracleDelay = MaxOracleDelay or 1200000
 
+-- protocol treasury
+Treasury = Treasury or ""
+
 -- admin addresses
 Owners = Owners or {}
 
@@ -320,7 +323,8 @@ Handlers.add(
       ["Oracle-Delay-Tolerance"] = tostring(MaxOracleDelay),
       Logo = logo,
       Authority = ao.authorities[1],
-      Friends = json.encode(Tokens)
+      Friends = json.encode(Tokens),
+      Treasury = Treasury
     }
 
     -- spawn new oToken process

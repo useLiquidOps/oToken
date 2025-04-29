@@ -10,6 +10,10 @@ function mod.setup(msg)
     assertions.isAddress(ao.env.Process.Tags["Collateral-Id"]),
     "Invalid collateral id"
   )
+  assert(
+    assertions.isAddress(ao.env.Process.Tags.Treasury),
+    "Invalid treasury address"
+  )
 
   -- token that can be lent/borrowed
   CollateralID = CollateralID or ao.env.Process.Tags["Collateral-Id"]
@@ -71,6 +75,7 @@ function mod.setup(msg)
   -- reserves
   ReserveFactor = ReserveFactor or tonumber(ao.env.Process.Tags["Reserve-Factor"]) or 0
   Reserves = Reserves or "0"
+  Treasury = Treasury or ao.env.Process.Tags.Treasury
 end
 
 -- This syncs the global timestamp and block using the current message

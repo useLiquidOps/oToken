@@ -15,6 +15,7 @@ function mod.update(msg)
   local newValueLimit = msg.Tags["Value-Limit"]
   local newOracleDelayTolerance = tonumber(msg.Tags["Oracle-Delay-Tolerance"])
   local newReserveFactor = tonumber(msg.Tags["Reserve-Factor"])
+  local newTreasury = msg.Tags.Treasury
 
   -- validate new config values, update
   assert(
@@ -36,6 +37,10 @@ function mod.update(msg)
   assert(
     (newLiquidationThreshold or LiquidationThreshold) > (newCollateralFactor or CollateralFactor),
     "Liquidation threshold must be greater than the collateral factor"
+  )
+  assert(
+    not newTreasury or assertions.isAddress(newTreasury),
+    "Invalid treasury address"
   )
 
   if newValueLimit then
@@ -66,6 +71,7 @@ function mod.update(msg)
   if newReserveFactor then ReserveFactor = newReserveFactor end
   if newValueLimit then ValueLimit = precision.formatNativeAsInternal(newValueLimit) end
   if newOracleDelayTolerance then MaxOracleDelay = newOracleDelayTolerance end
+  if newTreasury then Treasury = newTreasury end
 
   msg.reply({
     Oracle = Oracle,
@@ -73,7 +79,8 @@ function mod.update(msg)
     ["Liquidation-Threshold"] = tostring(LiquidationThreshold),
     ["Value-Limit"] = precision.formatInternalAsNative(ValueLimit, "rounddown"),
     ["Oracle-Delay-Tolerance"] = tostring(MaxOracleDelay),
-    ["Reserve-Factor"] = tostring(ReserveFactor)
+    ["Reserve-Factor"] = tostring(ReserveFactor),
+    Treasury = Treasury
   })
 end
 
