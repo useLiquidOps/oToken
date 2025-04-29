@@ -86,14 +86,18 @@ local function setup_handlers()
         return false -- not a token transfer
       end
       if msg.From ~= CollateralID then
-          return true -- unknown token
+        return true -- unknown token
       end
-      if utils.includes(msg.Tags["X-Action"], {
+      if
+        utils.includes(msg.Tags["X-Action"], {
           "Repay",
           "Mint",
           "Liquidate-Borrow"
-        }) then
+        })
+      then
         return false -- used by other actions so keep
+      elseif msg.Tags["X-Action"] == "Deploy-From-Reserves" then
+        return msg.Tags.Sender ~= Treasury
       end
       return true -- unknow tag
     end,
@@ -176,15 +180,13 @@ local function setup_handlers()
 
   -- Reserved for future use in a governance model
   Handlers.add(
-    "controller-reserves-withdraw",
-    { From = Controller, Action = "Withdraw-From-Reserves" },
-    reserves.withdraw
-  )
-
-  -- Reserved for future use in a governance model
-  Handlers.add(
     "controller-reserves-deploy",
-    { From = Controller, Action = "Deploy-From-Reserves" },
+    {
+      From = CollateralID,
+      Action = "Credit-Notice",
+      Sender = Treasury,
+      ["X-Action"] = "Deploy-From-Reserves"
+    },
     reserves.deploy
   )
 
