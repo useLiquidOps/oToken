@@ -29,12 +29,6 @@ local function borrow(msg, _, oracle)
   -- is never broken
   assert(bint.ult(quantity, cash), "Not enough tokens available to be lent")
 
-  -- also check that the reserves are not borrowed
-  assert(
-    bint.ule(bint(Reserves), cash - quantity),
-    "This action would require borrowing from the reserves"
-  )
-
   -- validate value limit
   assert(
     bint.ule(quantity, bint(ValueLimit)),
