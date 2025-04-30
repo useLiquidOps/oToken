@@ -20,7 +20,9 @@ function mod.getUnderlyingWorth(qty)
   if
     bint.eq(totalPooled, totalSupply) or
     bint.eq(totalSupply, bint.zero())
-  then return qty end
+  then
+    return precision.toInternalPrecision(qty)
+  end
 
   -- if the total pooled and the total supply is not
   -- the same, then the reward qty will be higher
