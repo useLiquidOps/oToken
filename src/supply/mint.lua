@@ -40,7 +40,7 @@ function mint.handler(msg)
   if not bint.eq(totalPooled, bint.zero()) then
     -- mint in proportion to the already supplied tokens
     mintQty = bint.udiv(
-      totalSupply * rawQuantity,
+      totalSupply * quantity,
       totalPooled
     )
   end
