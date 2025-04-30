@@ -33,6 +33,7 @@ local rate = require ".supply.rate"
 local redeem = require ".supply.redeem"
 
 local utils = require ".utils.utils"
+local precision = require ".utils.precision"
 
 HandlersAdded = HandlersAdded or false
 
@@ -142,7 +143,11 @@ local function setup_handlers()
   Handlers.add(
     "controller-reserves-total",
     Handlers.utils.hasMatchingTag("Action", "Total-Reserves"),
-    function (msg) msg.reply({ ["Total-Reserves"] = Reserves }) end
+    function (msg)
+      msg.reply({
+        ["Total-Reserves"] = precision.formatInternalAsNative(Reserves, "roundup")
+      })
+    end
   )
 
   -- Reserved for future use in a governance model
@@ -209,7 +214,10 @@ local function setup_handlers()
     Handlers.utils.hasMatchingTag("Action", "Sync-Interest"),
     function (msg)
       local target = msg.Tags.Recipient or msg.From
-      local borrowBalance = interest.accrueInterestForUser(target)
+      local borrowBalance = precision.toNativePrecision(
+        interest.accrueInterestForUser(target),
+        "roundup"
+      )
 
       msg.reply({ ["Borrow-Balance"] = tostring(borrowBalance) })
     end
@@ -264,12 +272,18 @@ local function setup_handlers()
   Handlers.add(
     "supply-cash",
     Handlers.utils.hasMatchingTag("Action", "Cash"),
-    function (msg) msg.reply({ Cash = Cash }) end
+    function (msg)
+      msg.reply({ Cash = precision.formatInternalAsNative(Cash, "roundup") })
+    end
   )
   Handlers.add(
     "supply-total-borrows",
     Handlers.utils.hasMatchingTag("Action", "Total-Borrows"),
-    function (msg) msg.reply({ ["Total-Borrows"] = TotalBorrows }) end
+    function (msg)
+      msg.reply({
+        ["Total-Borrows"] = precision.formatInternalAsNative(TotalBorrows, "roundup")
+      })
+    end
   )
   -- needs unqueueing because of coroutines
   Handlers.add(

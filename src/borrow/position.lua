@@ -1,5 +1,6 @@
 local oracleMod = require ".liquidations.oracle"
 local scheduler = require ".utils.scheduler"
+local precision = require ".utils.precision"
 local interest = require ".borrow.interest"
 local bint = require ".utils.bint"(1024)
 local utils = require ".utils.utils"
@@ -31,7 +32,7 @@ function mod.position(address)
   if Balances[address] and Balances[address] ~= "0" then
     -- base data for calculations
     local balance = bint(Balances[address])
-    local totalPooled = bint(Cash) + bint(TotalBorrows)
+    local totalPooled = bint(Cash) + bint(TotalBorrows) - bint(Reserves)
     local totalSupply = bint(TotalSupply)
 
     -- the value of the balance in terms of the underlying asset
@@ -52,10 +53,18 @@ function mod.position(address)
       res.collateralization * bint(LiquidationThreshold),
       bint(100)
     )
+
+    -- transform to native precision here for clarity
+    res.collateralization = precision.toNativePrecision(res.collateralization, "rounddown")
+    res.capacity = precision.toNativePrecision(res.capacity, "rounddown")
+    res.liquidationLimit = precision.toNativePrecision(res.liquidationLimit, "rounddown")
   end
 
-  -- sync interest for the user and get the borrow balance
-  res.borrowBalance = interest.accrueInterestForUser(address)
+  -- sync interest for the user and get the borrow balance and transform to native precision
+  res.borrowBalance = precision.toNativePrecision(
+    interest.accrueInterestForUser(address),
+    "roundup"
+  )
 
   return res
 end

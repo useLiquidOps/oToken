@@ -1,4 +1,5 @@
 local assertions = require ".utils.assertions"
+local precision = require ".utils.precision"
 local interest = require ".borrow.interest"
 local bint = require ".utils.bint"(1024)
 local utils = require ".utils.utils"
@@ -13,7 +14,8 @@ function mint.handler(msg)
   )
 
   -- quantity of tokens supplied
-  local quantity = bint(msg.Tags.Quantity)
+  local rawQuantity = bint(msg.Tags.Quantity)
+  local quantity = precision.toInternalPrecision(rawQuantity)
 
   -- validate value limit
   assert(
@@ -25,20 +27,20 @@ function mint.handler(msg)
   local sender = msg.Tags.Sender
 
   -- amount of oTokens to be minted
-  local mintQty = quantity
+  local mintQty = rawQuantity
 
   -- accrue interest for the user
   interest.accrueInterestForUser(sender)
 
   -- total tokens pooled and supply
   local availableTokens = bint(Cash)
-  local totalPooled = availableTokens + bint(TotalBorrows)
+  local totalPooled = availableTokens + bint(TotalBorrows) - bint(Reserves)
   local totalSupply = bint(TotalSupply)
 
   if not bint.eq(totalPooled, bint.zero()) then
     -- mint in proportion to the already supplied tokens
     mintQty = bint.udiv(
-      totalSupply * quantity,
+      totalSupply * rawQuantity,
       totalPooled
     )
   end

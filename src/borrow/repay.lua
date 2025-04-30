@@ -1,4 +1,5 @@
 local assertions = require ".utils.assertions"
+local precision = require ".utils.precision"
 local interest = require ".borrow.interest"
 local bint = require ".utils.bint"(1024)
 local utils = require ".utils.utils"
@@ -95,8 +96,12 @@ end
 ---@param target string Target to repay the loan for
 ---@param quantity Bint Amount of tokens to be repaid
 function repay.canRepayExact(target, quantity)
-  -- borrow & interest balances for the target
-  local borrowBalance = bint(Loans[target] or "0")
+  -- accrue interest for the user and get the borrow balance
+  -- in native precision, rounded upwards
+  local borrowBalance = precision.toNativePrecision(
+    interest.accrueInterestForUser(target),
+    "roundup"
+  )
   return bint.ule(quantity, borrowBalance)
 end
 
@@ -112,32 +117,35 @@ end
 ---@return Bint, Bint
 function repay.repayToPool(target, quantity)
   -- accrue interest for the user and get the borrow balance
-  local borrowBalance = interest.accrueInterestForUser(target)
+  -- in native precision, rounded upwards
+  local internalBorrowBalance = interest.accrueInterestForUser(target)
+  local borrowBalance = precision.toNativePrecision(internalBorrowBalance, "roundup")
   local zero = bint.zero()
 
   -- refund quantity, in case the user overpaid
   local refundQty = zero
 
-  -- if the outstanding loan is less than the remaining
-  -- quantity after paying the interests, we need to reset
-  -- the quantity owned by the target and refund the remainder
-  if bint.ult(borrowBalance, quantity) then
+  -- if the outstanding loan is less than the repaid
+  -- quantity, the loan is reset and the user is
+  -- refunded the remainder
+  if bint.ule(borrowBalance, quantity) then
     Loans[target] = nil
+    InterestIndices[target] = nil
     refundQty = quantity - borrowBalance
   else
     -- the outstanding loan is more than or equal to the
     -- remaining repay quantity, so we just deduct it
-    local newBorrowBalance = borrowBalance - quantity
-
-    Loans[target] = bint.ult(zero, newBorrowBalance) and tostring(newBorrowBalance) or nil
+    --
+    -- this has to be done in the internal precision
+    Loans[target] = tostring(internalBorrowBalance - precision.toInternalPrecision(quantity))
   end
 
   -- the actual quantity repaid (needed in case we need to refund the user)
   local actualRepaidQty = quantity - refundQty
 
   -- finally, we add the repaid amount back to the pool (minus the reserve amount if needed)
-  Cash = tostring(bint(Cash) + actualRepaidQty)
-  TotalBorrows = tostring(bint(TotalBorrows) - actualRepaidQty)
+  Cash = tostring(bint(Cash) + precision.toInternalPrecision(actualRepaidQty))
+  TotalBorrows = tostring(bint(TotalBorrows) - precision.toInternalPrecision(actualRepaidQty))
 
   return refundQty, actualRepaidQty
 end

@@ -1,3 +1,4 @@
+local precision = require ".utils.precision"
 local bint = require ".utils.bint"(1024)
 local utils = require ".utils.utils"
 
@@ -8,7 +9,7 @@ local mod = {}
 function mod.calculateBorrowRate()
   -- helper values
   local totalLent = bint(TotalBorrows)
-  local totalPooled = totalLent + bint(Cash)
+  local totalPooled = totalLent + bint(Cash) - bint(Reserves)
   local baseRateB, rateMul = utils.floatBintRepresentation(BaseRate)
   local initRateB = utils.floatBintRepresentation(InitRate, rateMul)
   local zero = bint.zero()
@@ -17,6 +18,8 @@ function mod.calculateBorrowRate()
   local weightedBase = zero
 
   if not bint.eq(totalPooled, zero) then
+    -- the weighted base rate is the utilization rate
+    -- multiplied by the base rate
     weightedBase = bint.udiv(
       baseRateB * totalLent,
       totalPooled
@@ -49,9 +52,11 @@ function mod.supplyRate(msg)
   )
 
   -- calculate supply interest rate
+  local totalBorrows = bint(TotalBorrows)
+  local totalPooled = bint(Cash) + totalBorrows - bint(Reserves)
+
   local le = math.log(borrowRateFloat + 1)
-  local totalBorrows = tonumber(TotalBorrows)
-  local utilizationRate = totalBorrows / (tonumber(Cash) + totalBorrows)
+  local utilizationRate = bint.tonumber(totalBorrows) / bint.tonumber(totalPooled)
   local supplyRate = math.exp(
     le * (1 - ReserveFactor / 100) * utilizationRate
   ) - 1
@@ -132,7 +137,7 @@ function mod.accrueInterestForUser(address)
   -- parse global borrow index and the user's interest index
   local borrowIndex = bint(BorrowIndex)
   local interestIndex = bint(
-    InterestIndices[address] or ("1" .. string.rep("0", BorrowIndexDenomination))
+    InterestIndices[address] or ("1" .. string.rep("0", precision.getPrecision()))
   )
 
   -- update borrow balance and interest index for the user

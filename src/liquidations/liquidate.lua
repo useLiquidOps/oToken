@@ -1,4 +1,5 @@
 local assertions = require ".utils.assertions"
+local precision = require ".utils.precision"
 local interest = require ".borrow.interest"
 local bint = require ".utils.bint"(1024)
 local repay = require ".borrow.repay"
@@ -161,7 +162,8 @@ function mod.liquidatePosition(msg)
   )
 
   -- amount of tokens to transfer out
-  local quantity = bint(msg.Tags.Quantity)
+  local rawQuantity = bint(msg.Tags.Quantity)
+  local quantity = precision.toInternalPrecision(rawQuantity)
 
   -- liquidator wallet
   local liquidator = msg.Tags.Liquidator
@@ -193,11 +195,12 @@ function mod.liquidatePosition(msg)
   -- helpers
   local totalSupply = bint(TotalSupply)
   local availableTokens = bint(Cash)
-  local totalPooled = availableTokens + bint(TotalBorrows)
+  local reserves = bint(Reserves)
+  local totalPooled = availableTokens + bint(TotalBorrows) - reserves
 
   -- validate if there are enough available tokens
   assert(
-    bint.ule(quantity, availableTokens),
+    bint.ule(quantity, availableTokens - reserves),
     "Not enough tokens available to liquidate"
   )
 
@@ -223,7 +226,7 @@ function mod.liquidatePosition(msg)
   ao.send({
     Target = CollateralID,
     Action = "Transfer",
-    Quantity = tostring(quantity),
+    Quantity = tostring(rawQuantity),
     Recipient = liquidator
   })
 

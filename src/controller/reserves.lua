@@ -1,4 +1,5 @@
 local assertions = require ".utils.assertions"
+local precision = require ".utils.precision"
 local bint = require ".utils.bint"(1024)
 
 local mod = {}
@@ -13,7 +14,8 @@ function mod.withdraw(msg)
   )
 
   -- amount of tokens to withdraw
-  local quantity = bint(msg.Tags.Quantity)
+  local rawQuantity = bint(msg.Tags.Quantity)
+  local quantity = precision.toInternalPrecision(rawQuantity)
   local reserves = bint(Reserves)
 
   -- check if there are enough tokens to withdraw
@@ -29,12 +31,14 @@ function mod.withdraw(msg)
   ao.send({
     Target = CollateralID,
     Action = "Transfer",
-    Quantity = tostring(quantity),
+    Quantity = tostring(rawQuantity),
     Recipient = msg.From
   })
 
   -- reply
-  msg.reply({ ["Total-Reserves"] = Reserves })
+  msg.reply({
+    ["Total-Reserves"] = precision.formatInternalAsNative(Reserves, "roundup")
+  })
 end
 
 -- Allows deploying the tokens from the reserves into the pool by the controller
@@ -47,7 +51,8 @@ function mod.deploy(msg)
   )
 
   -- amount of tokens to deploy
-  local quantity = bint(msg.Tags.Quantity)
+  local rawQuantity = bint(msg.Tags.Quantity)
+  local quantity = precision.toInternalPrecision(rawQuantity)
   local reserves = bint(Reserves)
 
   -- check if there are enough tokens to deploy
@@ -62,8 +67,8 @@ function mod.deploy(msg)
 
   -- reply
   msg.reply({
-    ["Total-Reserves"] = Reserves,
-    Cash = Cash
+    ["Total-Reserves"] = precision.formatInternalAsNative(Reserves, "roundup"),
+    Cash = precision.formatInternalAsNative(Cash, "roundup")
   })
 end
 

@@ -1,4 +1,5 @@
 local assertions = require ".utils.assertions"
+local precision = require ".utils.precision"
 local json = require "json"
 
 local mod = {}
@@ -29,9 +30,6 @@ function mod.setup(msg)
   ---@type table<string, string>
   Loans = Loans or {}
 
-  -- borrow index denomination for more precision
-  BorrowIndexDenomination = BorrowIndexDenomination or 18
-
   -- user interest indexes (in Bint string), denominated
   -- in the borrow index denomination
   ---@type table<string, string>
@@ -41,7 +39,7 @@ function mod.setup(msg)
   -- the borrow index is always denominated in
   -- the borrow index denomination
   -- (initialised as 1)
-  BorrowIndex = BorrowIndex or ("1" .. string.rep("0", BorrowIndexDenomination))
+  BorrowIndex = BorrowIndex or ("1" .. string.rep("0", precision.getPrecision()))
 
   -- last time the global borrow index was updated
   LastBorrowIndexUpdate = msg.Timestamp
@@ -64,7 +62,7 @@ function mod.setup(msg)
 
   -- limit the value of an interaction
   -- (in units of the collateral)
-  ValueLimit = ValueLimit or ao.env.Process.Tags["Value-Limit"] or "0"
+  ValueLimit = ValueLimit or precision.formatNativeAsInternal(ao.env.Process.Tags["Value-Limit"] or "0")
 
   -- global current timestamp and block for the oracle
   Timestamp = msg.Timestamp
