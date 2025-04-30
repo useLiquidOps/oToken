@@ -9,7 +9,7 @@ local mod = {}
 function mod.calculateBorrowRate()
   -- helper values
   local totalLent = bint(TotalBorrows)
-  local totalPooled = totalLent + bint(Cash)
+  local totalPooled = totalLent + bint(Cash) - bint(Reserves)
   local baseRateB, rateMul = utils.floatBintRepresentation(BaseRate)
   local initRateB = utils.floatBintRepresentation(InitRate, rateMul)
   local zero = bint.zero()
