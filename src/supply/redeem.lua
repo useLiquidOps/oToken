@@ -52,7 +52,7 @@ local function redeem(msg, _, oracle)
 
   -- make sure there is enough tokens available to redeem for
   assert(
-    bint.ult(rewardQtyScaled, availableTokens),
+    bint.ult(rewardQtyScaled, availableTokens - bint(Reserves)),
     "Not enough available tokens to redeem for"
   )
 
