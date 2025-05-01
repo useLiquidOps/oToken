@@ -1,4 +1,4 @@
-local assertions = require ".utils.assertions"
+local precision = require ".utils.precision"
 
 local mod = {}
 
@@ -39,13 +39,13 @@ function mod.info(msg)
     ["Collateral-Factor"] = tostring(CollateralFactor),
     ["Collateral-Denomination"] = tostring(CollateralDenomination),
     ["Liquidation-Threshold"] = tostring(LiquidationThreshold),
-    ["Value-Limit"] = ValueLimit,
+    ["Value-Limit"] = precision.formatInternalAsNative(ValueLimit, "rounddown"),
     Oracle = Oracle,
     ["Oracle-Delay-Tolerance"] = tostring(MaxOracleDelay),
-    ["Total-Borrows"] = TotalBorrows,
-    Cash = Cash,
+    ["Total-Borrows"] = precision.formatInternalAsNative(TotalBorrows, "roundup"),
+    Cash = precision.formatInternalAsNative(Cash, "rounddown"),
     ["Reserve-Factor"] = tostring(ReserveFactor),
-    ["Total-Reserves"] = Reserves
+    ["Total-Reserves"] = precision.formatInternalAsNative(Reserves, "roundup")
   })
 end
 

@@ -1,4 +1,5 @@
 local assertions = require ".utils.assertions"
+local precision = require ".utils.precision"
 local bint = require ".utils.bint"(1024)
 
 local mod = {}
@@ -63,14 +64,14 @@ function mod.update(msg)
   if newCollateralFactor then CollateralFactor = newCollateralFactor end
   if newLiquidationThreshold then LiquidationThreshold = newLiquidationThreshold end
   if newReserveFactor then ReserveFactor = newReserveFactor end
-  if newValueLimit then ValueLimit = newValueLimit end
+  if newValueLimit then ValueLimit = precision.formatNativeAsInternal(newValueLimit) end
   if newOracleDelayTolerance then MaxOracleDelay = newOracleDelayTolerance end
 
   msg.reply({
     Oracle = Oracle,
     ["Collateral-Factor"] = tostring(CollateralFactor),
     ["Liquidation-Threshold"] = tostring(LiquidationThreshold),
-    ["Value-Limit"] = ValueLimit,
+    ["Value-Limit"] = precision.formatInternalAsNative(ValueLimit, "rounddown"),
     ["Oracle-Delay-Tolerance"] = tostring(MaxOracleDelay),
     ["Reserve-Factor"] = tostring(ReserveFactor)
   })

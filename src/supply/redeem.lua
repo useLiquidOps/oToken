@@ -1,4 +1,5 @@
 local assertions = require ".utils.assertions"
+local precision = require ".utils.precision"
 local position = require ".borrow.position"
 local bint = require ".utils.bint"(1024)
 local rate = require ".supply.rate"
@@ -33,22 +34,31 @@ local function redeem(msg, _, oracle)
   local totalSupply = bint(TotalSupply)
 
   -- calculate amount of tokens to be sent out
-  local rewardQty = rate.getUnderlyingWorth(quantity)
+  local rewardQty = precision.toNativePrecision(
+    rate.getUnderlyingWorth(quantity),
+    "rounddown"
+  )
+
+  -- now we scale back up, because the actual removed
+  -- quantity will be rounded down - thus we need to
+  -- subtract that value
+  local rewardQtyScaled = precision.toInternalPrecision(rewardQty)
 
   -- validate value limit
   assert(
-    bint.ule(rewardQty, bint(ValueLimit)),
+    bint.ule(rewardQtyScaled, bint(ValueLimit)),
     "Redeem return quantity is above the allowed limit"
   )
 
   -- make sure there is enough tokens available to redeem for
   assert(
-    bint.ult(rewardQty, availableTokens),
+    bint.ult(rewardQtyScaled, availableTokens - bint(Reserves)),
     "Not enough available tokens to redeem for"
   )
 
   -- calculate how much capacity the removed reward tokens (collateral)
   -- worth, then calculate the USD value of that capacity
+  -- important: this is in native precision
   local removedCapacityValue = oracle.getValue(
     -- get the capacity that will be removed
     bint.udiv(
@@ -66,7 +76,7 @@ local function redeem(msg, _, oracle)
 
   -- update stored quantities (balance, available, total supply)
   Balances[sender] = tostring(walletBalance - quantity)
-  Cash = tostring(availableTokens - rewardQty)
+  Cash = tostring(availableTokens - rewardQtyScaled)
   TotalSupply = tostring(totalSupply - quantity)
 
   -- transfer

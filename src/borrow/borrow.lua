@@ -1,5 +1,5 @@
 local assertions = require ".utils.assertions"
-local interests = require ".borrow.interest"
+local precision = require ".utils.precision"
 local position = require ".borrow.position"
 local bint = require ".utils.bint"(1024)
 
@@ -18,7 +18,8 @@ local function borrow(msg, _, oracle)
   local pos = position.globalPosition(account, oracle)
 
   -- amount of tokens to borrow
-  local quantity = bint(msg.Tags.Quantity)
+  local rawQuantity = bint(msg.Tags.Quantity)
+  local quantity = precision.toInternalPrecision(rawQuantity)
 
   -- check if there are enough tokens available
   local cash = bint(Cash)
@@ -27,6 +28,12 @@ local function borrow(msg, _, oracle)
   -- the amount of tokens available to be lent so the interest ratio
   -- is never broken
   assert(bint.ult(quantity, cash), "Not enough tokens available to be lent")
+
+  -- also check that the reserves are not borrowed
+  assert(
+    bint.ule(bint(Reserves), cash - quantity),
+    "This action would require borrowing from the reserves"
+  )
 
   -- validate value limit
   assert(
@@ -40,31 +47,13 @@ local function borrow(msg, _, oracle)
   -- get borrow value in USD
   -- we request this after the collateralization, because
   -- in this case the oracle might not have to sync the price
-  local borrowValue = oracle.getValue(quantity, CollateralTicker)
+  local borrowValue = oracle.getValue(rawQuantity, CollateralTicker)
 
   -- make sure the user is allowed to borrow
   assert(
     assertions.isCollateralizedWith(borrowValue, pos),
     "Not enough collateral for this borrow"
   )
-
-  -- add initial interest date if the user has no interest balance
-  if not Interests[account] then
-    Interests[account] = {
-      value = "0",
-      updated = Timestamp
-    }
-  else
-    -- if the user has an interest balance, we sync it before
-    -- adding the loan, to avoid overcharging for the time
-    -- between the last sync (when the "Borrow" action was
-    -- received by the process) and the oracle response
-    interests.buildContext()
-    interests.updateInterest(
-      account,
-      Timestamp
-    )
-  end
 
   -- add loan
   Loans[account] = tostring(bint(Loans[account] or 0) + quantity)
@@ -75,14 +64,14 @@ local function borrow(msg, _, oracle)
   ao.send({
     Target = CollateralID,
     Action = "Transfer",
-    Quantity = tostring(quantity),
+    Quantity = tostring(rawQuantity),
     Recipient = account
   })
 
   -- send confirmation
   msg.reply({
     Action = "Borrow-Confirmation",
-    ["Borrowed-Quantity"] = tostring(quantity)
+    ["Borrowed-Quantity"] = tostring(rawQuantity)
   })
 end
 

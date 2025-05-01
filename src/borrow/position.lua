@@ -1,5 +1,7 @@
 local oracleMod = require ".liquidations.oracle"
 local scheduler = require ".utils.scheduler"
+local precision = require ".utils.precision"
+local interest = require ".borrow.interest"
 local bint = require ".utils.bint"(1024)
 local utils = require ".utils.utils"
 local json = require "json"
@@ -30,7 +32,7 @@ function mod.position(address)
   if Balances[address] and Balances[address] ~= "0" then
     -- base data for calculations
     local balance = bint(Balances[address])
-    local totalPooled = bint(Cash) + bint(TotalBorrows)
+    local totalPooled = bint(Cash) + bint(TotalBorrows) - bint(Reserves)
     local totalSupply = bint(TotalSupply)
 
     -- the value of the balance in terms of the underlying asset
@@ -51,19 +53,18 @@ function mod.position(address)
       res.collateralization * bint(LiquidationThreshold),
       bint(100)
     )
+
+    -- transform to native precision here for clarity
+    res.collateralization = precision.toNativePrecision(res.collateralization, "rounddown")
+    res.capacity = precision.toNativePrecision(res.capacity, "rounddown")
+    res.liquidationLimit = precision.toNativePrecision(res.liquidationLimit, "rounddown")
   end
 
-  -- if the user has unpaid depth (an active loan),
-  -- that will be the borrow balance
-  if Loans[address] and Loans[address] ~= "0" then
-    res.borrowBalance = bint(Loans[address])
-  end
-
-  -- if the user has unpaid interest, that also needs
-  -- to be added to the borrow balance
-  if Interests[address] and Interests[address].value ~= "0" then
-    res.borrowBalance = res.borrowBalance + bint(Interests[address].value or 0)
-  end
+  -- sync interest for the user and get the borrow balance and transform to native precision
+  res.borrowBalance = precision.toNativePrecision(
+    interest.accrueInterestForUser(address),
+    "roundup"
+  )
 
   return res
 end
@@ -181,11 +182,6 @@ function mod.handlers.allPositions(msg)
   -- go through all users who have "Loans"
   -- because it is possible that their collateralization
   -- is not in this instance of the process
-  --
-  -- we only need to go through the "Loans" and
-  -- not the "Interests", because the interest is repaid
-  -- first, the loan is only repaid after the owned
-  -- interest is zero
   for address, _ in pairs(Loans) do
     -- do not handle positions that have
     -- already been added above

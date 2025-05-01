@@ -1,4 +1,5 @@
 local assertions = require ".utils.assertions"
+local precision = require ".utils.precision"
 local position = require ".borrow.position"
 local bint = require ".utils.bint"(1024)
 local rate = require ".supply.rate"
@@ -27,7 +28,10 @@ local function transfer(msg, _, oracle)
   assert(bint.ule(quantity, walletBalance), "Insufficient balance")
 
   -- calculate how much collateral the transferred tokens are worth
-  local collateralValue = rate.getUnderlyingWorth(quantity)
+  local collateralValue = precision.toNativePrecision(
+    rate.getUnderlyingWorth(quantity),
+    "rounddown"
+  )
 
   -- calculate how much capacity the transferred underlying tokens
   -- (collateral) worth, then calculate the USD value of that capacity
