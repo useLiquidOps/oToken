@@ -14,13 +14,9 @@ function mod.getUnderlyingWorth(qty)
   local totalPooled = bint(Cash) + bint(TotalBorrows) - bint(Reserves)
   local totalSupply = bint(TotalSupply)
 
-  -- if the amount of tokens deposited is equal to the
-  -- total supply of oTokens, then the conversion rate
-  -- is 1:1
-  if
-    bint.eq(totalPooled, totalSupply) or
-    bint.eq(totalSupply, bint.zero())
-  then
+  -- if the total supply is 0, then the
+  -- conversion rate is 1:1
+  if bint.eq(totalSupply, bint.zero()) then
     return precision.toInternalPrecision(qty)
   end
 
