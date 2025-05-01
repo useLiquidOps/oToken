@@ -35,14 +35,14 @@ function mod.setup(msg)
   ---@type table<string, string>
   InterestIndices = InterestIndices or {}
 
+  -- last time the global borrow index was updated
+  LastBorrowIndexUpdate = BorrowIndex == nil and msg.Timestamp or LastBorrowIndexUpdate
+
   -- global borrow index (in Bint string)
   -- the borrow index is always denominated in
   -- the borrow index denomination
   -- (initialised as 1)
   BorrowIndex = BorrowIndex or ("1" .. string.rep("0", precision.getPrecision()))
-
-  -- last time the global borrow index was updated
-  LastBorrowIndexUpdate = msg.Timestamp
 
   -- base interest rate
   BaseRate = BaseRate or tonumber(ao.env.Process.Tags["Base-Rate"]) or 0
