@@ -46,15 +46,15 @@ function mod.update(msg)
     "Invalid kink param"
   )
   assert(
-    newBaseRate ~= nil and assertions.isValidNumber(newBaseRate),
+    not newBaseRate or assertions.isValidNumber(newBaseRate),
     "Invalid base rate"
   )
   assert(
-    newJumpRate ~= nil and assertions.isValidNumber(newJumpRate),
+    not newJumpRate or assertions.isValidNumber(newJumpRate),
     "Invalid jump rate"
   )
   assert(
-    newInitRate ~= nil and assertions.isValidNumber(newInitRate),
+    not newInitRate or assertions.isValidNumber(newInitRate),
     "Invalid init rate"
   )
 
