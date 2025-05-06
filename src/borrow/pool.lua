@@ -45,10 +45,17 @@ function mod.setup(msg)
   BorrowIndex = BorrowIndex or ("1" .. string.rep("0", precision.getPrecision()))
 
   -- base interest rate
-  BaseRate = BaseRate or tonumber(ao.env.Process.Tags["Base-Rate"]) or 0
+  BaseRate = BaseRate or tonumber(ao.env.Process.Tags["Base-Rate"]) or 1
+
+  -- jump interest rate
+  JumpRate = JumpRate or tonumber(ao.env.Process.Tags["Jump-Rate"]) or 1
 
   -- initial interest rate
-  InitRate = InitRate or tonumber(ao.env.Process.Tags["Init-Rate"]) or 0
+  InitRate = InitRate or tonumber(ao.env.Process.Tags["Init-Rate"]) or 1
+
+  -- kink parameter for the utilization rate after which 
+  -- the jump rate is applied (in percentage)
+  KinkParam = KinkParam or tonumber(ao.env.Process.Tags["Kink-Param"]) or 80
 
   -- other oToken processes
   -- a friend consists of the following fields:

@@ -15,6 +15,10 @@ function mod.update(msg)
   local newValueLimit = msg.Tags["Value-Limit"]
   local newOracleDelayTolerance = tonumber(msg.Tags["Oracle-Delay-Tolerance"])
   local newReserveFactor = tonumber(msg.Tags["Reserve-Factor"])
+  local newKinkParam = tonumber(msg.Tags["Kink-Param"])
+  local newBaseRate = tonumber(msg.Tags["Base-Rate"])
+  local newJumpRate = tonumber(msg.Tags["Jump-Rate"])
+  local newInitRate = tonumber(msg.Tags["Init-Rate"])
 
   -- validate new config values, update
   assert(
@@ -36,6 +40,22 @@ function mod.update(msg)
   assert(
     (newLiquidationThreshold or LiquidationThreshold) > (newCollateralFactor or CollateralFactor),
     "Liquidation threshold must be greater than the collateral factor"
+  )
+  assert(
+    not newKinkParam or assertions.isPercentage(newKinkParam),
+    "Invalid kink param"
+  )
+  assert(
+    newBaseRate ~= nil and assertions.isValidNumber(newBaseRate),
+    "Invalid base rate"
+  )
+  assert(
+    newJumpRate ~= nil and assertions.isValidNumber(newJumpRate),
+    "Invalid jump rate"
+  )
+  assert(
+    newInitRate ~= nil and assertions.isValidNumber(newInitRate),
+    "Invalid init rate"
   )
 
   if newValueLimit then
@@ -66,6 +86,10 @@ function mod.update(msg)
   if newReserveFactor then ReserveFactor = newReserveFactor end
   if newValueLimit then ValueLimit = precision.formatNativeAsInternal(newValueLimit) end
   if newOracleDelayTolerance then MaxOracleDelay = newOracleDelayTolerance end
+  if newKinkParam then KinkParam = newKinkParam end
+  if newBaseRate then BaseRate = newBaseRate end
+  if newJumpRate then JumpRate = newJumpRate end
+  if newInitRate then InitRate = newInitRate end
 
   msg.reply({
     Oracle = Oracle,
@@ -73,7 +97,11 @@ function mod.update(msg)
     ["Liquidation-Threshold"] = tostring(LiquidationThreshold),
     ["Value-Limit"] = precision.formatInternalAsNative(ValueLimit, "rounddown"),
     ["Oracle-Delay-Tolerance"] = tostring(MaxOracleDelay),
-    ["Reserve-Factor"] = tostring(ReserveFactor)
+    ["Reserve-Factor"] = tostring(ReserveFactor),
+    ["Kink-Param"] = tostring(KinkParam),
+    ["Base-Rate"] = tostring(BaseRate),
+    ["Jump-Rate"] = tostring(JumpRate),
+    ["Init-Rate"] = tostring(InitRate)
   })
 end
 
