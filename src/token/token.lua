@@ -1,4 +1,6 @@
 local precision = require ".utils.precision"
+local bint = require ".utils.bint"(1024)
+local utils = require ".utils.utils"
 
 local mod = {}
 
@@ -27,8 +29,20 @@ function mod.setup()
   TotalSupply = TotalSupply or "0"
 end
 
----@param msg Message
+---@type HandlerFunction
 function mod.info(msg)
+  -- parse as bint
+  local totalLent = bint(TotalBorrows)
+  local cash = bint(Cash)
+  local reserves = bint(Reserves)
+
+  -- calculate utilization
+  local utilizationDecimals = 5
+  local utilization = bint.udiv(
+    totalLent * bint(100) * bint.ipow(10, utilizationDecimals),
+    totalLent + cash - reserves
+  )
+
   msg.reply({
     Name = Name,
     Ticker = Ticker,
@@ -42,10 +56,15 @@ function mod.info(msg)
     ["Value-Limit"] = precision.formatInternalAsNative(ValueLimit, "rounddown"),
     Oracle = Oracle,
     ["Oracle-Delay-Tolerance"] = tostring(MaxOracleDelay),
-    ["Total-Borrows"] = precision.formatInternalAsNative(TotalBorrows, "roundup"),
-    Cash = precision.formatInternalAsNative(Cash, "rounddown"),
+    ["Total-Borrows"] = precision.toNativePrecision(totalLent, "roundup"),
+    Cash = precision.toNativePrecision(cash, "rounddown"),
     ["Reserve-Factor"] = tostring(ReserveFactor),
-    ["Total-Reserves"] = precision.formatInternalAsNative(Reserves, "roundup")
+    ["Total-Reserves"] = precision.toNativePrecision(reserves, "roundup"),
+    ["Init-Rate"] = tostring(InitRate),
+    ["Base-Rate"] = tostring(BaseRate),
+    ["Jump-Rate"] = tostring(JumpRate),
+    ["Kink-Param"] = tostring(KinkParam),
+    Utilization = tostring(utils.bintToFloat(utilization, utilizationDecimals))
   })
 end
 
