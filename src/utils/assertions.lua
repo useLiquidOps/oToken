@@ -17,7 +17,16 @@ end
 -- Checks if an input is not inf or nan
 ---@param val number Input to check
 function mod.isValidNumber(val)
-  return val == val and val % 1 == 0
+  return type(val) == "number" and
+    val == val and
+    val ~= math.huge and
+    val ~= -math.huge
+end
+
+-- Checks if an input is not inf or nan and is an integer
+---@param val number Input to check
+function mod.isValidInteger(val)
+  return mod.isValidNumber(val) and val % 1 == 0
 end
 
 -- Validates if the provided value can be parsed as a Bint
@@ -32,7 +41,7 @@ function mod.isBintRaw(val)
       end
 
       -- check if the val is an integer and not infinity, in case if the type is number
-      if type(val) == "number" and not mod.isValidNumber(val) then
+      if type(val) == "number" and not mod.isValidInteger(val) then
         return false
       end
 

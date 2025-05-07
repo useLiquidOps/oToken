@@ -12,18 +12,53 @@ function mod.calculateBorrowRate()
   local totalPooled = totalLent + bint(Cash) - bint(Reserves)
   local baseRateB, rateMul = utils.floatBintRepresentation(BaseRate)
   local initRateB = utils.floatBintRepresentation(InitRate, rateMul)
+  local jumpRateB = utils.floatBintRepresentation(JumpRate, rateMul)
+  local kinkParamB = utils.floatBintRepresentation(KinkParam, rateMul)
+
   local zero = bint.zero()
+  local hundred = bint(100)
+  local rateMulB = bint(rateMul)
 
   -- calculate weighted base rate
   local weightedBase = zero
 
   if not bint.eq(totalPooled, zero) then
-    -- the weighted base rate is the utilization rate
-    -- multiplied by the base rate
-    weightedBase = bint.udiv(
-      baseRateB * totalLent,
+    -- utilization rate in percentage, scaled up by the
+    -- rateMul so it can be compared to the kink param
+    local util = bint.udiv(
+      totalLent * hundred * rateMulB,
       totalPooled
     )
+
+    -- below the kink param, the interest rate is linear
+    -- with a gentle slope
+    if bint.ule(util, kinkParamB) then
+      -- normal interest rate:
+      -- initRate + utilizationRate * baseRate
+
+      -- the weighted base rate is the utilization rate
+      -- multiplied by the base rate
+      weightedBase = bint.udiv(
+        baseRateB * totalLent,
+        totalPooled
+      )
+    else
+      -- jump interest rate:
+      -- initRate + kinkUtilizationRate * baseRate + (utilizationRate - kinkUtilizationRate) * jumpRate
+
+      -- apply jump rate
+      -- use the kink param to calculate rate(kink)
+      weightedBase = bint.udiv(
+        baseRateB * kinkParamB,
+        hundred * rateMulB
+      )
+
+      -- add jump weighted value
+      weightedBase = weightedBase + bint.udiv(
+        jumpRateB * (util - kinkParamB),
+        hundred * rateMulB
+      )
+    end
   end
 
   -- full interest rate
