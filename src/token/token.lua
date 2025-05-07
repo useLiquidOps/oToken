@@ -37,11 +37,16 @@ function mod.info(msg)
   local reserves = bint(Reserves)
 
   -- calculate utilization
+  local totalPooled = totalLent + cash - reserves
   local utilizationDecimals = 5
-  local utilization = bint.udiv(
-    totalLent * bint(100) * bint.ipow(10, utilizationDecimals),
-    totalLent + cash - reserves
-  )
+  local utilization = bint.zero()
+
+  if not bint.eq(totalPooled, 0) then
+    utilization = bint.udiv(
+      totalLent * bint(100) * bint.ipow(10, utilizationDecimals),
+      totalPooled
+    )
+  end
 
   msg.reply({
     Name = Name,
@@ -56,10 +61,10 @@ function mod.info(msg)
     ["Value-Limit"] = precision.formatInternalAsNative(ValueLimit, "rounddown"),
     Oracle = Oracle,
     ["Oracle-Delay-Tolerance"] = tostring(MaxOracleDelay),
-    ["Total-Borrows"] = precision.toNativePrecision(totalLent, "roundup"),
-    Cash = precision.toNativePrecision(cash, "rounddown"),
+    ["Total-Borrows"] = tostring(precision.toNativePrecision(totalLent, "roundup")),
+    Cash = tostring(precision.toNativePrecision(cash, "rounddown")),
     ["Reserve-Factor"] = tostring(ReserveFactor),
-    ["Total-Reserves"] = precision.toNativePrecision(reserves, "roundup"),
+    ["Total-Reserves"] = tostring(precision.toNativePrecision(reserves, "roundup")),
     ["Init-Rate"] = tostring(InitRate),
     ["Base-Rate"] = tostring(BaseRate),
     ["Jump-Rate"] = tostring(JumpRate),
