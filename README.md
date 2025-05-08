@@ -6,4 +6,4 @@ The oToken module is a core component of the LiquidOps protocol, based on the [A
 
 The current integration tests are not complete and will be subject to refactor.
 
-![Cantina logo](https://arweave.dev/jTkaDUq1kFT8sSt5BojYbpNATpTthYZ92tsxO_WhhH0 "Cantina logo")
+[![Cantina logo](https://arweave.dev/jTkaDUq1kFT8sSt5BojYbpNATpTthYZ92tsxO_WhhH0)](https://cantina.xyz/welcome)
