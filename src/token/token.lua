@@ -69,6 +69,7 @@ function mod.info(msg)
     ["Base-Rate"] = tostring(BaseRate),
     ["Jump-Rate"] = tostring(JumpRate),
     ["Kink-Param"] = tostring(KinkParam),
+    ["Cooldown-Period"] = tostring(CooldownPeriod),
     Utilization = tostring(utils.bintToFloat(utilization, utilizationDecimals))
   })
 end

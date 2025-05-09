@@ -19,6 +19,7 @@ function mod.update(msg)
   local newBaseRate = tonumber(msg.Tags["Base-Rate"])
   local newJumpRate = tonumber(msg.Tags["Jump-Rate"])
   local newInitRate = tonumber(msg.Tags["Init-Rate"])
+  local newCooldownPeriod = tonumber(msg.Tags["Cooldown-Period"])
 
   -- validate new config values, update
   assert(
@@ -57,6 +58,10 @@ function mod.update(msg)
     not newInitRate or assertions.isValidNumber(newInitRate),
     "Invalid init rate"
   )
+  assert(
+    not newCooldownPeriod or assertions.isValidInteger(newCooldownPeriod),
+    "Invalid cooldown period"
+  )
 
   if newValueLimit then
     assert(
@@ -90,6 +95,7 @@ function mod.update(msg)
   if newBaseRate then BaseRate = newBaseRate end
   if newJumpRate then JumpRate = newJumpRate end
   if newInitRate then InitRate = newInitRate end
+  if newCooldownPeriod then CooldownPeriod = newCooldownPeriod end
 
   msg.reply({
     Oracle = Oracle,
