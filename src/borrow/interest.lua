@@ -103,7 +103,7 @@ function mod.supplyRate(msg)
   msg.reply({ ["Supply-Rate"] = tostring(supplyRate) })
 end
 
--- Accrues the accumulated interest since the last update. 
+-- Accrues the accumulated interest since the last update.
 -- Syncs total borrows, total reserves and the borrow index.
 -- This should be used on all protocol that change the market state.
 ---@type HandlerFunction
@@ -117,7 +117,9 @@ function mod.accrueInterest(msg)
   local borrowIndex = bint(BorrowIndex)
   local totalBorrows = bint(TotalBorrows)
   local reserves = bint(Reserves)
+
   local oneYearInMs = bint("31560000000")
+  local hundred = bint(100)
 
   -- calculate interest factor (multiplied by the rateMul)
   local interestFactor = borrowRate * bint(deltaT)
@@ -126,7 +128,7 @@ function mod.accrueInterest(msg)
   -- (this needs to be divided by the rateMul)
   local interestAccrued = bint.udiv(
     totalBorrows * interestFactor,
-    bint(rateMul) * oneYearInMs
+    bint(rateMul) * oneYearInMs * hundred
   )
 
   -- the remainder of the reserves division for precision
@@ -135,7 +137,7 @@ function mod.accrueInterest(msg)
   -- update the reserves
   local reservesUpdate, remainder = bint.udivmod(
     interestAccrued * bint(ReserveFactor) + bint(ReservesRemainder),
-    bint(100)
+    hundred
   )
 
   -- update the reserves remainder value
@@ -144,7 +146,7 @@ function mod.accrueInterest(msg)
   -- update global borrow index
   local borrowIndexUpdate = bint.udiv(
     borrowIndex * interestFactor,
-    bint(rateMul) * oneYearInMs
+    bint(rateMul) * oneYearInMs * hundred
   )
 
   -- return early if the state doesn't change
