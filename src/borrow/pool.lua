@@ -53,7 +53,7 @@ function mod.setup(msg)
   -- initial interest rate
   InitRate = InitRate or tonumber(ao.env.Process.Tags["Init-Rate"]) or 1
 
-  -- kink parameter for the utilization rate after which 
+  -- kink parameter for the utilization rate after which
   -- the jump rate is applied (in percentage)
   KinkParam = KinkParam or tonumber(ao.env.Process.Tags["Kink-Param"]) or 80
 

@@ -60,6 +60,15 @@ local function borrow(msg, _, oracle)
   Cash = tostring(cash - quantity)
   TotalBorrows = tostring(lent + quantity)
 
+  -- if this is the first loan, sync the interest index
+  if
+    not InterestIndices[account] or
+    InterestIndices[account] == "0" or
+    bint.eq(InterestIndices[account], "1" .. string.rep("0", precision.getPrecision()))
+  then
+    InterestIndices[account] = BorrowIndex
+  end
+
   -- send out the tokens
   ao.send({
     Target = CollateralID,
