@@ -1,0 +1,9 @@
+return {
+  default = {
+    root = "src",
+    pattern = "**/*_spec.lua$",
+    verbose = true,
+    coverage = true,
+    output = "utfTerminal",
+  }
+}

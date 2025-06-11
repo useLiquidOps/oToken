@@ -4,3 +4,4 @@ upload.js
 wallet.json
 pack.js
 packed.lua
+luacov.stats.out
