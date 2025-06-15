@@ -41,7 +41,7 @@ function mod.isBintRaw(val)
       end
 
       -- check if the val is an integer and not infinity, in case if the type is number
-      if type(val) == "number" and not mod.isValidInteger(val) then
+      if (type(val) == "number" or type(val) == "string") and not mod.isValidInteger(tonumber(val)) then
         return false
       end
 
