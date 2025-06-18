@@ -90,7 +90,7 @@ end
 ---@param position Position Current user position in USD
 ---@return boolean
 function mod.isCollateralizedWithout(removedCapacity, position)
-  return bint.ult(removedCapacity, position.capacity) and
+  return bint.ule(removedCapacity, position.capacity) and
     bint.ule(position.borrowBalance, position.capacity - removedCapacity)
 end
 
