@@ -226,13 +226,8 @@ describe("Assertion tests", function ()
         2,
         { capacity = 1 }
       )
-      local equal_res = assertions.isCollateralizedWithout(
-        1,
-        { capacity = 1 }
-      )
 
       assert.is_false(more_res)
-      assert.is_false(equal_res)
     end)
 
     it("should fail for a borrow balance that is too high", function ()
@@ -254,8 +249,14 @@ describe("Assertion tests", function ()
         { capacity = 4, borrowBalance = 2 }
       )
 
+      local empty_res = assertions.isCollateralizedWithout(
+        1,
+        { capacity = 1, borrowBalance = 0 }
+      )
+
       assert.is_true(equal_res)
       assert.is_true(more_res)
+      assert.is_true(empty_res)
     end)
   end)
 
