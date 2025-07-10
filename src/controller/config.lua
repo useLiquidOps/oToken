@@ -20,6 +20,7 @@ function mod.update(msg)
   local newJumpRate = tonumber(msg.Tags["Jump-Rate"])
   local newInitRate = tonumber(msg.Tags["Init-Rate"])
   local newCooldownPeriod = tonumber(msg.Tags["Cooldown-Period"])
+  local newWrappedAO = msg.Tags["WAO-Process"]
 
   -- validate new config values, update
   assert(
@@ -62,6 +63,10 @@ function mod.update(msg)
     not newCooldownPeriod or assertions.isValidInteger(newCooldownPeriod),
     "Invalid cooldown period"
   )
+  assert(
+    not newWrappedAO or assertions.isAddress(newWrappedAO),
+    "Invalid Wrapped AO process ID"
+  )
 
   if newValueLimit then
     assert(
@@ -96,6 +101,7 @@ function mod.update(msg)
   if newJumpRate then JumpRate = newJumpRate end
   if newInitRate then InitRate = newInitRate end
   if newCooldownPeriod then CooldownPeriod = newCooldownPeriod end
+  if newWrappedAO then WrappedAO = newWrappedAO end
 
   msg.reply({
     Oracle = Oracle,
