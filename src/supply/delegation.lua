@@ -26,7 +26,7 @@ function mod.delegate()
   -- claim accrued AO, but do not stop execution with .receive()
   --
   -- this is necessary, because this handler runs before interactions
-  -- (supply/redeem/liquidate position) that should not be delayed
+  -- (mint/redeem/liquidate position/transfer) that should not be delayed
 end
 
 return mod

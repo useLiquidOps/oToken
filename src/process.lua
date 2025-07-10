@@ -31,6 +31,7 @@ local liquidate = require ".liquidations.liquidate"
 local mint = require ".supply.mint"
 local rate = require ".supply.rate"
 local redeem = require ".supply.redeem"
+local delegation = require ".supply.delegation"
 
 local utils = require ".utils.utils"
 local precision = require ".utils.precision"
@@ -118,6 +119,25 @@ local function setup_handlers()
     handle = cooldown.gate,
     errorHandler = cooldown.refund
   })
+
+  -- accrued AO distribution for actions that update oToken balances
+  Handlers.add(
+    "supply-delegate-ao",
+    function (msg)
+      local action = msg.Tags["X-Action"] or msg.Tags.Action
+
+      if action == "Delegate" then return true end
+      if
+        action == "Mint" or
+        action == "Redeem" or
+        action == "Liquidate-Position" or
+        action == "Transfer"
+      then return "continue" end
+
+      return false
+    end,
+    delegation.delegate
+  )
 
   -- communication with the controller
   Handlers.add(
