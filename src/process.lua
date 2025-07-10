@@ -52,6 +52,7 @@ local function setup_handlers()
       pool.setup(msg, env)
       oracle.setup(msg, env)
       cooldown.setup(msg, env)
+      delegation.setup(msg, env)
     end
   )
 
@@ -86,8 +87,11 @@ local function setup_handlers()
       if msg.Tags.Action ~= "Credit-Notice" then
         return false -- not a token transfer
       end
+      if WrappedAO ~= nil and msg.From == AOToken and msg.Tags.Sender == WrappedAO then
+        return false -- this oToken process accrues AO and the message is a wAO claim response
+      end
       if msg.From ~= CollateralID then
-          return true -- unknown token
+        return true -- unknown token
       end
       if utils.includes(msg.Tags["X-Action"], {
           "Repay",

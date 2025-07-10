@@ -1,9 +1,7 @@
 local assertions = require ".utils.assertions"
 local utils = require ".utils.utils"
 
-local mod = {
-  aoToken = "0syT13r0s0tgPmIed95bJnuSqaD29HQNN8D3ElLSrsc"
-}
+local mod = {}
 
 ---@type HandlerFunction
 function mod.setup()
@@ -21,6 +19,9 @@ end
 function mod.delegate(msg)
   -- only run if defined
   if not WrappedAO then return end
+
+  -- the original message this message was pushed for
+  local pushedFor = msg.Tags["Pushed-For"] or msg.Id
 
   -- record oToken balances, so the correct quantities are used
   -- after the handler below is triggered later
@@ -49,13 +50,18 @@ function mod.delegate(msg)
         return true
       end
 
-      if action == "Credit-Notice" and msg.From ==
-    function ()
+      -- credit notice for the claimed AO
+      if action == "Credit-Notice" and msg.From == AOToken and msg.Tags["Pushed-For"] == pushedFor then
+        return true
+      end
 
+      return false
+    end,
+    function (msg)
+      -- TODO: distribute
+      -- TODO: save remainder AO with extra (internal) precision and redistribute it later
     end
   )
-
-  -- TODO: save remainder AO with extra (internal) precision and redistribute it later
 end
 
 return mod
