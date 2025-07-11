@@ -1,4 +1,5 @@
 local assertions = require ".utils.assertions"
+local bint = require ".utils.bint"(1024)
 local utils = require ".utils.utils"
 
 local mod = {}
@@ -11,7 +12,11 @@ function mod.setup()
   if not wAOProcess then return end
   assert(assertions.isAddress(wAOProcess), "Invalid wAO process id")
 
-  WrappedAO = wAOProcess
+  -- wrapped arweave process id
+  WrappedAO = WrappedAO or wAOProcess
+
+  -- remaining quantity to distribute
+  RemainingDelegateQuantity = RemainingDelegateQuantity or "0"
 end
 
 -- Claims and distributes accrued AO yield for owAR
@@ -23,9 +28,13 @@ function mod.delegate(msg)
   -- the original message this message was pushed for
   local pushedFor = msg.Tags["Pushed-For"] or msg.Id
 
-  -- record oToken balances, so the correct quantities are used
-  -- after the handler below is triggered later
-  local balances = Balances -- TODO: fix this to clone the balances
+  -- record oToken balances before the current interaction, so the
+  -- correct quantities are used after the handler below is triggered
+  local balancesRecord = {}
+
+  for addr, balance in pairs(Balances) do
+    balancesRecord[addr] = balance
+  end
 
   -- claim accrued AO, but do not stop execution with .receive()
   --
@@ -58,8 +67,63 @@ function mod.delegate(msg)
       return false
     end,
     function (msg)
-      -- TODO: distribute
-      -- TODO: save remainder AO with extra (internal) precision and redistribute it later
+      -- do not distribute if there was an error
+      if msg.Tags.Action == "Claim-Error" then return end
+
+      -- validate quantity
+      assert(
+        assertions.isTokenQuantity(msg.Tags.Quantity),
+        "Invalid claimed quantity"
+      )
+
+      -- quantity to distribute (the incoming + the remainder)
+      local quantity = bint(msg.Tags.Quantity) + bint(RemainingDelegateQuantity or "0")
+
+      -- number of token holders
+      local holdersCount = #utils.keys(balancesRecord)
+
+      -- if the claimed quantity is less than the amount of oToken
+      -- holders, do not distribute, but save the amount for future
+      -- distribution
+      if bint.ult(quantity, holdersCount) then
+        RemainingDelegateQuantity = tostring(quantity)
+        return
+      end
+
+      -- distribute claimed AO
+      local remaining = bint(quantity)
+      local totalSupply = bint(TotalSupply)
+      local zero = bint.zero()
+
+      for addr, rawBalance in pairs(balancesRecord) do
+        -- parsed wallet balance
+        local balance = bint(rawBalance)
+
+        -- amount to distribute to this wallet
+        local distributeQty = quantity.udiv(
+          balance * quantity,
+          totalSupply
+        )
+
+        -- distribute if more than 0
+        if bint.ult(zero, distributeQty) then
+          ao.send({
+            Target = AOToken,
+            Action = "Transfer",
+            Quantity = tostring(distributeQty),
+            Recipient = addr
+          })
+          remaining = remaining - distributeQty
+        end
+      end
+
+      -- make sure that the remainder is at least zero, otherwise
+      -- something went wrong with the calculations (this should not
+      -- happen)
+      assert(bint.ult(zero, remaining), "The distribution remainder cannot be less than zero")
+
+      -- update the remaining amount
+      RemainingDelegateQuantity = tostring(remaining)
     end
   )
 end
