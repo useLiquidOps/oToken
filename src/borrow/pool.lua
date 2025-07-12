@@ -12,7 +12,7 @@ function mod.setup(msg)
   )
 
   -- AO token process
-  AOToken = AOToken or "0syT13r0s0tgPmIed95bJnuSqaD29HQNN8D3ElLSrsc"
+  AOToken = AOToken or ao.env.Process.Tags["AO-Token"] or "0syT13r0s0tgPmIed95bJnuSqaD29HQNN8D3ElLSrsc"
 
   -- token that can be lent/borrowed
   CollateralID = CollateralID or ao.env.Process.Tags["Collateral-Id"]

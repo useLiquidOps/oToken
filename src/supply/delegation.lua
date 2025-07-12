@@ -7,13 +7,13 @@ local mod = {}
 ---@type HandlerFunction
 function mod.setup()
   -- validate wAO address
-  local wAOProcess = ao.env.Process.Tags["WAO-Process"]
+  local wAOProcess = ao.env.Process.Tags["Wrapped-AO-Token"]
 
   if not wAOProcess then return end
   assert(assertions.isAddress(wAOProcess), "Invalid wAO process id")
 
   -- wrapped arweave process id
-  WrappedAO = WrappedAO or wAOProcess
+  WrappedAOToken = WrappedAOToken or wAOProcess
 
   -- remaining quantity to distribute
   RemainingDelegateQuantity = RemainingDelegateQuantity or "0"
@@ -23,7 +23,7 @@ end
 ---@type HandlerFunction
 function mod.delegate(msg)
   -- only run if defined
-  if not WrappedAO then return end
+  if not WrappedAOToken then return end
 
   -- the original message this message was pushed for
   local pushedFor = msg.Tags["Pushed-For"] or msg.Id
@@ -41,7 +41,7 @@ function mod.delegate(msg)
   -- this is necessary, because this handler runs before interactions
   -- (mint/redeem/liquidate position/transfer) that should not be delayed
   local claimMsg = ao.send({
-    Target = WrappedAO,
+    Target = WrappedAOToken,
     Action = "Claim"
   })
   local claimRef = utils.find(
@@ -55,7 +55,7 @@ function mod.delegate(msg)
       local action = msg.Tags.Action
 
       -- claim error
-      if action == "Claim-Error" and msg.From == WrappedAO and msg.Tags["X-Reference"] == claimRef then
+      if action == "Claim-Error" and msg.From == WrappedAOToken and msg.Tags["X-Reference"] == claimRef then
         return true
       end
 
