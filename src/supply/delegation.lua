@@ -79,17 +79,6 @@ function mod.delegate(msg)
       -- quantity to distribute (the incoming + the remainder)
       local quantity = bint(msg.Tags.Quantity) + bint(RemainingDelegateQuantity or "0")
 
-      -- number of token holders
-      local holdersCount = #utils.keys(balancesRecord)
-
-      -- if the claimed quantity is less than the amount of oToken
-      -- holders, do not distribute, but save the amount for future
-      -- distribution
-      if bint.ult(quantity, holdersCount) then
-        RemainingDelegateQuantity = tostring(quantity)
-        return
-      end
-
       -- distribute claimed AO
       local remaining = bint(quantity)
       local totalSupply = bint(TotalSupply)
