@@ -87,7 +87,7 @@ local function setup_handlers()
       if msg.Tags.Action ~= "Credit-Notice" then
         return false -- not a token transfer
       end
-      if WrappedAO ~= nil and msg.From == AOToken and msg.Tags.Sender == WrappedAO then
+      if WrappedAOToken ~= nil and msg.From == AOToken and msg.Tags.Sender == WrappedAOToken then
         return false -- this oToken process accrues AO and the message is a wAO claim response
       end
       if msg.From ~= CollateralID then
@@ -179,6 +179,11 @@ local function setup_handlers()
     "controller-config-update",
     { From = Controller, Action = "Update-Config" },
     config.update
+  )
+  Handlers.add(
+    "controller-toggle-interactions",
+    { From = Controller, Action = "Toggle-Interactions" },
+    config.toggleInteractions
   )
 
   Handlers.advanced({
