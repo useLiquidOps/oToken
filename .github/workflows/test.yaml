@@ -15,7 +15,7 @@ jobs:
         uses: actions/checkout@v2
 
       - name: Install ao
-        run: curl -L https://install_ao.g8way.io | bash
+        run: curl -L https://install_ao.arweave.net | bash
 
       - name: Build module
         run: |
