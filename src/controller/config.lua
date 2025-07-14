@@ -20,6 +20,8 @@ function mod.update(msg)
   local newJumpRate = tonumber(msg.Tags["Jump-Rate"])
   local newInitRate = tonumber(msg.Tags["Init-Rate"])
   local newCooldownPeriod = tonumber(msg.Tags["Cooldown-Period"])
+  local newWrappedAOToken = msg.Tags["Wrapped-AO-Token"]
+  local newAOToken = msg.Tags["AO-Token"]
 
   -- validate new config values, update
   assert(
@@ -62,6 +64,14 @@ function mod.update(msg)
     not newCooldownPeriod or assertions.isValidInteger(newCooldownPeriod),
     "Invalid cooldown period"
   )
+  assert(
+    not newWrappedAOToken or assertions.isAddress(newWrappedAOToken),
+    "Invalid Wrapped AO token process ID"
+  )
+  assert(
+    not newAOToken or assertions.isAddress(newAOToken),
+    "Invalid AO token process ID"
+  )
 
   if newValueLimit then
     assert(
@@ -96,6 +106,8 @@ function mod.update(msg)
   if newJumpRate then JumpRate = newJumpRate end
   if newInitRate then InitRate = newInitRate end
   if newCooldownPeriod then CooldownPeriod = newCooldownPeriod end
+  if newWrappedAOToken then WrappedAOToken = newWrappedAOToken end
+  if newAOToken then AOToken = newAOToken end
 
   msg.reply({
     Oracle = Oracle,
@@ -107,7 +119,9 @@ function mod.update(msg)
     ["Kink-Param"] = tostring(KinkParam),
     ["Base-Rate"] = tostring(BaseRate),
     ["Jump-Rate"] = tostring(JumpRate),
-    ["Init-Rate"] = tostring(InitRate)
+    ["Init-Rate"] = tostring(InitRate),
+    ["AO-Token"] = tostring(AOToken),
+    ["Wrapped-AO-Token"] = tostring(WrappedAOToken)
   })
 end
 
