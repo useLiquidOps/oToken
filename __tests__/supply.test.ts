@@ -876,3 +876,293 @@ describe("Price and underlying asset value, supplies after initial provide", () 
 
   it.todo("Price input quantity is 1 by default when there is no quantity provided");
 });
+
+describe("AO delegation", () => {
+  let handle: HandleFunction;
+  let tags: Record<string, string>;
+
+  beforeEach(async () => {
+    const envWithWAO = {
+      Process: {
+        ...env.Process,
+        Tags: [
+          ...env.Process.Tags,
+          { name: "AO-Token", value: generateArweaveAddress() },
+          { name: "Wrapped-AO-Token", value: generateArweaveAddress() },
+        ]
+      }
+    };
+
+    handle = await setupProcess(envWithWAO);
+    tags = normalizeTags(envWithWAO.Process.Tags);
+  });
+
+  it("Does not run delegate if there is no wAO token process defined", async () => {
+    const handle = await setupProcess(env);
+    const res = await handle(createMessage({ Action: "Delegate" }));
+
+    expect(res.Messages).toHaveLength(0);
+  });
+
+  it("Does not delegate any tokens if the claim failed", async () => {
+    const delegateRes = await handle(createMessage({ Action: "Delegate" }));
+
+    expect(delegateRes.Messages).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          Target: tags["Wrapped-AO-Token"],
+          Tags: expect.arrayContaining([
+            expect.objectContaining({
+              name: "Action",
+              value: "Claim"
+            })
+          ])
+        })
+      ])
+    );
+
+    const claimRes = await handle(createMessage({
+      Owner: tags["Wrapped-AO-Token"],
+      From: tags["Wrapped-AO-Token"],
+      Action: "Claim-Error",
+      Error: "No balance",
+      "X-Reference": normalizeTags(
+        getMessageByAction("Claim", delegateRes.Messages)?.Tags || []
+      )["Reference"]
+    }));
+
+    expect(claimRes.Messages).toHaveLength(0);
+  });
+
+  it("Does not distribute an invalid quantity", async () => {
+    const id = generateArweaveAddress();
+    const delegateRes = await handle(createMessage({
+      Id: id,
+      Action: "Delegate"
+    }));
+
+    expect(delegateRes.Messages).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          Target: tags["Wrapped-AO-Token"],
+          Tags: expect.arrayContaining([
+            expect.objectContaining({
+              name: "Action",
+              value: "Claim"
+            })
+          ])
+        })
+      ])
+    );
+
+    const claimRes = await handle(createMessage({
+      Owner: tags["AO-Token"],
+      From: tags["AO-Token"],
+      Action: "Credit-Notice",
+      Quantity: "invalid",
+      Sender: tags["Wrapped-AO-Token"],
+      ["Pushed-For"]: id
+    }));
+
+    expect(claimRes.Messages).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          Tags: expect.arrayContaining([
+            expect.objectContaining({
+              name: "Action",
+              value: "Credit-Notice-Error"
+            }),
+            expect.objectContaining({
+              name: "Error",
+              value: expect.stringContaining(
+                "Invalid claimed quantity"
+              )
+            })
+          ])
+        })
+      ])
+    );
+  });
+
+  it("Distributes the claimed quantity evenly", async () => {
+    // prepare by adding holders
+    const balances = [
+      { addr: generateArweaveAddress(), qty: "2" },
+      { addr: generateArweaveAddress(), qty: "1" }
+    ];
+    await handle(createMessage({
+      Action: "Update",
+      Data: `Balances = { ["${balances[0].addr}"] = "${balances[0].qty}", ["${balances[1].addr}"] = "${balances[1].qty}" }
+      TotalSupply = "3"`
+    }));
+
+    // distribute
+    const id = generateArweaveAddress();
+    const delegateRes = await handle(createMessage({
+      Id: id,
+      Action: "Delegate"
+    }));
+
+    expect(delegateRes.Messages).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          Target: tags["Wrapped-AO-Token"],
+          Tags: expect.arrayContaining([
+            expect.objectContaining({
+              name: "Action",
+              value: "Claim"
+            })
+          ])
+        })
+      ])
+    );
+
+    const claimRes = await handle(createMessage({
+      Owner: tags["AO-Token"],
+      From: tags["AO-Token"],
+      Action: "Credit-Notice",
+      Quantity: "6",
+      Sender: tags["Wrapped-AO-Token"],
+      ["Pushed-For"]: id
+    }));
+
+    expect(claimRes.Messages).toEqual(
+      expect.arrayContaining(balances.map((balance) => (
+        expect.objectContaining({
+          Target: tags["AO-Token"],
+          Tags: expect.arrayContaining([
+            expect.objectContaining({
+              name: "Action",
+              value: "Transfer"
+            }),
+            expect.objectContaining({
+              name: "Recipient",
+              value: balance.addr
+            }),
+            expect.objectContaining({
+              name: "Quantity",
+              value: (parseInt(balance.qty) * 2).toString()
+            }),
+          ])
+        })
+      )))
+    );
+  });
+
+  it("Distributes the claimed quantity with a remainder", async () => {
+    // prepare by adding holders
+    const balances = [
+      { addr: generateArweaveAddress(), qty: "2" },
+      { addr: generateArweaveAddress(), qty: "1" }
+    ];
+    await handle(createMessage({
+      Action: "Update",
+      Data: `Balances = { ["${balances[0].addr}"] = "${balances[0].qty}", ["${balances[1].addr}"] = "${balances[1].qty}" }
+      TotalSupply = "3"`
+    }));
+
+    // distribute
+    const id = generateArweaveAddress();
+    const delegateRes = await handle(createMessage({
+      Id: id,
+      Action: "Delegate"
+    }));
+
+    expect(delegateRes.Messages).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          Target: tags["Wrapped-AO-Token"],
+          Tags: expect.arrayContaining([
+            expect.objectContaining({
+              name: "Action",
+              value: "Claim"
+            })
+          ])
+        })
+      ])
+    );
+
+    const claimRes = await handle(createMessage({
+      Owner: tags["AO-Token"],
+      From: tags["AO-Token"],
+      Action: "Credit-Notice",
+      Quantity: "7",
+      Sender: tags["Wrapped-AO-Token"],
+      ["Pushed-For"]: id
+    }));
+
+    expect(claimRes.Messages).toEqual(
+      expect.arrayContaining(balances.map((balance) => (
+        expect.objectContaining({
+          Target: tags["AO-Token"],
+          Tags: expect.arrayContaining([
+            expect.objectContaining({
+              name: "Action",
+              value: "Transfer"
+            }),
+            expect.objectContaining({
+              name: "Recipient",
+              value: balance.addr
+            }),
+            expect.objectContaining({
+              name: "Quantity",
+              value: (parseInt(balance.qty) * 2).toString()
+            }),
+          ])
+        })
+      )))
+    );
+
+    // now check redistribution of the remainder
+    const id2 = generateArweaveAddress();
+    const delegateRes2 = await handle(createMessage({
+      Id: id2,
+      Action: "Delegate"
+    }));
+
+    expect(delegateRes2.Messages).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          Target: tags["Wrapped-AO-Token"],
+          Tags: expect.arrayContaining([
+            expect.objectContaining({
+              name: "Action",
+              value: "Claim"
+            })
+          ])
+        })
+      ])
+    );
+
+    const claimRes2 = await handle(createMessage({
+      Owner: tags["AO-Token"],
+      From: tags["AO-Token"],
+      Action: "Credit-Notice",
+      Quantity: "2",
+      Sender: tags["Wrapped-AO-Token"],
+      ["Pushed-For"]: id2
+    }));
+
+    expect(claimRes2.Messages).toEqual(
+      expect.arrayContaining(balances.map((balance) => (
+        expect.objectContaining({
+          Target: tags["AO-Token"],
+          Tags: expect.arrayContaining([
+            expect.objectContaining({
+              name: "Action",
+              value: "Transfer"
+            }),
+            expect.objectContaining({
+              name: "Recipient",
+              value: balance.addr
+            }),
+            expect.objectContaining({
+              name: "Quantity",
+              value: balance.qty
+            }),
+          ])
+        })
+      )))
+    );
+  });
+});

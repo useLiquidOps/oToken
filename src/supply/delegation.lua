@@ -109,7 +109,7 @@ function mod.delegate(msg)
       -- make sure that the remainder is at least zero, otherwise
       -- something went wrong with the calculations (this should not
       -- happen)
-      assert(bint.ult(zero, remaining), "The distribution remainder cannot be less than zero")
+      assert(bint.ule(zero, remaining), "The distribution remainder cannot be less than zero")
 
       -- update the remaining amount
       RemainingDelegateQuantity = tostring(remaining)
