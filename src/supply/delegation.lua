@@ -44,10 +44,10 @@ function mod.delegate(msg)
     Target = WrappedAOToken,
     Action = "Claim"
   })
-  local claimRef = utils.find(
+  local claimRef = (utils.find(
     function (tag) return tag.name == "Reference" end,
     claimMsg.Tags
-  )
+  ) or {}).value
 
   -- add handler that handles a potential claim error/credit-notice
   Handlers.once(
