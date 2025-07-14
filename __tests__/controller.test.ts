@@ -1873,8 +1873,8 @@ describe("Interactions toggler tests", () => {
   it("Toggles defined functions", async () => {
     const res = await handle(createMessage({
       Action: "Toggle-Interactions",
-      Mint: "Enabled",
-      Borrow: "Disabled"
+      Mint: "Disabled",
+      Borrow: "Enabled"
     }));
 
     expect(res.Messages).toEqual(
@@ -1900,11 +1900,45 @@ describe("Interactions toggler tests", () => {
           Tags: expect.arrayContaining([
             expect.objectContaining({
               name: "Enabled-Interactions",
-              value: expect.toBeJsonEncoded(expect.not.arrayContaining(["Borrow"]))
+              value: expect.toBeJsonEncoded(expect.not.arrayContaining(["Mint"]))
             }),
             expect.objectContaining({
               name: "Disabled-Interactions",
-              value: expect.toBeJsonEncoded(expect.arrayContaining(["Borrow"]))
+              value: expect.toBeJsonEncoded(expect.arrayContaining(["Mint"]))
+            })
+          ])
+        })
+      ])
+    );
+
+    const sender = generateArweaveAddress();
+    const borrowRes = await handle(createMessage({
+      Action: "Credit-Notice",
+      "X-Action": "Mint",
+      Owner: tags["Collateral-Id"],
+      From: tags["Collateral-Id"],
+      "From-Process": tags["Collateral-Id"],
+      Quantity: "1",
+      Recipient: env.Process.Id,
+      Sender: sender
+    }));
+    const queueRes = await handle(createMessage({
+      "Queued-User": sender,
+      "X-Reference": normalizeTags(
+        getMessageByAction("Add-To-Queue", borrowRes.Messages)?.Tags || []
+      )["Reference"]
+    }));
+
+    expect(queueRes.Messages).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          Target: sender,
+          Tags: expect.arrayContaining([
+            expect.objectContaining({
+              name: "Error",
+              value: expect.stringContaining(
+                "Minting is currently disabled"
+              )
             })
           ])
         })
