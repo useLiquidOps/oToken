@@ -131,10 +131,11 @@ function mod.toggleInteractions(msg)
   local updatedInteractions = {}
 
   for name, value in pairs(EnabledInteractions) do
+    local expectedTagName = string.upper(string.sub(name, 1, 1)) .. string.sub(name, 2)
     updatedInteractions[name] = value
 
-    if msg.Tags[name] ~= nil then
-      updatedInteractions[name] = msg.Tags[name] == "Enabled"
+    if msg.Tags[expectedTagName] ~= nil then
+      updatedInteractions[name] = msg.Tags[expectedTagName] == "Enabled"
     end
   end
 
