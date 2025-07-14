@@ -1,6 +1,7 @@
 local precision = require ".utils.precision"
 local bint = require ".utils.bint"(1024)
 local utils = require ".utils.utils"
+local json = require "json"
 
 local mod = {}
 
@@ -48,6 +49,17 @@ function mod.info(msg)
     )
   end
 
+  -- enabled and disabled interactions
+  local enabledInteractions = {}
+  local disabledInteractions = {}
+
+  for name, enabled in pairs(EnabledInteractions) do
+    table.insert(
+      enabled and enabledInteractions or disabledInteractions,
+      string.upper(string.sub(name, 1, 1)) .. string.sub(name, 2)
+    )
+  end
+
   msg.reply({
     Name = Name,
     Ticker = Ticker,
@@ -70,7 +82,9 @@ function mod.info(msg)
     ["Jump-Rate"] = tostring(JumpRate),
     ["Kink-Param"] = tostring(KinkParam),
     ["Cooldown-Period"] = tostring(CooldownPeriod),
-    Utilization = tostring(utils.bintToFloat(utilization, utilizationDecimals))
+    Utilization = tostring(utils.bintToFloat(utilization, utilizationDecimals)),
+    ["Enabled-Interactions"] = json.encode(enabledInteractions),
+    ["Disabled-Interactions"] = json.encode(disabledInteractions)
   })
 end
 

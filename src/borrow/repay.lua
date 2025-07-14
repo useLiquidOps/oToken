@@ -8,6 +8,9 @@ local repay = {}
 
 ---@type HandlerFunction
 function repay.handler(msg)
+  -- check if the interaction is enabled
+  assert(EnabledInteractions.repay, "Repaying is currently disabled")
+
   assert(
     assertions.isTokenQuantity(msg.Tags.Quantity),
     "Invalid incoming transfer quantity"

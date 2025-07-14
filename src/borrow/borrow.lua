@@ -17,6 +17,9 @@ local function borrow(msg, _, oracle)
   -- get position data
   local pos = position.globalPosition(account, oracle)
 
+  -- check if the interaction is enabled
+  assert(EnabledInteractions.borrow, "Borrowing is currently disabled")
+
   -- amount of tokens to borrow
   local rawQuantity = bint(msg.Tags.Quantity)
   local quantity = precision.toInternalPrecision(rawQuantity)

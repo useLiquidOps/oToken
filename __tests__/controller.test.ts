@@ -1831,3 +1831,118 @@ describe("Reserves tests", () => {
     );
   });
 });
+
+describe("Interactions toggler tests", () => {
+  let handle: HandleFunction;
+  let controller: string;
+  let tags: Record<string, string>;
+
+  beforeAll(async () => {
+    handle = await setupProcess(env);
+    controller = env.Process.Owner;
+    tags = normalizeTags(env.Process.Tags);
+  });
+
+  it("Does not allow the toggle function to be called by anyone other than the controller", async () => {
+    const otherAddr = generateArweaveAddress();
+    const res = await handle(createMessage({
+      From: otherAddr,
+      Owner: otherAddr,
+      Action: "Toggle-Interactions",
+      Mint: "Enabled",
+      Borrow: "Disabled"
+    }));
+
+    expect(res.Messages).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          Target: otherAddr,
+          Tags: expect.arrayContaining([
+            expect.objectContaining({
+              name: "Error",
+              value: expect.stringContaining(
+                "The request could not be handled"
+              )
+            })
+          ])
+        })
+      ])
+    );
+  });
+
+  it("Toggles defined functions", async () => {
+    const res = await handle(createMessage({
+      Action: "Toggle-Interactions",
+      Mint: "Disabled",
+      Borrow: "Enabled"
+    }));
+
+    expect(res.Messages).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          Target: controller,
+          Tags: expect.arrayContaining([
+            expect.objectContaining({
+              name: "Updated",
+              value: "true"
+            })
+          ])
+        })
+      ])
+    );
+
+    const infoRes = await handle(createMessage({ Action: "Info" }));
+
+    expect(infoRes.Messages).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          Target: controller,
+          Tags: expect.arrayContaining([
+            expect.objectContaining({
+              name: "Enabled-Interactions",
+              value: expect.toBeJsonEncoded(expect.not.arrayContaining(["Mint"]))
+            }),
+            expect.objectContaining({
+              name: "Disabled-Interactions",
+              value: expect.toBeJsonEncoded(expect.arrayContaining(["Mint"]))
+            })
+          ])
+        })
+      ])
+    );
+
+    const sender = generateArweaveAddress();
+    const borrowRes = await handle(createMessage({
+      Action: "Credit-Notice",
+      "X-Action": "Mint",
+      Owner: tags["Collateral-Id"],
+      From: tags["Collateral-Id"],
+      "From-Process": tags["Collateral-Id"],
+      Quantity: "1",
+      Recipient: env.Process.Id,
+      Sender: sender
+    }));
+    const queueRes = await handle(createMessage({
+      "Queued-User": sender,
+      "X-Reference": normalizeTags(
+        getMessageByAction("Add-To-Queue", borrowRes.Messages)?.Tags || []
+      )["Reference"]
+    }));
+
+    expect(queueRes.Messages).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          Target: sender,
+          Tags: expect.arrayContaining([
+            expect.objectContaining({
+              name: "Error",
+              value: expect.stringContaining(
+                "Minting is currently disabled"
+              )
+            })
+          ])
+        })
+      ])
+    );
+  });
+});

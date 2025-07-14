@@ -11,6 +11,9 @@ local mod = {}
 -- (similar functionality to repaying)
 ---@type HandlerFunction
 function mod.liquidateBorrow(msg)
+  -- check if the interaction is enabled
+  assert(EnabledInteractions.liquidation, "Borrow liquidation is currently disabled")
+
   assert(
     assertions.isTokenQuantity(msg.Tags.Quantity),
     "Invalid incoming transfer quantity"
@@ -150,6 +153,9 @@ end
 -- (reverse redeem)
 ---@type HandlerFunction
 function mod.liquidatePosition(msg)
+  -- check if the interaction is enabled
+  assert(EnabledInteractions.liquidation, "Position liquidation is currently disabled")
+
   -- check if the message is coming from a friend process
   assert(
     assertions.isFriend(msg.From) or msg.From == ao.id,

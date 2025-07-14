@@ -13,6 +13,9 @@ local function transfer(msg, _, oracle)
   -- get position data
   local pos = position.globalPosition(sender, oracle)
 
+  -- check if the interaction is enabled
+  assert(EnabledInteractions.transfer, "Transferring is currently disabled")
+
   -- validate target and quantity
   assert(assertions.isAddress(target), "Invalid address")
   assert(target ~= sender, "Target cannot be the sender")

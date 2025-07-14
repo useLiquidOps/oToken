@@ -125,4 +125,23 @@ function mod.update(msg)
   })
 end
 
+-- Handler to enable interactions
+---@type HandlerFunction
+function mod.toggleInteractions(msg)
+  local updatedInteractions = {}
+
+  for name, value in pairs(EnabledInteractions) do
+    local expectedTagName = string.upper(string.sub(name, 1, 1)) .. string.sub(name, 2)
+    updatedInteractions[name] = value
+
+    if msg.Tags[expectedTagName] ~= nil then
+      updatedInteractions[name] = msg.Tags[expectedTagName] == "Enabled"
+    end
+  end
+
+  EnabledInteractions = updatedInteractions
+
+  msg.reply({ Updated = "true" })
+end
+
 return mod

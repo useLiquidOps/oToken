@@ -6,6 +6,9 @@ local rate = require ".supply.rate"
 
 ---@type HandlerWithOracle
 local function redeem(msg, _, oracle)
+  -- check if the interaction is enabled
+  assert(EnabledInteractions.redeem, "Redeeming is currently disabled")
+
   -- the wallet that is burning the tokens
   local sender = msg.From
 
