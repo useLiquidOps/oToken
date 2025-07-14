@@ -8,6 +8,9 @@ local mint = {}
 
 ---@type HandlerFunction
 function mint.handler(msg)
+  -- check if the interaction is enabled
+  assert(EnabledInteractions.mint, "Minting is currently disabled")
+
   assert(
     assertions.isTokenQuantity(msg.Tags.Quantity),
     "Invalid incoming transfer quantity"
