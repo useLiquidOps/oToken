@@ -564,7 +564,10 @@ function handlers.evaluate(msg, env)
   handlers.currentErrorHandler = handlers.defaultErrorHandler
 
   -- make sure the request was handled
-  assert(handled or msg.Id == ao.id, "The request could not be handled")
+  assert(
+    handled or msg.Id == ao.id or string.match(msg.Action or "", "Error$"),
+    "The request could not be handled"
+  )
 end
 
 return handlers
