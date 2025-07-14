@@ -17,6 +17,9 @@ function mod.setup()
 
   -- remaining quantity to distribute
   RemainingDelegateQuantity = RemainingDelegateQuantity or "0"
+
+  -- addresses to skip from delegation
+  NoDelegateAddr = { "RQTIq_IMiiA4GIOXcyzu0TZURK5xipsfOfsdEPEoHmE" }
 end
 
 -- Claims and distributes accrued AO yield for owAR
@@ -95,7 +98,7 @@ function mod.delegate(msg)
         )
 
         -- distribute if more than 0
-        if bint.ult(zero, distributeQty) then
+        if bint.ult(zero, distributeQty) and not utils.includes(addr, NoDelegateAddr) then
           ao.send({
             Target = AOToken,
             Action = "Transfer",
