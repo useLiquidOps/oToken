@@ -81,6 +81,16 @@ function mod.setup(msg)
   -- reserves
   ReserveFactor = ReserveFactor or tonumber(ao.env.Process.Tags["Reserve-Factor"]) or 0
   Reserves = Reserves or "0"
+
+  -- enabled functionalities
+  EnabledInteractions = EnabledInteractions or {
+    mint = true,
+    redeem = true,
+    borrow = true,
+    repay = true,
+    transfer = true,
+    liquidation = true
+  }
 end
 
 -- This syncs the global timestamp and block using the current message
