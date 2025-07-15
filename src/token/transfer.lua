@@ -1,3 +1,4 @@
+local delegation = require ".supply.delegation"
 local assertions = require ".utils.assertions"
 local precision = require ".utils.precision"
 local position = require ".borrow.position"
@@ -52,6 +53,9 @@ local function transfer(msg, _, oracle)
     assertions.isCollateralizedWithout(removedCapacityValue, pos),
     "Transfer value is too high and requires higher collateralization"
   )
+
+  -- run delegation
+  delegation.delegate(msg)
 
   -- update balances
   Balances[target] = tostring(bint(Balances[target] or 0) + quantity)
