@@ -1,3 +1,4 @@
+local delegation = require ".supply.delegation"
 local assertions = require ".utils.assertions"
 local precision = require ".utils.precision"
 local interest = require ".borrow.interest"
@@ -222,6 +223,9 @@ function mod.liquidatePosition(msg)
     bint.ule(qtyValueInoToken, balance),
     "The liquidation target owns less oTokens than the supplied quantity's worth"
   )
+
+  -- run delegation
+  delegation.delegate(msg)
 
   -- liquidate position by updating the oToken quantities, etc.
   Balances[target] = tostring(balance - qtyValueInoToken)

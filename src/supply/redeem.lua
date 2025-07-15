@@ -1,3 +1,4 @@
+local delegation = require ".supply.delegation"
 local assertions = require ".utils.assertions"
 local precision = require ".utils.precision"
 local position = require ".borrow.position"
@@ -76,6 +77,9 @@ local function redeem(msg, _, oracle)
     assertions.isCollateralizedWithout(removedCapacityValue, pos),
     "Redeem value is too high and requires higher collateralization"
   )
+
+  -- run delegation
+  delegation.delegate(msg)
 
   -- update stored quantities (balance, available, total supply)
   Balances[sender] = tostring(walletBalance - quantity)

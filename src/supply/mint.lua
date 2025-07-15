@@ -1,3 +1,4 @@
+local delegation = require ".supply.delegation"
 local assertions = require ".utils.assertions"
 local precision = require ".utils.precision"
 local interest = require ".borrow.interest"
@@ -25,6 +26,9 @@ function mint.handler(msg)
     bint.ule(quantity, bint(ValueLimit)),
     "Mint quantity is above the allowed limit"
   )
+
+  -- run delegation
+  delegation.delegate(msg)
 
   -- transfer sender
   local sender = msg.Tags.Sender
