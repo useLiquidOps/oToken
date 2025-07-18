@@ -46,20 +46,26 @@ function mod.setQueued(address, queued)
   }
 end
 
+-- Get the user to be queued, depending on the type of the message
+---@param msg Message Message to process
+---@return string
+function mod.getUserToQueue(msg)
+  -- return sender if it is a credit notice
+  if msg.Tags.Action == "Credit-Notice" then
+    return msg.Tags.Sender
+  end
+
+  -- the msg sender should be queued if it is not a credit-notice
+  return msg.From
+end
+
 -- Make a handle function use the global queue of the controller
 ---@param handle HandlerFunction Handle function to wrap
 ---@param errorHandler fun(msg: Message, env: Message, err: unknown)? Optional error handler
 ---@return HandlerFunction
 function mod.useQueue(handle, errorHandler)
   return function (msg, env)
-    -- default sender of the interaction is the message sender
-    local sender = msg.From
-    local isCreditNotice = msg.Tags.Action == "Credit-Notice"
-
-    -- if the message is a credit notice, update the sender
-    if isCreditNotice then
-      sender = msg.Tags.Sender
-    end
+    local sender = mod.getUserToQueue(msg)
 
     -- update and set queue
     local res = mod.setQueued(sender, true).receive()
@@ -98,6 +104,28 @@ function mod.useQueue(handle, errorHandler)
         error(err)
       end
     end
+  end
+end
+
+-- Make the error handler unqueue the user
+---@param errorHandler fun(msg: Message, env: Message, err: unknown)? Optional error handler
+---return fun(msg: Message, env: Message, err: unknown)
+function mod.useErrorHandler(errorHandler)
+  return function (msg, env, err)
+    -- call wrapped error handler if provided
+    if errorHandler ~= nil then
+      errorHandler(msg, env, err or "Unknown error")
+    else
+      Handlers.defaultErrorHandler(msg, env, err)
+    end
+
+    -- get user to unqueue
+    local sender = mod.getUserToQueue(msg)
+
+    -- unqueue and notify if it failed
+    mod
+      .setQueued(sender, false)
+      .notifyOnFailedQueue()
   end
 end
 

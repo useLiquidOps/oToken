@@ -482,8 +482,9 @@ function handlers.evaluate(msg, env)
             o.onRemove("timeout")
             o.onRemove = nil
           end
-          handlers.remove(o.name)
-          match = 0
+          --handlers.remove(o.name)
+          o.handle = function () end
+          --match = 0
         end
       end
 
