@@ -1,5 +1,3 @@
-local utils = require ".utils.utils"
-
 local mod = {}
 
 -- Add or remove a user from the queue in the controller
@@ -59,12 +57,19 @@ function mod.getUserToQueue(msg)
   return msg.From
 end
 
--- Make a handle function use the global queue of the controller
----@param handle HandlerFunction Handle function to wrap
----@param errorHandler fun(msg: Message, env: Message, err: unknown)? Optional error handler
----@return HandlerFunction
-function mod.useQueue(handle, errorHandler)
-  return function (msg, env)
+-- Make a handler use the global queue of the controller. This is
+-- usually needed for handlers that impelement complex behavior by
+-- waiting for several message responses before completion to prevent
+-- double spending
+---@param config table Configuration for the handler
+---@return table
+function mod.useQueue(config)
+  -- original handle function and error handler
+  local handle = config.handle
+  local errorHandler = config.errorHandler
+
+  -- override handle function to queue and unqueue
+  config.handle = function (msg, env)
     local sender = mod.getUserToQueue(msg)
 
     -- update and set queue
@@ -108,13 +113,9 @@ function mod.useQueue(handle, errorHandler)
       end
     end
   end
-end
 
--- Make the error handler unqueue the user
----@param errorHandler fun(msg: Message, env: Message, err: unknown)? Optional error handler
----return fun(msg: Message, env: Message, err: unknown)
-function mod.useErrorHandler(errorHandler)
-  return function (msg, env, err)
+  -- override error handler to unqueue the user
+  config.errorHandler = function (msg, env, err)
     -- call wrapped error handler if provided
     if errorHandler ~= nil then
       errorHandler(msg, env, err or "Unknown error")
@@ -130,6 +131,8 @@ function mod.useErrorHandler(errorHandler)
       .setQueued(sender, false)
       .notifyOnFailedQueue()
   end
+
+  return config
 end
 
 return mod
