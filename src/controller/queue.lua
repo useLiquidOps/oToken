@@ -82,6 +82,9 @@ function mod.useQueue(handle, errorHandler)
         errorHandler(msg, env, err)
       else
         -- no error handler, throw the error
+        -- do not error() here - that would trigger
+        -- the handler's error handler, which would
+        -- try to unqueue the user
         Handlers.defaultErrorHandler(msg, env, err)
       end
 

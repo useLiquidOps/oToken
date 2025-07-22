@@ -279,8 +279,8 @@ local function setup_handlers()
       Action = "Credit-Notice",
       ["X-Action"] = "Mint"
     },
-    handle = queue.useQueue(mint.handler),
-    errorHandler = mint.error
+    handle = queue.useQueue(mint.handler, mint.error),
+    errorHandler = queue.useErrorHandler(mint.error)
   })
   Handlers.add(
     "supply-price",
