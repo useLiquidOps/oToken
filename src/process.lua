@@ -253,8 +253,8 @@ local function setup_handlers()
       Action = "Credit-Notice",
       ["X-Action"] = "Repay"
     },
-    handle = queue.useQueue(repay.handler),
-    errorHandler = repay.error
+    handle = queue.useQueue(repay.handler, repay.error),
+    errorHandler = queue.useErrorHandler(repay.error)
   })
   Handlers.add(
     "borrow-position-collateralization",
