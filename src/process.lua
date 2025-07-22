@@ -239,22 +239,21 @@ local function setup_handlers()
       msg.reply({ ["Borrow-Balance"] = tostring(borrowBalance) })
     end
   )
-  Handlers.add(
-    "borrow-loan-borrow",
-    Handlers.utils.hasMatchingTag("Action", "Borrow"),
-    -- needs unqueueing because of coroutines
-    queue.useQueue(oracle.withOracle(borrow))
-  )
-  Handlers.advanced({
+  Handlers.advanced(queue.useQueue({
+    name = "borrow-loan-borrow",
+    pattern = { Action = "Borrow" },
+    handle = oracle.withOracle(borrow)
+  }))
+  Handlers.advanced(queue.useQueue({
     name = "borrow-repay",
     pattern = {
       From = CollateralID,
       Action = "Credit-Notice",
       ["X-Action"] = "Repay"
     },
-    handle = queue.useQueue(repay.handler),
+    handle = repay.handler,
     errorHandler = repay.error
-  })
+  }))
   Handlers.add(
     "borrow-position-collateralization",
     Handlers.utils.hasMatchingTag("Action", "Position"),
@@ -271,16 +270,16 @@ local function setup_handlers()
     position.handlers.allPositions
   )
 
-  Handlers.advanced({
+  Handlers.advanced(queue.useQueue({
     name = "supply-mint",
     pattern = {
       From = CollateralID,
       Action = "Credit-Notice",
       ["X-Action"] = "Mint"
     },
-    handle = queue.useQueue(mint.handler),
+    handle = mint.handler,
     errorHandler = mint.error
-  })
+  }))
   Handlers.add(
     "supply-price",
     Handlers.utils.hasMatchingTag("Action", "Exchange-Rate-Current"),
@@ -302,12 +301,11 @@ local function setup_handlers()
       })
     end
   )
-  -- needs unqueueing because of coroutines
-  Handlers.add(
-    "supply-redeem",
-    Handlers.utils.hasMatchingTag("Action", "Redeem"),
-    queue.useQueue(oracle.withOracle(redeem))
-  )
+  Handlers.advanced(queue.useQueue({
+    name = "supply-redeem",
+    pattern = { Action = "Redeem" },
+    handle = oracle.withOracle(redeem)
+  }))
 
   Handlers.add(
     "token-info",
@@ -329,12 +327,11 @@ local function setup_handlers()
     Handlers.utils.hasMatchingTag("Action", "Balances"),
     balance.balances
   )
-  -- needs unqueueing because of coroutines
-  Handlers.add(
-    "token-transfer",
-    Handlers.utils.hasMatchingTag("Action", "Transfer"),
-    queue.useQueue(oracle.withOracle(transfer))
-  )
+  Handlers.advanced(queue.useQueue({
+    name = "token-transfer",
+    pattern = { Action = "Transfer" },
+    handle = oracle.withOracle(transfer)
+  }))
 
   HandlersAdded = true
 end

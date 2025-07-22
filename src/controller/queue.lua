@@ -1,5 +1,3 @@
-local utils = require ".utils.utils"
-
 local mod = {}
 
 -- Add or remove a user from the queue in the controller
@@ -46,20 +44,33 @@ function mod.setQueued(address, queued)
   }
 end
 
--- Make a handle function use the global queue of the controller
----@param handle HandlerFunction Handle function to wrap
----@param errorHandler fun(msg: Message, env: Message, err: unknown)? Optional error handler
----@return HandlerFunction
-function mod.useQueue(handle, errorHandler)
-  return function (msg, env)
-    -- default sender of the interaction is the message sender
-    local sender = msg.From
-    local isCreditNotice = msg.Tags.Action == "Credit-Notice"
+-- Get the user to be queued, depending on the type of the message
+---@param msg Message Message to process
+---@return string
+function mod.getUserToQueue(msg)
+  -- return sender if it is a credit notice
+  if msg.Tags.Action == "Credit-Notice" then
+    return msg.Tags.Sender
+  end
 
-    -- if the message is a credit notice, update the sender
-    if isCreditNotice then
-      sender = msg.Tags.Sender
-    end
+  -- the msg sender should be queued if it is not a credit-notice
+  return msg.From
+end
+
+-- Make a handler use the global queue of the controller. This is
+-- usually needed for handlers that impelement complex behavior by
+-- waiting for several message responses before completion to prevent
+-- double spending
+---@param config table Configuration for the handler
+---@return table
+function mod.useQueue(config)
+  -- original handle function and error handler
+  local handle = config.handle
+  local errorHandler = config.errorHandler
+
+  -- override handle function to queue and unqueue
+  config.handle = function (msg, env)
+    local sender = mod.getUserToQueue(msg)
 
     -- update and set queue
     local res = mod.setQueued(sender, true).receive()
@@ -76,7 +87,10 @@ function mod.useQueue(handle, errorHandler)
         errorHandler(msg, env, err)
       else
         -- no error handler, throw the error
-        error(err)
+        -- do not error() here - that would trigger
+        -- the handler's error handler, which would
+        -- try to unqueue the user
+        Handlers.defaultErrorHandler(msg, env, err)
       end
 
       return
@@ -99,6 +113,26 @@ function mod.useQueue(handle, errorHandler)
       end
     end
   end
+
+  -- override error handler to unqueue the user
+  config.errorHandler = function (msg, env, err)
+    -- call wrapped error handler if provided
+    if errorHandler ~= nil then
+      errorHandler(msg, env, err or "Unknown error")
+    else
+      Handlers.defaultErrorHandler(msg, env, err)
+    end
+
+    -- get user to unqueue
+    local sender = mod.getUserToQueue(msg)
+
+    -- unqueue and notify if it failed
+    mod
+      .setQueued(sender, false)
+      .notifyOnFailedQueue()
+  end
+
+  return config
 end
 
 return mod

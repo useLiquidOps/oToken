@@ -464,6 +464,7 @@ end
 -- @treturn The response from the handler(s). Returns a default message if no handler matches.
 function handlers.evaluate(msg, env)
   local handled = false
+  local toRemove = {} -- handlers to remove after evaluation
   assert(type(msg) == 'table', 'msg is not valid')
   assert(type(env) == 'table', 'env is not valid')
 
@@ -482,8 +483,8 @@ function handlers.evaluate(msg, env)
             o.onRemove("timeout")
             o.onRemove = nil
           end
-          handlers.remove(o.name)
-          match = 0
+          o.handle = function () end
+          table.insert(toRemove, o.name)
         end
       end
 
@@ -550,7 +551,7 @@ function handlers.evaluate(msg, env)
               o.onRemove("expired")
               o.onRemove = nil
             end
-            handlers.remove(o.name)
+            table.insert(toRemove, o.name)
           end
         end
       end
@@ -563,8 +564,16 @@ function handlers.evaluate(msg, env)
   -- reset current error handler
   handlers.currentErrorHandler = handlers.defaultErrorHandler
 
+  -- remove marked handlers
+  for _, name in ipairs(toRemove) do
+    handlers.remove(name)
+  end
+
   -- make sure the request was handled
-  assert(handled or msg.Id == ao.id, "The request could not be handled")
+  assert(
+    handled or msg.Id == ao.id or string.match(msg.Action or "", "Error$"),
+    "The request could not be handled"
+  )
 end
 
 return handlers
