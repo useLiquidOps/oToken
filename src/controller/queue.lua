@@ -82,7 +82,7 @@ function mod.useQueue(handle, errorHandler)
         errorHandler(msg, env, err)
       else
         -- no error handler, throw the error
-        error(err)
+        Handlers.defaultErrorHandler(msg, env, err)
       end
 
       return

@@ -239,12 +239,6 @@ local function setup_handlers()
       msg.reply({ ["Borrow-Balance"] = tostring(borrowBalance) })
     end
   )
-  -- Handlers.add(
-  --   "borrow-loan-borrow",
-  --   Handlers.utils.hasMatchingTag("Action", "Borrow"),
-  --   -- needs unqueueing because of coroutines
-  --   queue.useQueue(oracle.withOracle(borrow))
-  -- )
   Handlers.advanced({
     name = "borrow-loan-borrow",
     pattern = { Action = "Borrow" },
