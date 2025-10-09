@@ -1,7 +1,9 @@
 local delegation = require ".supply.delegation"
 local assertions = require ".utils.assertions"
 local precision = require ".utils.precision"
+local position = require ".borrow.position"
 local interest = require ".borrow.interest"
+local patching = require ".token.patching"
 local bint = require ".utils.bint"(1024)
 local repay = require ".borrow.repay"
 local utils = require ".utils.utils"
@@ -238,6 +240,26 @@ function mod.liquidatePosition(msg)
     Action = "Transfer",
     Quantity = tostring(rawQuantity),
     Recipient = liquidator
+  })
+
+  -- patch
+  ao.send({
+    device = "patch@1.0",
+    ["token-info"] = { supply = TotalSupply },
+    ["pool-state"] = {
+      cash = precision.formatInternalAsNative(Cash, "rounddown"),
+      utilization = mod.utils.utilization(),
+      rates = {
+        borrow = mod.utils.borrowRate(),
+        supply = interest.calculateSupplyRate()
+      }
+    },
+    balances = { [target] = Balances[target] },
+    positions = {
+      [target] = patching.utils.stringValPosition(
+        position.position(target)
+      )
+    }
   })
 
   -- reply to the controller
