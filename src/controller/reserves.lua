@@ -65,6 +65,15 @@ function mod.deploy(msg)
   Reserves = tostring(reserves - quantity)
   Cash = tostring(bint(Cash) + quantity)
 
+  -- patch
+  ao.send({
+    device = "patch@1.0",
+    ["pool-state"] = {
+      cash = precision.formatInternalAsNative(Cash, "rounddown"),
+      ["total-reserves"] = precision.formatInternalAsNative(Reserves, "roundup")
+    }
+  })
+
   -- reply
   msg.reply({
     ["Total-Reserves"] = precision.formatInternalAsNative(Reserves, "roundup"),

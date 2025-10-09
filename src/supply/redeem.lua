@@ -1,12 +1,17 @@
 local delegation = require ".supply.delegation"
 local assertions = require ".utils.assertions"
 local precision = require ".utils.precision"
+local interest = require ".borrow.interest"
 local position = require ".borrow.position"
+local patching = require ".token.patching"
 local bint = require ".utils.bint"(1024)
+local utils = require ".utils.utils"
 local rate = require ".supply.rate"
 
+local mod = {}
+
 ---@type HandlerWithOracle
-local function redeem(msg, _, oracle)
+function mod.redeem(msg, _, oracle)
   -- check if the interaction is enabled
   assert(EnabledInteractions.redeem, "Redeeming is currently disabled")
 
@@ -93,6 +98,25 @@ local function redeem(msg, _, oracle)
     Quantity = tostring(rewardQty),
     Recipient = sender
   })
+  patching.patchOrder(msg.Id, true)
+  ao.send({
+    device = "patch@1.0",
+    ["pool-state"] = {
+      cash = precision.formatInternalAsNative(Cash, "rounddown"),
+      ["total-borrows"] = precision.formatInternalAsNative(TotalBorrows, "roundup"),
+      utilization = patching.utils.utilization(),
+      rates = {
+        borrow = patching.utils.borrowRate(),
+        supply = interest.calculateSupplyRate()
+      }
+    },
+    balances = { [sender] = Balances[sender] },
+    positions = {
+      [sender] = patching.utils.stringValPosition(
+        position.position(sender)
+      )
+    }
+  })
 
   msg.reply({
     Action = "Redeem-Confirmation",
@@ -101,4 +125,19 @@ local function redeem(msg, _, oracle)
   })
 end
 
-return redeem
+---@param msg Message
+---@param _ Message
+---@param err unknown
+function mod.error(msg, _, err)
+  local prettyError, rawError = utils.prettyError(err)
+
+  patching.patchOrder(msg.Id, false, prettyError)
+  ao.send({
+    Target = msg.From,
+    Action = "Redeem-Error",
+    Error = prettyError,
+    ["Raw-Error"] = rawError
+  })
+end
+
+return mod

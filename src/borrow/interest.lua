@@ -77,9 +77,8 @@ function mod.interestRate(msg)
   })
 end
 
----@type HandlerFunction
-function mod.supplyRate(msg)
-  ---@type Bint, number
+-- Calculates the current supply rate
+function mod.calculateSupplyRate()
   local borrowRate, rateMul = mod.calculateBorrowRate()
   local borrowRateFloat = utils.bintToFloat(
     borrowRate,
@@ -100,6 +99,12 @@ function mod.supplyRate(msg)
     ) - 1
   end
 
+  return supplyRate
+end
+
+---@type HandlerFunction
+function mod.supplyRate(msg)
+  local supplyRate = mod.calculateSupplyRate()
   msg.reply({ ["Supply-Rate"] = tostring(supplyRate) })
 end
 
@@ -140,9 +145,6 @@ function mod.accrueInterest(msg)
     hundred
   )
 
-  -- update the reserves remainder value
-  ReservesRemainder = tostring(remainder)
-
   -- update global borrow index
   local borrowIndexUpdate = bint.udiv(
     borrowIndex * interestFactor,
@@ -163,6 +165,23 @@ function mod.accrueInterest(msg)
   TotalBorrows = tostring(totalBorrows + interestAccrued)
   Reserves = tostring(reserves + reservesUpdate)
   BorrowIndex = tostring(borrowIndex + borrowIndexUpdate)
+
+  -- update the reserves remainder value
+  ReservesRemainder = tostring(remainder)
+
+  -- patch the updated globals
+  ao.send({
+    device = "patch@1.0",
+    ["pool-state"] = {
+      ["total-borrows"] = precision.formatInternalAsNative(TotalBorrows, "roundup"),
+      ["total-reserves"] = precision.formatInternalAsNative(Reserves, "roundup"),
+      ["interest-accrual"] = {
+        ["borrow-index"] = BorrowIndex,
+        ["last-updated"] = LastBorrowIndexUpdate,
+        ["reserves-remainder"] = ReservesRemainder
+      }
+    }
+  })
 end
 
 -- Accrues interest for a specific user and returns the updated borrow balance
@@ -191,6 +210,14 @@ function mod.accrueInterestForUser(address)
   -- update global values
   Loans[address] = tostring(borrowBalance)
   InterestIndices[address] = tostring(interestIndex)
+
+  -- patch updated global values
+  ao.send({
+    device = "patch@1.0",
+    loans = { [address] = Loans[address] },
+    ["interest-indices"] = { [address] = InterestIndices[address] },
+    -- !!do not update positions to avoid an infinite recursive loop!!
+  })
 
   return borrowBalance
 end

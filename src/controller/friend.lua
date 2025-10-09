@@ -51,6 +51,12 @@ function friend.add(msg)
     denomination = friendDenomination
   })
 
+  -- patch
+  ao.send({
+    device = "patch@1.0",
+    environment = { friends = Friends }
+  })
+
   -- notify the sender
   msg.reply({
     Action = "Friend-Added",
@@ -81,6 +87,12 @@ function friend.remove(msg)
 
   -- check if any were removed
   assert(#removed > 0, "Friend " .. target .. " not yet added")
+
+  -- patch
+  ao.send({
+    device = "patch@1.0",
+    environment = { friends = Friends }
+  })
 
   -- notify the sender
   msg.reply({

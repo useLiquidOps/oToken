@@ -2,6 +2,7 @@ local delegation = require ".supply.delegation"
 local assertions = require ".utils.assertions"
 local precision = require ".utils.precision"
 local position = require ".borrow.position"
+local patching = require ".token.patching"
 local bint = require ".utils.bint"(1024)
 local rate = require ".supply.rate"
 
@@ -60,6 +61,23 @@ local function transfer(msg, _, oracle)
   -- update balances
   Balances[target] = tostring(bint(Balances[target] or 0) + quantity)
   Balances[sender] = tostring(walletBalance - quantity)
+
+  -- patch transfer
+  ao.send({
+    device = "patch@1.0",
+    balances = {
+      [sender] = Balances[sender],
+      [target] = Balances[target]
+    },
+    positions = {
+      [sender] = patching.utils.stringValPosition(
+        position.position(sender)
+      ),
+      [target] = patching.utils.stringValPosition(
+        position.position(target)
+      )
+    }
+  })
 
   -- send notices about the transfer
   if not msg.Tags.Cast then

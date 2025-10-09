@@ -1,6 +1,8 @@
 local assertions = require ".utils.assertions"
 local precision = require ".utils.precision"
+local position = require ".borrow.position"
 local interest = require ".borrow.interest"
+local patching = require ".token.patching"
 local bint = require ".utils.bint"(1024)
 local utils = require ".utils.utils"
 
@@ -48,6 +50,7 @@ function repay.handler(msg)
     ["Repaid-Quantity"] = tostring(actualRepaidQty),
     ["Refund-Quantity"] = tostring(refundQty)
   })
+  patching.patchOrder(msg.Tags["Pushed-For"] or msg.Id, true)
 
   -- if this was paid on behalf of someone else
   -- we will also notify them
@@ -74,6 +77,11 @@ function repay.error(msg, _, err)
     Quantity = msg.Tags.Quantity,
     Recipient = sender
   })
+  patching.patchOrder(
+    msg.Tags["Pushed-For"] or msg.Id,
+    false,
+    prettyError
+  )
 
   if assertions.isAddress(sender) then
     ao.send({
@@ -149,6 +157,27 @@ function repay.repayToPool(target, quantity)
   -- finally, we add the repaid amount back to the pool (minus the reserve amount if needed)
   Cash = tostring(bint(Cash) + precision.toInternalPrecision(actualRepaidQty))
   TotalBorrows = tostring(bint(TotalBorrows) - precision.toInternalPrecision(actualRepaidQty))
+
+  -- patch the updated globals
+  ao.send({
+    device = "patch@1.0",
+    ["pool-state"] = {
+      cash = precision.formatInternalAsNative(Cash, "rounddown"),
+      ["total-borrows"] = precision.formatInternalAsNative(TotalBorrows, "roundup"),
+      utilization = patching.utils.utilization(),
+      rates = {
+        borrow = patching.utils.borrowRate(),
+        supply = interest.calculateSupplyRate()
+      }
+    },
+    positions = {
+      [target] = patching.utils.stringValPosition(
+        position.position(target)
+      )
+    },
+    loans = { [target] = Loans[target] },
+    ["interest-indices"] = { [target] = InterestIndices[target] }
+  })
 
   return refundQty, actualRepaidQty
 end

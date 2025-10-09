@@ -1,5 +1,6 @@
 local assertions = require ".utils.assertions"
 local precision = require ".utils.precision"
+local patching = require ".token.patching"
 local bint = require ".utils.bint"(1024)
 
 local mod = {}
@@ -109,6 +110,34 @@ function mod.update(msg)
   if newWrappedAOToken then WrappedAOToken = newWrappedAOToken end
   if newAOToken then AOToken = newAOToken end
 
+  -- patch
+  ao.send({
+    device = "patch@1.0",
+    environment = {
+      ["risk-parameters"] = {
+        ["collateral-factor"] = CollateralFactor,
+        ["liquidation-threshold"] = LiquidationThreshold,
+        ["reserve-factor"] = ReserveFactor
+      },
+      limits = {
+        ["value-limit"] = precision.formatInternalAsNative(ValueLimit, "rounddown"),
+        ["cooldown-period"] = CooldownPeriod
+      },
+      ["oracle-parameters"] = {
+        oracle = Oracle,
+        ["oracle-delay-tolerance"] = MaxOracleDelay
+      },
+      ["interest-model"] = {
+        rates = {
+          init = InitRate,
+          base = BaseRate,
+          jump = JumpRate
+        },
+        ["kink-param"] = KinkParam
+      }
+    }
+  })
+
   msg.reply({
     Oracle = Oracle,
     ["Collateral-Factor"] = tostring(CollateralFactor),
@@ -140,6 +169,19 @@ function mod.toggleInteractions(msg)
   end
 
   EnabledInteractions = updatedInteractions
+
+  -- patch
+  local enabledInteractions, disabledInteractions = patching.utils.interactionsState()
+
+  ao.send({
+    device = "patch@1.0",
+    environment = {
+      limits = {
+        ["enabled-interactions"] = enabledInteractions,
+        ["disabled-interactions"] = disabledInteractions
+      }
+    }
+  })
 
   msg.reply({ Updated = "true" })
 end

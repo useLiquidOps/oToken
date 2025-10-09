@@ -1,10 +1,15 @@
 local assertions = require ".utils.assertions"
 local precision = require ".utils.precision"
+local interest = require ".borrow.interest"
 local position = require ".borrow.position"
+local patching = require ".token.patching"
 local bint = require ".utils.bint"(1024)
+local utils = require ".utils.utils"
+
+local mod = {}
 
 ---@type HandlerWithOracle
-local function borrow(msg, _, oracle)
+function mod.borrow(msg, _, oracle)
   -- the wallet that will borrow the tokens
   local account = msg.From
 
@@ -80,6 +85,35 @@ local function borrow(msg, _, oracle)
     Recipient = account
   })
 
+  -- patch order result
+  patching.patchOrder(
+    msg.Id,
+    true,
+    "Successfully borrowed " ..
+    utils.bintToFloatString(rawQuantity, CollateralDenomination) ..
+    " " ..
+    CollateralTicker
+  )
+  ao.send({
+    device = "patch@1.0",
+    ["pool-state"] = {
+      cash = precision.formatInternalAsNative(Cash, "rounddown"),
+      ["total-borrows"] = precision.formatInternalAsNative(TotalBorrows, "roundup"),
+      utilization = patching.utils.utilization(),
+      rates = {
+        borrow = patching.utils.borrowRate(),
+        supply = interest.calculateSupplyRate()
+      }
+    },
+    positions = {
+      [account] = patching.utils.stringValPosition(
+        position.position(account)
+      )
+    },
+    loans = { [account] = Loans[account] },
+    ["interest-indices"] = { [account] = InterestIndices[account] }
+  })
+
   -- send confirmation
   msg.reply({
     Action = "Borrow-Confirmation",
@@ -87,4 +121,19 @@ local function borrow(msg, _, oracle)
   })
 end
 
-return borrow
+---@param msg Message
+---@param _ Message
+---@param err unknown
+function mod.error(msg, _, err)
+  local prettyError, rawError = utils.prettyError(err)
+
+  patching.patchOrder(msg.Id, false, prettyError)
+  ao.send({
+    Target = msg.From,
+    Action = "Borrow-Error",
+    Error = prettyError,
+    ["Raw-Error"] = rawError
+  })
+end
+
+return mod

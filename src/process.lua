@@ -18,6 +18,7 @@ local reserves = require ".controller.reserves"
 local balance = require ".token.balance"
 local token = require ".token.token"
 local transfer = require ".token.transfer"
+local patching = require ".token.patching"
 
 local pool = require ".borrow.pool"
 local position = require ".borrow.position"
@@ -53,6 +54,7 @@ local function setup_handlers()
       oracle.setup(msg, env)
       cooldown.setup(msg, env)
       delegation.setup(msg, env)
+      patching.setup(msg, env)
     end
   )
 
@@ -242,7 +244,8 @@ local function setup_handlers()
   Handlers.advanced(queue.useQueue({
     name = "borrow-loan-borrow",
     pattern = { Action = "Borrow" },
-    handle = oracle.withOracle(borrow)
+    handle = oracle.withOracle(borrow.borrow),
+    errorHandler = borrow.error
   }))
   Handlers.advanced(queue.useQueue({
     name = "borrow-repay",
@@ -304,7 +307,8 @@ local function setup_handlers()
   Handlers.advanced(queue.useQueue({
     name = "supply-redeem",
     pattern = { Action = "Redeem" },
-    handle = oracle.withOracle(redeem)
+    handle = oracle.withOracle(redeem.redeem),
+    errorHandler = redeem.error
   }))
 
   Handlers.add(
