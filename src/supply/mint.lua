@@ -1,6 +1,7 @@
 local delegation = require ".supply.delegation"
 local assertions = require ".utils.assertions"
 local precision = require ".utils.precision"
+local position = require ".borrow.position"
 local interest = require ".borrow.interest"
 local patching = require ".token.patching"
 local bint = require ".utils.bint"(1024)
@@ -58,7 +59,26 @@ function mint.handler(msg)
   Cash = tostring(availableTokens + quantity)
   TotalSupply = tostring(totalSupply + mintQty)
 
+  -- patch
   patching.patchOrder(msg.Tags["Pushed-For"] or msg.Id, true)
+  ao.send({
+    device = "patch@1.0",
+    ["pool-state"] = {
+      cash = precision.formatInternalAsNative(Cash, "rounddown"),
+      ["total-borrows"] = precision.formatInternalAsNative(TotalBorrows, "roundup"),
+      utilization = patching.utils.utilization(),
+      rates = {
+        borrow = patching.utils.borrowRate(),
+        supply = interest.calculateSupplyRate()
+      }
+    },
+    balances = { [sender] = Balances[sender] },
+    positions = {
+      [sender] = patching.utils.stringValPosition(
+        position.position(sender)
+      )
+    }
+  })
 
   -- TODO: maybe we could msg.reply, but the target of that would be
   -- the token process that sent the "Credit-Notice"
