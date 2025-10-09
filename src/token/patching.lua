@@ -35,12 +35,10 @@ function mod.setup()
     )
   end
 
-  -- clone balances
-  local balances = { device = "trie@1.0" }
-
-  for address, balance in pairs(Balances) do
-    balances[address] = balance
-  end
+  -- clone loans, interest indices, balances
+  local loans = mod.mapAsTrie(Loans)
+  local interestIndices = mod.mapAsTrie(InterestIndices)
+  local balances = mod.mapAsTrie(Balances)
 
   -- current interest rate
   local interestRate, rateMul = interest.calculateBorrowRate()
@@ -50,7 +48,7 @@ function mod.setup()
   )
 
   -- map positions
-  local positions = {}
+  local positions = { device = "trie@1.0" }
   local calculatedPositions = mod.allPositions()
 
   for address, position in pairs(calculatedPositions) do
@@ -95,8 +93,27 @@ function mod.setup()
     cooldowns = Cooldowns,
     borrowRate = borrowRate,
     supplyRate = interest.calculateSupplyRate(),
-    positions = positions
+    positions = positions,
+    loans = loans,
+    borrowIndex = BorrowIndex,
+    lastBorrowIndexUpdate = LastBorrowIndexUpdate,
+    reservesRemainder = ReservesRemainder,
+    interestIndices = interestIndices
   })
+end
+
+-- Convert a map to a trie structure when patching
+---@generic T : unknown
+---@param map table<string, T> The map to convert
+---@return table<string, T>
+function mod.mapAsTrie(map)
+  local res = { device = "trie@1.0" }
+
+  for key, value in pairs(map) do
+    res[key] = value
+  end
+
+  return res
 end
 
 return mod
