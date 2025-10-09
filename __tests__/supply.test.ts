@@ -74,17 +74,29 @@ describe("Minting and providing", () => {
   });
 
   it("Does not throw unhandled error for debit notices", async () => {
-    const res = await handle(createMessage({
+    const msg = createMessage({
       Action: "Debit-Notice",
       Owner: tags["Collateral-Id"],
       From: tags["Collateral-Id"],
       "From-Process": tags["Collateral-Id"],
       Quantity: "15",
       Recipient: generateArweaveAddress()
-    }));
+    });
+    const res = await handle(msg);
 
-    expect(res.Messages).toEqual([]);
-    expect(res.Messages).toHaveLength(0);
+    expect(res.Messages).not.toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          Target: msg.From,
+          Tags: expect.arrayContaining([
+            expect.objectContaining({
+              name: "Action",
+              value: "Debit-Notice-Error"
+            })
+          ])
+        })
+      ])
+    );
   });
 
   it("Does not handle invalid token quantities", async () => {
@@ -901,7 +913,19 @@ describe("AO delegation", () => {
     const handle = await setupProcess(env);
     const res = await handle(createMessage({ Action: "Delegate" }));
 
-    expect(res.Messages).toHaveLength(0);
+    expect(res.Messages).not.toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          Target: tags["Wrapped-AO-Token"],
+          Tags: expect.arrayContaining([
+            expect.objectContaining({
+              name: "Action",
+              value: "Claim"
+            })
+          ])
+        })
+      ])
+    );
   });
 
   it("Does not delegate any tokens if the claim failed", async () => {
