@@ -77,9 +77,8 @@ function mod.interestRate(msg)
   })
 end
 
----@type HandlerFunction
-function mod.supplyRate(msg)
-  ---@type Bint, number
+-- Calculates the current supply rate
+function mod.calculateSupplyRate()
   local borrowRate, rateMul = mod.calculateBorrowRate()
   local borrowRateFloat = utils.bintToFloat(
     borrowRate,
@@ -100,6 +99,12 @@ function mod.supplyRate(msg)
     ) - 1
   end
 
+  return supplyRate
+end
+
+---@type HandlerFunction
+function mod.supplyRate(msg)
+  local supplyRate = mod.calculateSupplyRate()
   msg.reply({ ["Supply-Rate"] = tostring(supplyRate) })
 end
 

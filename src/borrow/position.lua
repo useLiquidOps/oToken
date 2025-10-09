@@ -129,6 +129,32 @@ function mod.globalPosition(address, oracle)
   return res
 end
 
+-- Get all positions on this oToken
+---@return Position[]
+function mod.allPositions()
+  ---@type Position[]
+  local positions = {}
+
+  -- go through all users who have collateral deposited
+  -- and add their position
+  for address, _ in pairs(Balances) do
+    positions[address] = mod.position(address)
+  end
+
+  -- go through all users who have "Loans"
+  -- because it is possible that their collateralization
+  -- is not in this instance of the process
+  for address, _ in pairs(Loans) do
+    -- do not handle positions that have
+    -- already been added above
+    if not positions[address] then
+      positions[address] = mod.position(address)
+    end
+  end
+
+  return positions
+end
+
 -- Local position action handler
 ---@type HandlerFunction
 function mod.handlers.localPosition(msg)
@@ -165,36 +191,15 @@ end
 function mod.handlers.allPositions(msg)
   ---@type table<string, { Collateralization: string, Capacity: string, Borrow-Balance: string, Liquidation-Limit: string }>
   local positions = {}
+  local calculatedPositions = mod.allPositions()
 
-  -- go through all users who have collateral deposited
-  -- and add their position
-  for address, _ in pairs(Balances) do
-    local position = mod.position(address)
-
+  for address, position in pairs(calculatedPositions) do
     positions[address] = {
       Collateralization = tostring(position.collateralization),
       Capacity = tostring(position.capacity),
       ["Borrow-Balance"] = tostring(position.borrowBalance),
       ["Liquidation-Limit"] = tostring(position.liquidationLimit)
     }
-  end
-
-  -- go through all users who have "Loans"
-  -- because it is possible that their collateralization
-  -- is not in this instance of the process
-  for address, _ in pairs(Loans) do
-    -- do not handle positions that have
-    -- already been added above
-    if not positions[address] then
-      local position = mod.position(address)
-
-      positions[address] = {
-        Collateralization = tostring(position.collateralization),
-        Capacity = tostring(position.capacity),
-        ["Borrow-Balance"] = tostring(position.borrowBalance),
-        ["Liquidation-Limit"] = tostring(position.liquidationLimit)
-      }
-    end
   end
 
   -- reply with the serialized result

@@ -18,6 +18,7 @@ local reserves = require ".controller.reserves"
 local balance = require ".token.balance"
 local token = require ".token.token"
 local transfer = require ".token.transfer"
+local patching = require ".token.patching"
 
 local pool = require ".borrow.pool"
 local position = require ".borrow.position"
@@ -53,6 +54,7 @@ local function setup_handlers()
       oracle.setup(msg, env)
       cooldown.setup(msg, env)
       delegation.setup(msg, env)
+      patching.setup(msg, env)
     end
   )
 
