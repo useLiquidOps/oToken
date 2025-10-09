@@ -32,7 +32,7 @@ function mod.sync(msg)
   end
 end
 
--- Cooldown middleware/gate that rejects 
+-- Cooldown middleware/gate that rejects
 -- interactions if the user is on cooldown
 ---@type HandlerFunction
 function mod.gate(msg)
@@ -47,6 +47,12 @@ function mod.gate(msg)
 
   -- add user cooldown
   Cooldowns[sender] = msg["Block-Height"] + CooldownPeriod
+
+  -- patch
+  ao.send({
+    device = "patch@1.0",
+    cooldowns = { [sender] = Cooldowns[sender] }
+  })
 end
 
 -- Refunds the user and sends the cooldown error
