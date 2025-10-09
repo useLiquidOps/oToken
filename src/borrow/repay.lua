@@ -1,6 +1,7 @@
 local assertions = require ".utils.assertions"
 local precision = require ".utils.precision"
 local interest = require ".borrow.interest"
+local patching = require ".token.patching"
 local bint = require ".utils.bint"(1024)
 local utils = require ".utils.utils"
 
@@ -48,6 +49,7 @@ function repay.handler(msg)
     ["Repaid-Quantity"] = tostring(actualRepaidQty),
     ["Refund-Quantity"] = tostring(refundQty)
   })
+  patching.patchOrder(msg.Tags["Pushed-For"] or msg.Id, true)
 
   -- if this was paid on behalf of someone else
   -- we will also notify them
@@ -74,6 +76,11 @@ function repay.error(msg, _, err)
     Quantity = msg.Tags.Quantity,
     Recipient = sender
   })
+  patching.patchOrder(
+    msg.Tags["Pushed-For"] or msg.Id,
+    false,
+    prettyError
+  )
 
   if assertions.isAddress(sender) then
     ao.send({

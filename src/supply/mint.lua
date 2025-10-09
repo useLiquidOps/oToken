@@ -2,6 +2,7 @@ local delegation = require ".supply.delegation"
 local assertions = require ".utils.assertions"
 local precision = require ".utils.precision"
 local interest = require ".borrow.interest"
+local patching = require ".token.patching"
 local bint = require ".utils.bint"(1024)
 local utils = require ".utils.utils"
 
@@ -57,6 +58,8 @@ function mint.handler(msg)
   Cash = tostring(availableTokens + quantity)
   TotalSupply = tostring(totalSupply + mintQty)
 
+  patching.patchOrder(msg.Tags["Pushed-For"] or msg.Id, true)
+
   -- TODO: maybe we could msg.reply, but the target of that would be
   -- the token process that sent the "Credit-Notice"
   -- we need to discuss with the ao team if the reply is actually forwarded
@@ -79,6 +82,11 @@ end
 function mint.error(msg, _, err)
   local prettyError, rawError = utils.prettyError(err)
 
+  patching.patchOrder(
+    msg.Tags["Pushed-For"] or msg.Id,
+    false,
+    prettyError
+  )
   ao.send({
     Target = CollateralID,
     Action = "Transfer",

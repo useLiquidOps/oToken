@@ -244,7 +244,8 @@ local function setup_handlers()
   Handlers.advanced(queue.useQueue({
     name = "borrow-loan-borrow",
     pattern = { Action = "Borrow" },
-    handle = oracle.withOracle(borrow)
+    handle = oracle.withOracle(borrow.borrow),
+    errorHandler = borrow.error
   }))
   Handlers.advanced(queue.useQueue({
     name = "borrow-repay",
@@ -306,7 +307,8 @@ local function setup_handlers()
   Handlers.advanced(queue.useQueue({
     name = "supply-redeem",
     pattern = { Action = "Redeem" },
-    handle = oracle.withOracle(redeem)
+    handle = oracle.withOracle(redeem.redeem),
+    errorHandler = redeem.error
   }))
 
   Handlers.add(

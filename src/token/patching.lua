@@ -98,7 +98,24 @@ function mod.setup()
     borrowIndex = BorrowIndex,
     lastBorrowIndexUpdate = LastBorrowIndexUpdate,
     reservesRemainder = ReservesRemainder,
-    interestIndices = interestIndices
+    interestIndices = interestIndices,
+    orders = { device = "trie@1.0" }
+  })
+end
+
+-- Patch the result of a borrow/mint/redeem/repay
+---@param id string The ID of the message that initiated the order (pushed for or message id)
+---@param success boolean The result of the order
+---@param message string? Optional result message
+function mod.patchOrder(id, success, message)
+  ao.send({
+    device = "patch@1.0",
+    orders = {
+      [id] = {
+        success = success,
+        message = message
+      }
+    }
   })
 end
 
