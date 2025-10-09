@@ -67,38 +67,58 @@ function mod.setup()
       ticker = Ticker,
       logo = Logo,
       denomination = tostring(Denomination),
-      supply = TotalSupply,
-      collateralId = CollateralID,
-      collateralFactor = tostring(CollateralFactor),
-      collateralDenomination = tostring(CollateralDenomination),
-      liquidationThreshold = tostring(LiquidationThreshold),
-      valueLimit = precision.formatInternalAsNative(ValueLimit, "rounddown"),
-      oracle = Oracle,
-      oracleDelayTolerance = tostring(MaxOracleDelay),
-      totalBorrows = tostring(precision.toNativePrecision(totalLent, "roundup")),
+      supply = TotalSupply
+    },
+    environment = {
+      collateral = {
+        id = CollateralID,
+        denomination = CollateralDenomination
+      },
+      ["risk-parameters"] = {
+        ["collateral-factor"] = CollateralFactor,
+        ["liquidation-threshold"] = LiquidationThreshold,
+        ["reserve-factor"] = ReserveFactor
+      },
+      limits = {
+        ["value-limit"] = precision.formatInternalAsNative(ValueLimit, "rounddown"),
+        ["cooldown-period"] = CooldownPeriod,
+        ["enabled-interactions"] = enabledInteractions,
+        ["disabled-interactions"] = disabledInteractions
+      },
+      ["oracle-parameters"] = {
+        oracle = Oracle,
+        ["oracle-delay-tolerance"] = MaxOracleDelay
+      },
+      ["interest-model"] = {
+        rates = {
+          init = InitRate,
+          base = BaseRate,
+          jump = JumpRate
+        },
+        ["kink-param"] = KinkParam
+      },
+      friends = Friends
+    },
+    ["pool-state"] = {
+      ["total-borrows"] = tostring(precision.toNativePrecision(totalLent, "roundup")),
       cash = tostring(precision.toNativePrecision(cash, "rounddown")),
-      reserveFactor = tostring(ReserveFactor),
-      totalReserves = tostring(precision.toNativePrecision(reserves, "roundup")),
-      initRate = tostring(InitRate),
-      baseRate = tostring(BaseRate),
-      jumpRate = tostring(JumpRate),
-      kinkParam = tostring(KinkParam),
-      cooldownPeriod = tostring(CooldownPeriod),
+      ["total-reserves"] = tostring(precision.toNativePrecision(reserves, "roundup")),
       utilization = tostring(utils.bintToFloat(utilization, utilizationDecimals)),
-      enabledInteractions = enabledInteractions,
-      disabledInteractions = disabledInteractions
+      rates = {
+        borrow = borrowRate,
+        supply = interest.calculateSupplyRate()
+      },
+      ["interest-accrual"] = {
+        ["borrow-index"] = BorrowIndex,
+        ["last-updated"] = LastBorrowIndexUpdate,
+        ["reserves-remainder"] = ReservesRemainder
+      }
     },
     balances = balances,
-    friends = Friends,
     cooldowns = Cooldowns,
-    borrowRate = borrowRate,
-    supplyRate = interest.calculateSupplyRate(),
     positions = positions,
     loans = loans,
-    borrowIndex = BorrowIndex,
-    lastBorrowIndexUpdate = LastBorrowIndexUpdate,
-    reservesRemainder = ReservesRemainder,
-    interestIndices = interestIndices,
+    ["interest-indices"] = interestIndices,
     orders = { device = "trie@1.0" }
   })
 end

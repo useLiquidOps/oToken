@@ -86,6 +86,15 @@ function mod.borrow(msg, _, oracle)
 
   -- patch order result
   patching.patchOrder(msg.Id, true)
+  ao.send({
+    device = "patch@1.0",
+    loans = { [account] = Loans[account] },
+    ["token-info"] = {
+      cash = tostring(precision.toNativePrecision(bint(Cash), "rounddown")),
+      totalBorrows = tostring(precision.toNativePrecision(bint(TotalBorrows), "roundup"))
+    },
+    interestIndices = { [account] = InterestIndices[account] }
+  })
 
   -- send confirmation
   msg.reply({
