@@ -1,4 +1,5 @@
 local precision = require ".utils.precision"
+local position = require ".borrow.position"
 local interest = require ".borrow.interest"
 local bint = require ".utils.bint"(1024)
 local utils = require ".utils.utils"
@@ -19,10 +20,10 @@ function mod.setup()
 
   -- map positions
   local positions = { device = "trie@1.0" }
-  local calculatedPositions = mod.allPositions()
+  local calculatedPositions = position.allPositions()
 
-  for address, position in pairs(calculatedPositions) do
-    positions[address] = mod.utils.stringValPosition(position)
+  for address, pos in pairs(calculatedPositions) do
+    positions[address] = mod.utils.stringValPosition(pos)
   end
 
   ao.send({
@@ -163,13 +164,13 @@ function mod.utils.interactionsState()
 end
 
 -- Make position values strings from Bint
----@param position Position The position to transform
-function mod.utils.stringValPosition(position)
+---@param pos Position The position to transform
+function mod.utils.stringValPosition(pos)
   return {
-    collateralization = tostring(position.collateralization),
-    capacity = tostring(position.capacity),
-    borrowBalance = tostring(position.borrowBalance),
-    liquidationLimit = tostring(position.liquidationLimit)
+    collateralization = tostring(pos.collateralization),
+    capacity = tostring(pos.capacity),
+    borrowBalance = tostring(pos.borrowBalance),
+    liquidationLimit = tostring(pos.liquidationLimit)
   }
 end
 

@@ -248,9 +248,9 @@ function mod.liquidatePosition(msg)
     ["token-info"] = { supply = TotalSupply },
     ["pool-state"] = {
       cash = precision.formatInternalAsNative(Cash, "rounddown"),
-      utilization = mod.utils.utilization(),
+      utilization = patching.utils.utilization(),
       rates = {
-        borrow = mod.utils.borrowRate(),
+        borrow = patching.utils.borrowRate(),
         supply = interest.calculateSupplyRate()
       }
     },
