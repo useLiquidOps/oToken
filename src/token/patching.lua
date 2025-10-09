@@ -9,9 +9,6 @@ local mod = {
 
 ---@type HandlerFunction
 function mod.setup()
-  -- calculate utilization
-  local utilization, utilizationDecimals = mod.utils.utilization()
-
   -- enabled and disabled interactions
   local enabledInteractions, disabledInteractions = mod.utils.interactionsState()
 
@@ -20,20 +17,12 @@ function mod.setup()
   local interestIndices = mod.mapAsTrie(InterestIndices)
   local balances = mod.mapAsTrie(Balances)
 
-  -- current interest rate
-  local borrowRate = mod.utils.borrowRate()
-
   -- map positions
   local positions = { device = "trie@1.0" }
   local calculatedPositions = mod.allPositions()
 
   for address, position in pairs(calculatedPositions) do
-    positions[address] = {
-      collateralization = tostring(position.collateralization),
-      capacity = tostring(position.capacity),
-      borrowBalance = tostring(position.borrowBalance),
-      liquidationLimit = tostring(position.liquidationLimit)
-    }
+    positions[address] = mod.utils.stringValPosition(position)
   end
 
   ao.send({
@@ -79,9 +68,9 @@ function mod.setup()
       ["total-borrows"] = precision.formatInternalAsNative(TotalBorrows, "roundup"),
       cash = precision.formatInternalAsNative(Cash, "rounddown"),
       ["total-reserves"] = precision.formatInternalAsNative(Reserves, "roundup"),
-      utilization = utils.bintToFloatString(utilization, utilizationDecimals),
+      utilization = mod.utils.utilization(),
       rates = {
-        borrow = borrowRate,
+        borrow = mod.utils.borrowRate(),
         supply = interest.calculateSupplyRate()
       },
       ["interest-accrual"] = {
@@ -147,7 +136,7 @@ function mod.utils.utilization()
     )
   end
 
-  return utilization, utilizationDecimals
+  return utils.bintToFloatString(utilization, utilizationDecimals)
 end
 
 function mod.utils.borrowRate()
@@ -171,6 +160,17 @@ function mod.utils.interactionsState()
   end
 
   return enabled, disabled
+end
+
+-- Make position values strings from Bint
+---@param position Position The position to transform
+function mod.utils.stringValPosition(position)
+  return {
+    collateralization = tostring(position.collateralization),
+    capacity = tostring(position.capacity),
+    borrowBalance = tostring(position.borrowBalance),
+    liquidationLimit = tostring(position.liquidationLimit)
+  }
 end
 
 return mod

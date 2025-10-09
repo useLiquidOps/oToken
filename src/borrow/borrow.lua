@@ -1,5 +1,6 @@
 local assertions = require ".utils.assertions"
 local precision = require ".utils.precision"
+local interest = require ".borrow.interest"
 local position = require ".borrow.position"
 local patching = require ".token.patching"
 local bint = require ".utils.bint"(1024)
@@ -85,15 +86,32 @@ function mod.borrow(msg, _, oracle)
   })
 
   -- patch order result
-  patching.patchOrder(msg.Id, true)
+  patching.patchOrder(
+    msg.Id,
+    true,
+    "Successfully borrowed " ..
+    utils.bintToFloatString(rawQuantity, CollateralDenomination) ..
+    " " ..
+    CollateralTicker
+  )
   ao.send({
     device = "patch@1.0",
-    loans = { [account] = Loans[account] },
-    ["token-info"] = {
-      cash = tostring(precision.toNativePrecision(bint(Cash), "rounddown")),
-      totalBorrows = tostring(precision.toNativePrecision(bint(TotalBorrows), "roundup"))
+    ["pool-state"] = {
+      cash = precision.formatInternalAsNative(Cash, "rounddown"),
+      ["total-borrows"] = precision.formatInternalAsNative(TotalBorrows, "roundup"),
+      utilization = patching.utils.utilization(),
+      rates = {
+        borrow = patching.utils.borrowRate(),
+        supply = interest.calculateSupplyRate()
+      }
     },
-    interestIndices = { [account] = InterestIndices[account] }
+    positions = {
+      [account] = patching.utils.stringValPosition(
+        position.position(account)
+      )
+    },
+    loans = { [account] = Loans[account] },
+    ["interest-indices"] = { [account] = InterestIndices[account] }
   })
 
   -- send confirmation
