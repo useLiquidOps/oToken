@@ -27,7 +27,7 @@ function utils.matchesPattern(pattern, value, msg)
       return false
     end
   end
-  
+
   -- if the patternMatchSpec is a string, check it for special symbols (less `-` alone)
   -- and exact string match mode
   if (type(pattern) == 'string') then
@@ -346,7 +346,7 @@ function utils.floatBintRepresentation(raw, floatMul)
   return repr, floatMul
 end
 
--- Create a pretty error message from any Lua error 
+-- Create a pretty error message from any Lua error
 -- (returns the pretty error and the raw stringified error)
 ---@param err unknown Original error message
 function utils.prettyError(err)
@@ -361,25 +361,34 @@ function utils.floatToString(val)
   return string.format("%.17f", val):gsub("0+$", ""):gsub("%.$", "")
 end
 
--- Convert a biginteger with a denomination to a float
+-- Convert a biginteger with a denomination to a float string
 ---@param val Bint Bigint value
 ---@param denomination number Denomination
-function utils.bintToFloat(val, denomination)
+function utils.bintToFloatString(val, denomination)
   local stringVal = tostring(val)
   local len = #stringVal
 
-  if stringVal == "0" then return 0.0 end
+  if stringVal == "0" then return "0.0" end
 
   -- if denomination is greater than or equal to the string length, prepend "0."
   if denomination >= len then
-    return tonumber("0." .. string.rep("0", denomination - len) .. stringVal)
+    return "0." .. string.rep("0", denomination - len) .. stringVal
   end
 
   -- insert decimal point at the correct position from the back
   local integer_part = string.sub(stringVal, 1, len - denomination)
   local fractional_part = string.sub(stringVal, len - denomination + 1)
 
-  return tonumber(integer_part .. "." .. fractional_part)
+  return integer_part .. "." .. fractional_part
+end
+
+-- Convert a biginteger with a denomination to a float
+---@param val Bint Bigint value
+---@param denomination number Denomination
+function utils.bintToFloat(val, denomination)
+  return tonumber(
+    utils.bintToFloatString(val, denomination)
+  )
 end
 
 -- Perform unsigned integer division, but rounding upwards

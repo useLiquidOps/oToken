@@ -3,37 +3,17 @@ local interest = require ".borrow.interest"
 local bint = require ".utils.bint"(1024)
 local utils = require ".utils.utils"
 
-local mod = {}
+local mod = {
+  utils = {}
+}
 
 ---@type HandlerFunction
 function mod.setup()
-  -- parse as bint
-  local totalLent = bint(TotalBorrows)
-  local cash = bint(Cash)
-  local reserves = bint(Reserves)
-
   -- calculate utilization
-  local totalPooled = totalLent + cash - reserves
-  local utilizationDecimals = 5
-  local utilization = bint.zero()
-
-  if not bint.eq(totalPooled, 0) then
-    utilization = bint.udiv(
-      totalLent * bint(100) * bint.ipow(10, utilizationDecimals),
-      totalPooled
-    )
-  end
+  local utilization, utilizationDecimals = mod.utils.utilization()
 
   -- enabled and disabled interactions
-  local enabledInteractions = {}
-  local disabledInteractions = {}
-
-  for name, enabled in pairs(EnabledInteractions) do
-    table.insert(
-      enabled and enabledInteractions or disabledInteractions,
-      string.upper(string.sub(name, 1, 1)) .. string.sub(name, 2)
-    )
-  end
+  local enabledInteractions, disabledInteractions = mod.utils.interactionsState()
 
   -- clone loans, interest indices, balances
   local loans = mod.mapAsTrie(Loans)
@@ -41,11 +21,7 @@ function mod.setup()
   local balances = mod.mapAsTrie(Balances)
 
   -- current interest rate
-  local interestRate, rateMul = interest.calculateBorrowRate()
-  local borrowRate = utils.bintToFloat(
-    interestRate,
-    select(2, string.gsub(tostring(rateMul), "0", ""))
-  )
+  local borrowRate = mod.utils.borrowRate()
 
   -- map positions
   local positions = { device = "trie@1.0" }
@@ -100,10 +76,10 @@ function mod.setup()
       friends = Friends
     },
     ["pool-state"] = {
-      ["total-borrows"] = tostring(precision.toNativePrecision(totalLent, "roundup")),
-      cash = tostring(precision.toNativePrecision(cash, "rounddown")),
-      ["total-reserves"] = tostring(precision.toNativePrecision(reserves, "roundup")),
-      utilization = tostring(utils.bintToFloat(utilization, utilizationDecimals)),
+      ["total-borrows"] = precision.formatInternalAsNative(TotalBorrows, "roundup"),
+      cash = precision.formatInternalAsNative(Cash, "rounddown"),
+      ["total-reserves"] = precision.formatInternalAsNative(Reserves, "roundup"),
+      utilization = utils.bintToFloatString(utilization, utilizationDecimals),
       rates = {
         borrow = borrowRate,
         supply = interest.calculateSupplyRate()
@@ -151,6 +127,50 @@ function mod.mapAsTrie(map)
   end
 
   return res
+end
+
+function mod.utils.utilization()
+  -- parse as bint
+  local totalLent = bint(TotalBorrows)
+  local cash = bint(Cash)
+  local reserves = bint(Reserves)
+
+  -- calculate utilization
+  local totalPooled = totalLent + cash - reserves
+  local utilizationDecimals = 5
+  local utilization = bint.zero()
+
+  if not bint.eq(totalPooled, 0) then
+    utilization = bint.udiv(
+      totalLent * bint(100) * bint.ipow(10, utilizationDecimals),
+      totalPooled
+    )
+  end
+
+  return utilization, utilizationDecimals
+end
+
+function mod.utils.borrowRate()
+  local interestRate, rateMul = interest.calculateBorrowRate()
+
+  return utils.bintToFloatString(
+    interestRate,
+    select(2, string.gsub(tostring(rateMul), "0", ""))
+  )
+end
+
+function mod.utils.interactionsState()
+  local enabled = {}
+  local disabled = {}
+
+  for name, isEnabled in pairs(EnabledInteractions) do
+    table.insert(
+      isEnabled and enabled or disabled,
+      string.upper(string.sub(name, 1, 1)) .. string.sub(name, 2)
+    )
+  end
+
+  return enabled, disabled
 end
 
 return mod
