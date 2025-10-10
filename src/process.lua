@@ -343,9 +343,6 @@ local function setup_handlers()
 end
 
 function process.handle(msg, env)
-  -- reset current patch
-  PatchData = {}
-
   -- add reply and forward actions
   ao.add_message_actions(msg)
 
@@ -385,13 +382,6 @@ function process.handle(msg, env)
   if not status then
     -- call default error handler
     Handlers.defaultErrorHandler(msg, env, result)
-  end
-
-  -- send summarized patch
-  if next(PatchData) ~= nil then
-    PatchData.device = "patch@1.0"
-    ao.send(PatchData)
-    PatchData = {}
   end
 
   return ao.result()
