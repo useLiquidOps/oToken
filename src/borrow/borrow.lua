@@ -94,8 +94,7 @@ function mod.borrow(msg, _, oracle)
     " " ..
     CollateralTicker
   )
-  ao.send({
-    device = "patch@1.0",
+  patching.patch({
     ["pool-state"] = {
       cash = precision.formatInternalAsNative(Cash, "rounddown"),
       ["total-borrows"] = precision.formatInternalAsNative(TotalBorrows, "roundup"),

@@ -105,8 +105,7 @@ end
 ---@param success boolean The result of the order
 ---@param message string? Optional result message
 function mod.patchOrder(id, success, message)
-  ao.send({
-    device = "patch@1.0",
+  mod.patch({
     orders = {
       [id] = {
         success = success,

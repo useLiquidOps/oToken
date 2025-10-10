@@ -243,8 +243,7 @@ function mod.liquidatePosition(msg)
   })
 
   -- patch
-  ao.send({
-    device = "patch@1.0",
+  patching.patch({
     ["token-info"] = { supply = TotalSupply },
     ["pool-state"] = {
       cash = precision.formatInternalAsNative(Cash, "rounddown"),

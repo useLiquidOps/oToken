@@ -681,7 +681,7 @@ describe("Token standard functionalities", () => {
     const res = await handle(
       generateOracleResponse({ BTC: 85325.425 }, oracleRes)
     );
-    
+
     expect(res.Messages).toEqual(
       expect.arrayContaining([
         expect.objectContaining({

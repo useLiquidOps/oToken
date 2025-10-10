@@ -1,3 +1,4 @@
+local patching = require ".token.patching"
 local json = require "json"
 
 local mod = {}
@@ -49,8 +50,7 @@ function mod.gate(msg)
   Cooldowns[sender] = msg["Block-Height"] + CooldownPeriod
 
   -- patch
-  ao.send({
-    device = "patch@1.0",
+  patching.patch({
     cooldowns = { [sender] = Cooldowns[sender] }
   })
 end
