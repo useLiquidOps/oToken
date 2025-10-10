@@ -10,6 +10,9 @@ local mod = {
 
 ---@type HandlerFunction
 function mod.setup()
+  PatchingSetUp = PatchingSetUp or false
+  if PatchingSetUp then return end
+
   -- enabled and disabled interactions
   local enabledInteractions, disabledInteractions = mod.utils.interactionsState()
 
@@ -87,6 +90,14 @@ function mod.setup()
     ["interest-indices"] = interestIndices,
     orders = { device = "trie@1.0" }
   })
+
+  PatchingSetUp = true
+end
+
+-- Add a param to the patch message going out after all handlers were executed
+---@param data table The data to patch
+function mod.patch(data)
+  utils.patch_table(Patch, data)
 end
 
 -- Patch the result of a borrow/mint/redeem/repay

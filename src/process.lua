@@ -58,6 +58,13 @@ local function setup_handlers()
     end
   )
 
+  -- add patch structure setup
+  Handlers.add(
+    "setup-current-patch-iter",
+    function () return "continue" end,
+    function () Patch = { device = "patch@1.0" } end
+  )
+
   -- current timestamp sync
   -- (this is required for coroutines, so they always
   -- have the up-to-date timestamp and they don't have
@@ -380,9 +387,11 @@ function process.handle(msg, env)
   if not status then
     -- call default error handler
     Handlers.defaultErrorHandler(msg, env, result)
-
-    return ao.result()
   end
+
+  -- send summarized patch
+  ao.send(Patch)
+  Patch = { device = "patch@1.0" }
 
   return ao.result()
 end
