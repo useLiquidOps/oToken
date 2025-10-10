@@ -342,7 +342,7 @@ end
 
 function process.handle(msg, env)
   -- reset current patch
-  Patch = { device = "patch@1.0" }
+  Patch = {}
 
   -- add reply and forward actions
   ao.add_message_actions(msg)
@@ -386,8 +386,11 @@ function process.handle(msg, env)
   end
 
   -- send summarized patch
-  ao.send(Patch)
-  Patch = { device = "patch@1.0" }
+  if next(Patch) ~= nil then
+    Patch.device = "patch@1.0"
+    ao.send(Patch)
+    Patch = {}
+  end
 
   return ao.result()
 end
