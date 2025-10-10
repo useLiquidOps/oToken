@@ -49,8 +49,7 @@ function mod.gate(msg)
   Cooldowns[sender] = msg["Block-Height"] + CooldownPeriod
 
   -- patch
-  ao.send({
-    device = "patch@1.0",
+  patch({
     cooldowns = { [sender] = Cooldowns[sender] }
   })
 end

@@ -468,6 +468,9 @@ function handlers.evaluate(msg, env)
   assert(type(msg) == 'table', 'msg is not valid')
   assert(type(env) == 'table', 'env is not valid')
 
+  -- reset current patch
+  PatchData = {}
+
   for _, o in ipairs(handlers.list) do
     if o.name ~= "_default" and not o.inactive then
       local match = utils.matchesSpec(msg, o.pattern)
@@ -556,7 +559,7 @@ function handlers.evaluate(msg, env)
         end
       end
       if match < 0 then
-        return handled
+        break
       end
     end
   end
@@ -567,6 +570,13 @@ function handlers.evaluate(msg, env)
   -- remove marked handlers
   for _, name in ipairs(toRemove) do
     handlers.remove(name)
+  end
+
+  -- send summarized patch
+  if next(PatchData) ~= nil then
+    PatchData.device = "patch@1.0"
+    ao.send(PatchData)
+    PatchData = {}
   end
 
   -- make sure the request was handled

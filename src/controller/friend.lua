@@ -1,4 +1,5 @@
 local assertions = require ".utils.assertions"
+local patching = require ".token.patching"
 local utils = require ".utils.utils"
 local json = require "json"
 
@@ -52,8 +53,7 @@ function friend.add(msg)
   })
 
   -- patch
-  ao.send({
-    device = "patch@1.0",
+  patch({
     environment = { friends = Friends }
   })
 
@@ -89,8 +89,7 @@ function friend.remove(msg)
   assert(#removed > 0, "Friend " .. target .. " not yet added")
 
   -- patch
-  ao.send({
-    device = "patch@1.0",
+  patch({
     environment = { friends = Friends }
   })
 

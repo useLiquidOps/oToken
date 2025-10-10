@@ -402,4 +402,17 @@ function utils.udiv_roundup(x, y)
   )
 end
 
+-- Patches a table with another table, without deleting any keys (recursively merges nested tables)
+---@param target table The table to be patched (modified in-place)
+---@param patch table The table providing new or updated values
+function utils.patch_table(target, patch)
+  for k, v in pairs(patch) do
+    if type(v) == "table" and type(target[k]) == "table" then
+      utils.patch_table(target[k], v)
+    else
+      target[k] = v
+    end
+  end
+end
+
 return utils

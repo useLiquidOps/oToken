@@ -159,8 +159,7 @@ function repay.repayToPool(target, quantity)
   TotalBorrows = tostring(bint(TotalBorrows) - precision.toInternalPrecision(actualRepaidQty))
 
   -- patch the updated globals
-  ao.send({
-    device = "patch@1.0",
+  patch({
     ["pool-state"] = {
       cash = precision.formatInternalAsNative(Cash, "rounddown"),
       ["total-borrows"] = precision.formatInternalAsNative(TotalBorrows, "roundup"),

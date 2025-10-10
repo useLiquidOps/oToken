@@ -1,5 +1,6 @@
 local assertions = require ".utils.assertions"
 local precision = require ".utils.precision"
+local patching = require ".token.patching"
 local bint = require ".utils.bint"(1024)
 
 local mod = {}
@@ -66,8 +67,7 @@ function mod.deploy(msg)
   Cash = tostring(bint(Cash) + quantity)
 
   -- patch
-  ao.send({
-    device = "patch@1.0",
+  patch({
     ["pool-state"] = {
       cash = precision.formatInternalAsNative(Cash, "rounddown"),
       ["total-reserves"] = precision.formatInternalAsNative(Reserves, "roundup")

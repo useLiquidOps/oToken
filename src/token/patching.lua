@@ -10,6 +10,9 @@ local mod = {
 
 ---@type HandlerFunction
 function mod.setup()
+  PatchingSetUp = PatchingSetUp or false
+  if PatchingSetUp then return end
+
   -- enabled and disabled interactions
   local enabledInteractions, disabledInteractions = mod.utils.interactionsState()
 
@@ -87,6 +90,8 @@ function mod.setup()
     ["interest-indices"] = interestIndices,
     orders = { device = "trie@1.0" }
   })
+
+  PatchingSetUp = true
 end
 
 -- Patch the result of a borrow/mint/redeem/repay
@@ -94,8 +99,7 @@ end
 ---@param success boolean The result of the order
 ---@param message string? Optional result message
 function mod.patchOrder(id, success, message)
-  ao.send({
-    device = "patch@1.0",
+  patch({
     orders = {
       [id] = {
         success = success,

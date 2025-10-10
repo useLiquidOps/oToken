@@ -7,6 +7,9 @@ require(".utils.assignment").init(ao)
 local process = { _version = "0.0.1" }
 
 local coroutine = require "coroutine"
+local utils = require ".utils.utils"
+
+patch = function (data) utils.patch_table(PatchData or {}, data) end
 
 local friend = require ".controller.friend"
 local config = require ".controller.config"
@@ -34,7 +37,6 @@ local rate = require ".supply.rate"
 local redeem = require ".supply.redeem"
 local delegation = require ".supply.delegation"
 
-local utils = require ".utils.utils"
 local precision = require ".utils.precision"
 
 HandlersAdded = HandlersAdded or false
@@ -380,8 +382,6 @@ function process.handle(msg, env)
   if not status then
     -- call default error handler
     Handlers.defaultErrorHandler(msg, env, result)
-
-    return ao.result()
   end
 
   return ao.result()
