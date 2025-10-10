@@ -322,8 +322,6 @@ describe("Minting and providing", () => {
       )["Reference"]
     }));
 
-    console.log(JSON.stringify(res.Messages, null, 2))
-
     expect(res.Messages).toEqual(
       expect.arrayContaining([
         expect.objectContaining({

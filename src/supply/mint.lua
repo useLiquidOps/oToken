@@ -61,7 +61,7 @@ function mint.handler(msg)
 
   -- patch
   patching.patchOrder(msg.Tags["Pushed-For"] or msg.Id, true)
-  patching.patch({
+  patch({
     ["pool-state"] = {
       cash = precision.formatInternalAsNative(Cash, "rounddown"),
       ["total-borrows"] = precision.formatInternalAsNative(TotalBorrows, "roundup"),

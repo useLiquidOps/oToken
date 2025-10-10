@@ -63,7 +63,7 @@ local function transfer(msg, _, oracle)
   Balances[sender] = tostring(walletBalance - quantity)
 
   -- patch transfer
-  patching.patch({
+  patch({
     balances = {
       [sender] = Balances[sender],
       [target] = Balances[target]

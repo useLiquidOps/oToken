@@ -99,7 +99,7 @@ function mod.redeem(msg, _, oracle)
     Recipient = sender
   })
   patching.patchOrder(msg.Id, true)
-  patching.patch({
+  patch({
     ["pool-state"] = {
       cash = precision.formatInternalAsNative(Cash, "rounddown"),
       ["total-borrows"] = precision.formatInternalAsNative(TotalBorrows, "roundup"),

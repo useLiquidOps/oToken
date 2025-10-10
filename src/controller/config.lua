@@ -111,7 +111,7 @@ function mod.update(msg)
   if newAOToken then AOToken = newAOToken end
 
   -- patch
-  patching.patch({
+  patch({
     environment = {
       ["risk-parameters"] = {
         ["collateral-factor"] = CollateralFactor,
@@ -172,7 +172,7 @@ function mod.toggleInteractions(msg)
   -- patch
   local enabledInteractions, disabledInteractions = patching.utils.interactionsState()
 
-  patching.patch({
+  patch({
     environment = {
       limits = {
         ["enabled-interactions"] = enabledInteractions,

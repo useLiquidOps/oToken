@@ -243,7 +243,7 @@ function mod.liquidatePosition(msg)
   })
 
   -- patch
-  patching.patch({
+  patch({
     ["token-info"] = { supply = TotalSupply },
     ["pool-state"] = {
       cash = precision.formatInternalAsNative(Cash, "rounddown"),

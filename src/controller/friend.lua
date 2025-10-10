@@ -53,7 +53,7 @@ function friend.add(msg)
   })
 
   -- patch
-  patching.patch({
+  patch({
     environment = { friends = Friends }
   })
 
@@ -89,7 +89,7 @@ function friend.remove(msg)
   assert(#removed > 0, "Friend " .. target .. " not yet added")
 
   -- patch
-  patching.patch({
+  patch({
     environment = { friends = Friends }
   })
 

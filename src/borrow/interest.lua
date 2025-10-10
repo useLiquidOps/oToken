@@ -1,5 +1,4 @@
 local precision = require ".utils.precision"
-local patching = require ".token.patching"
 local bint = require ".utils.bint"(1024)
 local utils = require ".utils.utils"
 
@@ -171,7 +170,7 @@ function mod.accrueInterest(msg)
   ReservesRemainder = tostring(remainder)
 
   -- patch the updated globals
-  patching.patch({
+  patch({
     ["pool-state"] = {
       ["total-borrows"] = precision.formatInternalAsNative(TotalBorrows, "roundup"),
       ["total-reserves"] = precision.formatInternalAsNative(Reserves, "roundup"),
@@ -212,7 +211,7 @@ function mod.accrueInterestForUser(address)
   InterestIndices[address] = tostring(interestIndex)
 
   -- patch updated global values
-  patching.patch({
+  patch({
     loans = { [address] = Loans[address] },
     ["interest-indices"] = { [address] = InterestIndices[address] },
     -- !!do not update positions to avoid an infinite recursive loop!!

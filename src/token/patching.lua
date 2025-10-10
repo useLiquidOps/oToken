@@ -94,18 +94,12 @@ function mod.setup()
   PatchingSetUp = true
 end
 
--- Add a param to the patch message going out after all handlers were executed
----@param data table The data to patch
-function mod.patch(data)
-  utils.patch_table(Patch, data)
-end
-
 -- Patch the result of a borrow/mint/redeem/repay
 ---@param id string The ID of the message that initiated the order (pushed for or message id)
 ---@param success boolean The result of the order
 ---@param message string? Optional result message
 function mod.patchOrder(id, success, message)
-  mod.patch({
+  patch({
     orders = {
       [id] = {
         success = success,

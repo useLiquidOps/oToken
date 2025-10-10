@@ -7,6 +7,9 @@ require(".utils.assignment").init(ao)
 local process = { _version = "0.0.1" }
 
 local coroutine = require "coroutine"
+local utils = require ".utils.utils"
+
+patch = function (data) utils.patch_table(PatchData or {}, data) end
 
 local friend = require ".controller.friend"
 local config = require ".controller.config"
@@ -34,7 +37,6 @@ local rate = require ".supply.rate"
 local redeem = require ".supply.redeem"
 local delegation = require ".supply.delegation"
 
-local utils = require ".utils.utils"
 local precision = require ".utils.precision"
 
 HandlersAdded = HandlersAdded or false
@@ -342,7 +344,7 @@ end
 
 function process.handle(msg, env)
   -- reset current patch
-  Patch = {}
+  PatchData = {}
 
   -- add reply and forward actions
   ao.add_message_actions(msg)
@@ -386,10 +388,10 @@ function process.handle(msg, env)
   end
 
   -- send summarized patch
-  if next(Patch) ~= nil then
-    Patch.device = "patch@1.0"
-    ao.send(Patch)
-    Patch = {}
+  if next(PatchData) ~= nil then
+    PatchData.device = "patch@1.0"
+    ao.send(PatchData)
+    PatchData = {}
   end
 
   return ao.result()

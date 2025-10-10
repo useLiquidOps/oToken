@@ -67,7 +67,7 @@ function mod.deploy(msg)
   Cash = tostring(bint(Cash) + quantity)
 
   -- patch
-  patching.patch({
+  patch({
     ["pool-state"] = {
       cash = precision.formatInternalAsNative(Cash, "rounddown"),
       ["total-reserves"] = precision.formatInternalAsNative(Reserves, "roundup")
