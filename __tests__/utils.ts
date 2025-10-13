@@ -46,12 +46,14 @@ export async function setupProcess(defaultEnvironment: Environment, keepMemory =
   // current state of the process
   let currentMemory: ArrayBuffer | null = null;
 
+  const module = generateArweaveAddress()
+
   // handler function that automatically saves the state
   return async (msg, env) => {
     // call handle
     const envWithRandomMod = env || defaultEnvironment;
     // @ts-expect-error
-    envWithRandomMod.Module = { Id: generateArweaveAddress() };
+    envWithRandomMod.Module = { Id: module };
     const res = await defaultHandle(currentMemory, msg, envWithRandomMod);
 
     // save memory

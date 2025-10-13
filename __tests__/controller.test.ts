@@ -1476,6 +1476,7 @@ describe("Reserves tests", () => {
 
   beforeAll(async () => {
     const envWithReserves = {
+      ...env,
       Process: {
         ...env.Process,
         Tags: [
