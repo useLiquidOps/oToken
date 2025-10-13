@@ -405,7 +405,7 @@ function handlers.advanced(config)
 
   if idx ~= nil and idx > 0 then
     -- found a handler to update
-    handlers[idx] = config
+    handlers.list[idx] = config
   else
     -- a handler with this name doesn't exist yet, so we add it
     --
