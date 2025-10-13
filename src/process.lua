@@ -43,7 +43,25 @@ local chance = require ".utils.chance"
 HandlersAdded = HandlersAdded or false
 
 -- add handlers for inputs
-local function setup_handlers()
+local function setup_handlers(msg)
+  -- reseed random for handlers.once()
+  -- reseed random
+  chance.seed(tonumber(msg["Block-Height"] .. chance.stringToSeed(ao.env.Process.Owner .. ao.env.Module.Id .. ao.id)))
+  math.random = function(...)
+    local args = {...}
+    local n = #args
+    if n == 0 then
+      return chance.random()
+    end
+    if n == 1 then
+      return chance.integer(1, args[1])
+    end
+    if n == 2 then
+      return chance.integer(args[1], args[2])
+    end
+    return chance.random()
+  end
+
   -- only add handlers once
   if HandlersAdded then return end
 
@@ -362,28 +380,11 @@ function process.handle(msg, env)
     return ao.result()
   end
 
-  -- reseed random
-  chance.seed(tonumber(msg["Block-Height"] .. chance.stringToSeed(ao.env.Process.Owner .. ao.env.Module.Id .. ao.id)))
-  math.random = function(...)
-    local args = {...}
-    local n = #args
-    if n == 0 then
-      return chance.random()
-    end
-    if n == 1 then
-      return chance.integer(1, args[1])
-    end
-    if n == 2 then
-      return chance.integer(args[1], args[2])
-    end
-    return chance.random()
-  end
-
   -- the controller is the process spawner
   Controller = Controller or ao.env.Process.Owner
 
   -- add handlers
-  setup_handlers()
+  setup_handlers(msg)
 
   -- eval handlers
   local co = coroutine.create(function() return pcall(Handlers.evaluate, msg, ao.env) end)
