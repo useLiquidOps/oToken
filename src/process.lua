@@ -44,24 +44,6 @@ HandlersAdded = HandlersAdded or false
 
 -- add handlers for inputs
 local function setup_handlers(msg)
-  -- reseed random for handlers.once()
-  -- reseed random
-  chance.seed(tonumber(msg["Block-Height"] .. chance.stringToSeed(ao.env.Process.Owner .. ao.env.Module.Id .. ao.id)))
-  math.random = function(...)
-    local args = {...}
-    local n = #args
-    if n == 0 then
-      return chance.random()
-    end
-    if n == 1 then
-      return chance.integer(1, args[1])
-    end
-    if n == 2 then
-      return chance.integer(args[1], args[2])
-    end
-    return chance.random()
-  end
-
   -- only add handlers once
   if HandlersAdded then return end
 
@@ -378,6 +360,26 @@ function process.handle(msg, env)
     end
 
     return ao.result()
+  end
+
+  if not RandomSeeded then
+    chance.seed(tonumber(msg["Block-Height"] .. chance.stringToSeed(ao.env.Process.Owner .. ao.env.Module.Id .. ao.id)))
+    math.random = function(...)
+      local args = {...}
+      local n = #args
+      if n == 0 then
+        return chance.random()
+      end
+      if n == 1 then
+        return chance.integer(1, args[1])
+      end
+      if n == 2 then
+        return chance.integer(args[1], args[2])
+      end
+      return chance.random()
+    end
+
+    RandomSeeded = true
   end
 
   -- the controller is the process spawner
