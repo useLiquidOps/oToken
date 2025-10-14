@@ -577,6 +577,7 @@ describe("Position liquidation", () => {
 
   beforeEach(async () => {
     const envWithFriend = {
+      ...env,
       Process: {
         ...env.Process,
         Tags: env.Process.Tags.map((t) => {

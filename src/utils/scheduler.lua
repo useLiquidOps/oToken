@@ -51,7 +51,7 @@ function mod.schedule(...)
 
     -- wait for response
     Handlers.advanced({
-      name = "_once_" .. tostring(Handlers.onceNonce),
+      name = "_once_" .. tostring(Timestamp) .. tostring(math.random(1e9)),
       position = "prepend",
       pattern = {
         From = msg.Target,

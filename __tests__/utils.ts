@@ -46,10 +46,15 @@ export async function setupProcess(defaultEnvironment: Environment, keepMemory =
   // current state of the process
   let currentMemory: ArrayBuffer | null = null;
 
+  const module = generateArweaveAddress()
+
   // handler function that automatically saves the state
   return async (msg, env) => {
     // call handle
-    const res = await defaultHandle(currentMemory, msg, env || defaultEnvironment);
+    const envWithRandomMod = env || defaultEnvironment;
+    // @ts-expect-error
+    envWithRandomMod.Module = { Id: module };
+    const res = await defaultHandle(currentMemory, msg, envWithRandomMod);
 
     // save memory
     if (keepMemory)
@@ -177,7 +182,7 @@ expect.extend({
   },
   toBeFloatStringEncoded(actual: unknown) {
     const pass = typeof actual === "string" && actual.match(/^-?\d+(\.\d+)?$/) !== null;
-    
+
     return {
       pass,
       message: () => `expected ${this.utils.printReceived(actual)} to be a ${this.utils.printExpected("string encoded float")}`
@@ -193,7 +198,7 @@ expect.extend({
   },
   toBeJsonEncoded(actual: string, matcher: jest.AsymmetricMatcher) {
     let parsed: unknown;
-    
+
     try {
       parsed = JSON.parse(actual);
     } catch (error: any) {
@@ -226,7 +231,7 @@ expect.extend({
         })
       ])
     };
-  
+
     if (this.isNot) {
       expect(actual).not.toEqual(expect.objectContaining(objTest));
     } else {

@@ -953,6 +953,7 @@ describe("Token standard functionalities", () => {
     };
     const friendTicker = "TST";
     const envWithFriend = {
+      ...env,
       Process: {
         ...env.Process,
         Tags: env.Process.Tags.map((t) => {

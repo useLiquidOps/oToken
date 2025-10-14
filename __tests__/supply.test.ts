@@ -895,6 +895,7 @@ describe("AO delegation", () => {
 
   beforeEach(async () => {
     const envWithWAO = {
+      ...env,
       Process: {
         ...env.Process,
         Tags: [

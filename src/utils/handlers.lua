@@ -131,7 +131,7 @@ function handlers.receive(pattern, timeout)
   end
 
   handlers.advanced({
-    name = "_once_" .. tostring(handlers.onceNonce),
+    name = "_once_" .. tostring(Timestamp) .. tostring(math.random(1e9)),
     position = "prepend",
     pattern = pattern,
     maxRuns = 1,
@@ -162,7 +162,7 @@ function handlers.once(...)
     pattern = select(2, ...)
     handle = select(3, ...)
   else
-    name = "_once_" .. tostring(handlers.onceNonce)
+    name = "_once_" .. tostring(Timestamp) .. tostring(math.random(1e9))
     handlers.onceNonce = handlers.onceNonce + 1
     pattern = select(1, ...)
     handle = select(2, ...)
@@ -405,7 +405,7 @@ function handlers.advanced(config)
 
   if idx ~= nil and idx > 0 then
     -- found a handler to update
-    handlers[idx] = config
+    handlers.list[idx] = config
   else
     -- a handler with this name doesn't exist yet, so we add it
     --
